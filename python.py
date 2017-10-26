@@ -318,20 +318,20 @@ def selectmove(xoro):
  
         minihold = 1
         while minihold == 1:
-            pp = raw_input('Place or pass (l/a)? ')
+            pp = input('Place or pass (l/a)? ')
             if pp == 'a':
                 return 'pass'
             elif pp == 'l':
                 minihold = 0
                 ## This try...except ensures that the user
-                ## raw_inputs only numbers
+                ## inputs only numbers
                 error = 0
                 try:
-                    x = int(raw_input('x: '))
+                    x = int(input('x: '))
                 except ValueError:
                     error = 1
                 try:
-                    y = int(raw_input('y: '))
+                    y = int(input('y: '))
                 except ValueError:
                     error = 1
                 if error == 1:
@@ -339,7 +339,7 @@ def selectmove(xoro):
                     print('invalid')
             else:
                 print('invalid')
-        ## Ensures that the raw_input is on the board
+        ## Ensures that the input is on the board
         if (x > boardsize) | (x < 0) | (y > boardsize) | (y < 0):
             print('invalid')
         elif gsc[y][x] != '-':
@@ -521,7 +521,7 @@ while gameon == 1:
     main()
     hold = 1
     while hold == 1:
-        yn = raw_input('play again (y/n)? ')
+        yn = input('play again (y/n)? ')
         if yn == 'n':
             gameon = 0
             hold = 0
