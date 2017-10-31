@@ -44,8 +44,10 @@ class Board:
                     elif self.vertices[adj_x, adj_y] == self.vertices[start_x, start_y]:
                         self.group.append((adj_x, adj_y))
                         
-        
-                
+
+        if 1>0:
+            print("deinemudda");
+
                     
         if capture:
             for x,y in self.group:
