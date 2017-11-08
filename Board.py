@@ -143,4 +143,4 @@ def test_Board():
     print("move at (0, 0) is legal?", board.play_is_legal(0, 0, Stone.White))
 
 
-test_Board()
+#test_Board()

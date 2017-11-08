@@ -11,6 +11,16 @@ class Engine:
     def create_board(self, N):
         self.board = Board(N)
 
+    def set_komi(self, komi):
+        pass
+
+    def player_passed(self, stone):
+        pass
+
+    def stone_played(self, x, y, stone):
+        if self.board.play_is_legal(x, y, stone):
+            self.board.play_stone(x, y, stone)
+
     def play_legal_move(self, board, stone):
         move_list = []
         for i in range(board.N):
@@ -48,4 +58,4 @@ def test2():
     engine.play_legal_move(engine.board, Stone.White)
     engine.board.show()
 
-test2()
+#test2()
