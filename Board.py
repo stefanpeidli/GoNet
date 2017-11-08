@@ -82,7 +82,7 @@ class Board:
         return made_capture or self.check_group_liberties(x, y)
                 
     def play_is_legal(self, x, y, stone):
-        saved_vertices = self.vertices
+        saved_vertices = np.copy(self.vertices)
         move_is_legal = self.play_stone(x, y, stone, just_testing=True)
         self.vertices = saved_vertices
         return move_is_legal
@@ -123,7 +123,7 @@ def test_Board():
     board = Board(5)
 
     print("simplest capture:")
-    show_sequence(board, [(1, 0), (0, 0), (0, 1)], Stone.Black)
+    show_sequence(board, [(1, 0), (3, 0), (0, 1), (0, 0)], Stone.Black)
     print("move at (0, 0) is legal?", board.play_is_legal(0, 0, Stone.White))
     board.flip_colors()
 
@@ -143,4 +143,4 @@ def test_Board():
     print("move at (0, 0) is legal?", board.play_is_legal(0, 0, Stone.White))
 
 
-test_Board()
+#test_Board()
