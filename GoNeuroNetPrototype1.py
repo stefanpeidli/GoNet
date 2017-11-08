@@ -28,7 +28,7 @@ testdata = testdata.round()
 # Initialize the weights
 # here by a normal distribution
 mu=0
-sigma=0.1
+sigma=1
 
 w1=np.random.normal(mu, sigma, (num_input,n_hidden_1))
 w2=np.random.normal(mu, sigma, (n_hidden_1,n_hidden_2))
@@ -53,6 +53,15 @@ def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum()
 
+# the derivative of the activation fct
+def softmax_prime(x):#check if this actually works...
+    """Compute the jacobian of the softmax fct of x"""
+    SM = softmax(x)
+    #jac = np.outer(SM, (np.eye(x.size) - np.transpose(SM)) ) WRONG
+    jac = SM.dot(np.eye(x.size)) - np.outer(SM, np.transpose(SM) )
+    return jac
+
+
 #The actual function
 layers=[n_hidden_1,n_hidden_2]
 
@@ -73,12 +82,36 @@ plt.bar(range(1,10), y)
 
 
 
-print("Suggested move: Field number", suggestedmove+1, "with a value of",np.round(100*y[suggestedmove],2),"%") 
+print("Suggested move: Field number", suggestedmove+1, "with a value of",np.round(100*y[suggestedmove],2),"%.") 
 
   
 
+#Learning Part (highly experimental!!!)
+def compute_error(suggested, target): #compare the prediction with the answer/target
+    totalError = 0
+    if suggested == target:
+        totalError = 0 #We have no Error if the NN did what was expected of it
+    else:
+        totalError = y[suggested] - y[target]  #The Error could be like here the difference of output-prob between target and suggested move
+    return totalError
 
+print("We are ",np.round(compute_error(suggestedmove,2)*100,2),"% away from the right solution move.")#test
 
+def step_gradient(weights, learningRate):
+    b_gradient = 0
+    m_gradient = 0
+    N = float(len(points))
+    for i in range(0, len(points)):
+        x = points[i, 0]
+        y = points[i, 1]
+        b_gradient += -(2/N) * (y - ((m_current * x) + b_current))
+        m_gradient += -(2/N) * x * (y - ((m_current * x) + b_current))
+    new_b = b_current - (learningRate * b_gradient)
+    new_m = m_current - (learningRate * m_gradient)
+    return [new_b, new_m]
+
+#Backpropagation
+#print(softmax_prime(y))
 
 
 
