@@ -123,7 +123,7 @@ def test_Board():
     board = Board(5)
 
     print("simplest capture:")
-    show_sequence(board, [(1, 0), (3, 0), (0, 1), (0, 0)], Stone.Black)
+    show_sequence(board, [(1, 0), (0, 0), (0, 1)], Stone.Black)
     print("move at (0, 0) is legal?", board.play_is_legal(0, 0, Stone.White))
     board.flip_colors()
 
@@ -143,4 +143,4 @@ def test_Board():
     print("move at (0, 0) is legal?", board.play_is_legal(0, 0, Stone.White))
 
 
-#test_Board()
+test_Board()
