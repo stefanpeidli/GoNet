@@ -28,17 +28,21 @@ def str_from_coords(x, y):
     return chr(ord('A')+x) + str(y+1)
 
 class GTP:
-    def __init__(self, engine):
+    def __init__(self, engine, logfile):
         self.engine = engine
-
+        self.fclient = sys.stdout
+        sys.stdout = sys.stderr = open(logfile, 'w')
+        print("GTP: Redirected stdout to logfile.")
 
     def tell_client(self, s):
-        sys.stdout.write('= ' + s + '\n\n')
-        sys.stdout.flush()
+        self.fclient.write('= ' + s + '\n\n')
+        self.fclient.flush()
+        print("GTP: Told client: " + s)
 
     def error_client(self, s):
         sys.stdout.write('? ' + s + '\n\n')
         sys.stdout.flush()
+        print("GTP: Sent error message to client: " + s)
 
     def list_commands(self):
         commands = ["protocol_version", "name", "version", "boardsize", "clearboard", "komi", "play", "genmove",
@@ -49,52 +53,70 @@ class GTP:
         try:
             boardsize = int(line.split()[1])
         except ValueError:
-            print("No valid number")
+            self.error_client("Unsupported board size")
             return
+        print("GTP: setting board size to", boardsize)
         self.engine.create_board(boardsize)
+        self.tell_client("")
 
     def clear_board(self):
         self.engine.board.clear()
+        print("GTP: clearing board")
+        self.tell_client("")
 
     def set_komi(self, line):
         try:
             komi = float(line.split()[1])
         except ValueError:
             print("No valid number")
+            self.tell_client("")
             return
+        print("GTP: setting komi to", komi)
         self.engine.set_komi(komi)
+        self.tell_client("")
 
     def stone_played(self, line):
         stone = colour_from_str(line.split()[1])
         if "pass" in line.split()[2]:
+            print("GTP: ", colour_names[stone], " passed")
             self.engine.player_passed(stone)
         else:
             x, y = coords_from_str(line.split()[2])
+            print("GTP: ", colour_names[stone], " has played at (%d,%d)" % (x, y))
             self.engine.stone_played(x, y, stone)
+        self.tell_client("")
 
     def gen_move(self, line):
         try:
             stone = colour_from_str(line.split()[1])
         except ValueError:
             print("No valid input")
+            self.tell_client("")
             return
-        self.engine.play_legal_move(self.engine.board, stone)
+        print("GTP: asked to generate move for", colour_names[stone])
+
+        coords = self.engine.play_legal_move(self.engine.board, stone)
+        if coords:
+            x, y = coords
+            print("GTP: engine generated move (%d,%d) for" % (x, y), colour_names[stone])
+            self.tell_client(str_from_coords(x, y))
+        else:
+            print("GTP: engine passed")
+            self.tell_client("pass")
 
     def show_board(self):
         self.engine.board.show()
 
-
-
-
     def quit(self):
+        print("GTP: Quitting")
+        self.tell_client("")
+        sys.stdout.close()  # Close log file
         exit(0)
-
-
-
 
     def loop(self):
         while True:
             line = sys.stdin.readline().strip()
+            if len(line) == 0: return
             print("Client sent: " + line)
 
             if line.startswith("protocol_version"):  # GTP protocol version
@@ -124,7 +146,8 @@ class GTP:
 
 def test():
     engine = Engine(5)
-    gtp = GTP(engine)
+    logfile = "log_1.txt"
+    gtp = GTP(engine, logfile)
     # gtp.list_commands()
     gtp.loop()
 
