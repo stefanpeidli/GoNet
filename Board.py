@@ -10,7 +10,9 @@ class Stone:
     Empty = 0
     Black = 1
     White = 2
-    
+
+colour_names = { Stone.Empty:"Empty", Stone.Black:"Black", Stone.White:"White", }
+
 def flipped_stone(stone):
     if stone == Stone.Empty:
         return Stone.Empty

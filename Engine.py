@@ -11,6 +11,12 @@ class Engine:
     def create_board(self, N):
         self.board = Board(N)
 
+    def name(self):
+        return "Akira"
+
+    def version(self):
+        return "1.0"
+
     def set_komi(self, komi):
         pass
 
@@ -29,10 +35,12 @@ class Engine:
                     move_list.append((i, j))
         if move_list == []:
             print("kein legaler zug möglich")
-            return
+            return 0
         ch = random.choice(move_list)
         print(ch)
         board.play_stone(ch[0], ch[1], stone)
+        return ch
+
 
 def test():
     engine = Engine(5)
