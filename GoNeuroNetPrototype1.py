@@ -3,18 +3,21 @@
 Created on Wed Nov  8 11:00:05 2017
 
 @author: Stefan
+
+Tags: Policy-net, Neural Network
+
 """
 #import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 
 #Specifications of the game
-n=3 # 3x3 board
+n=9 # 3x3 board
 
 # Parameters of the NN
 layercount = 2
 n_hidden_1 = 10 # 1st layer number of neurons
-n_hidden_2 = 9 # 2nd layer number of neurons
+n_hidden_2 = n*n # 2nd layer number of neurons
 num_input = n*n # data input format (board fields)
 num_classes = 3 # data input total classes (empty=0, white=1, black=-1)
 
@@ -75,10 +78,25 @@ for j in range(0,games):
     
 suggestedmove=np.argmax(y)
 
+
+#Plot the results:
+plt.title("Neuronal Net Output Plot")
 plt.ylabel("quality in percentage")
-plt.xticks(range(1,10))
-plt.ylim( (0,y[suggestedmove]*1.3) )  # set the ylim to ymin, ymax
-plt.bar(range(1,10), y)
+plt.xlabel("Board field number")
+#plt.xticks( range(1,(n*n)+1) )  # this looks super ugly if n is higher than 3 because ticks are to dense then.
+plt.ylim( (0,y[suggestedmove]*1.1) )  # set the ylim to ymin, ymax, the 1.1 is an offset for cosmetic reasons
+plt.bar(range(1,(n*n+1)), y)
+
+#Visualization of the output on a board representation:
+image = np.zeros(n*n)
+image = y
+image = image.reshape((n, n)) # Reshape things into a nxn grid.
+row_labels = reversed(np.array(range(n))+1) #fuck Python
+col_labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+plt.matshow(image)
+plt.xticks(range(n), col_labels)
+plt.yticks(range(n), row_labels)
+plt.show()
 
 
 
@@ -95,8 +113,15 @@ def compute_error(suggested, target): #compare the prediction with the answer/ta
         totalError = y[suggested] - y[target]  #The Error could be like here the difference of output-prob between target and suggested move
     return totalError
 
+def compute_l2_error (suggested, target): #Returns the total mean square (l2-norm) error (not tested yet)
+    diff = np.absolute(suggested - target)
+    Error = np.sqrt(np.inner(diff,diff))
+    return Error
+
+
 print("We are ",np.round(compute_error(suggestedmove,2)*100,2),"% away from the right solution move.")#test
 
+"""
 def step_gradient(weights, learningRate):
     b_gradient = 0
     m_gradient = 0
@@ -109,9 +134,13 @@ def step_gradient(weights, learningRate):
     new_b = b_current - (learningRate * b_gradient)
     new_m = m_current - (learningRate * m_gradient)
     return [new_b, new_m]
+    
+"""
 
 #Backpropagation
-#print(softmax_prime(y))
+# the last layer must be dealt with differently:
+delta=np.zeros(shape=(n_hidden_2,1))
+
 
 
 
