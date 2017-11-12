@@ -23,7 +23,7 @@ num_classes = 3 # data input total classes (empty=0, white=1, black=-1)
 
 
 #Input Test Data n x n
-games=10; #10 empty games as test data
+games=4; #random potentially illegal boards as test data
 testdata = np.random.uniform(-1.5,1.5,(games,n*n))
 testdata = testdata.round()
 
@@ -70,14 +70,51 @@ layers=[n_hidden_1,n_hidden_2]
 
 for j in range(0,games):
     y = testdata[j]
-    for i in range(0,layercount):
+    ys = [0]*layercount
+    #Forward-propagate
+    for i in range(0,layercount): 
         w = np.transpose(weights[i]) #anders machen!
         s = w.dot(y)
         y = softmax(s)
-    #print(y)
+        ys[i]=y #save the y values for backprop (?)
+    out=y
     
+    #Calc derivatives/Jacobian of the activationfct in every layer (i dont have a good feeling about this)
+    DF=[1,2]
+    for i in range(0,layercount): #please note that I think this is pure witchcraft happening here
+        yt=ys[i] #load y from ys and lets call it yt
+        le=len(yt)
+        DFt=np.ones((le,le)) #alloc storage temporarily
+        for j in range(0,le):
+            DFt[j,:]*=yt[j]
+        DFt=np.identity(le) - DFt
+        for j in range(0,le):
+            DFt[:,j]*=yt[j]
+        DF[i]=DFt
+    
+    #Use (L2) and (L3) to get the error signals of the layers
+    errorsignals=[1,2]
+    errorsignals[layercount-1]=DF[layercount-1] # (L2), the error signal of the output layer can be computed directly
+    for i in reversed(range(0,layercount-1)):
+        errorsignals[i]=np.dot(errorsignals[i-1],np.dot(weights[i-1],DF[i-1])) # (L3), does python fucking get that?
+    
+    #Use (L1) to get the sought derivatives
+    Dy=[1,2]
+    for i in [1]:  #range(0,layercount): #this does somehow not work, dimensions dont fit
+        Dy[i]=np.dot(errorsignals[i],ys[i]) # (L1), do we need to transpose?
+
+
+
+
+#End of Main Loop
+        
 suggestedmove=np.argmax(y)
 
+a=np.ones((3,3))
+a[:,0]*=3
+a[0,:]+=1
+#print(a)
+#print(np.dot(a,a))
 
 #Plot the results:
 plt.title("Neuronal Net Output Plot")
@@ -119,7 +156,7 @@ def compute_l2_error (suggested, target): #Returns the total mean square (l2-nor
     return Error
 
 
-print("We are ",np.round(compute_error(suggestedmove,2)*100,2),"% away from the right solution move.")#test
+print("We are ",np.round(compute_error(suggestedmove,2)*100,2),"% away from the right solution move.")#test, lets just say that 2 would be the best move for now
 
 """
 def step_gradient(weights, learningRate):
@@ -136,13 +173,6 @@ def step_gradient(weights, learningRate):
     return [new_b, new_m]
     
 """
-
-#Backpropagation
-# the last layer must be dealt with differently:
-delta=np.zeros(shape=(n_hidden_2,1))
-
-
-
 
 
 
