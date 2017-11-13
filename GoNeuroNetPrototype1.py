@@ -15,9 +15,10 @@ import matplotlib.pyplot as plt
 n=9 # 3x3 board
 
 # Parameters of the NN
-layercount = 2
+layercount = 3
 n_hidden_1 = 10 # 1st layer number of neurons
-n_hidden_2 = n*n # 2nd layer number of neurons
+n_hidden_2 = 40 # 2nd layer number of neurons
+n_hidden_3 = n*n # 3rd layer number of neurons
 num_input = n*n # data input format (board fields)
 num_classes = 3 # data input total classes (empty=0, white=1, black=-1)
 
@@ -26,6 +27,10 @@ num_classes = 3 # data input total classes (empty=0, white=1, black=-1)
 games=4; #random potentially illegal boards as test data
 testdata = np.random.uniform(-1.5,1.5,(games,n*n))
 testdata = testdata.round()
+targ=abs(np.random.normal(0,4,n*n)) #create random target
+targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
+
+
 
 
 # Initialize the weights
@@ -35,9 +40,10 @@ sigma=1
 
 w1=np.random.normal(mu, sigma, (num_input,n_hidden_1))
 w2=np.random.normal(mu, sigma, (n_hidden_1,n_hidden_2))
-wout=np.random.normal(mu, sigma, (n_hidden_2,num_input))
+w3=np.random.normal(mu, sigma, (n_hidden_2,n_hidden_3))
+wout=np.random.normal(mu, sigma, (n_hidden_3,num_input))
 
-weights=[w1,w2,wout]
+weights=[w1,w2,w3]
 
 
 
@@ -48,7 +54,7 @@ weights=[w1,w2,wout]
 #}
 
 
-
+###Function Definition yard
   
 # activation function
 def softmax(x):
@@ -64,9 +70,25 @@ def softmax_prime(x):#check if this actually works...
     jac = SM.dot(np.eye(x.size)) - np.outer(SM, np.transpose(SM) )
     return jac
 
+def compute_error(suggested, target): #compare the prediction with the answer/target
+    totalError = 0
+    if suggested == target:
+        totalError = 0 #We have no Error if the NN did what was expected of it
+    else:
+        totalError = y[suggested] - y[target]  #The Error could be like here the difference of output-prob between target and suggested move
+    return totalError
 
-#The actual function
-layers=[n_hidden_1,n_hidden_2]
+def compute_ms_error (suggested, target): #Returns the total mean square error (not tested yet)
+    diff = np.absolute(suggested - target)
+    Error = 0.5*np.inner(diff,diff)
+    return Error
+
+
+
+###The actual function
+    
+
+layers=[n_hidden_1,n_hidden_2,n_hidden_3]
 
 for j in range(0,games):
     y = testdata[j]
@@ -80,10 +102,11 @@ for j in range(0,games):
     out=y
     
     #Calc derivatives/Jacobian of the activationfct in every layer (i dont have a good feeling about this)
-    DF=[1,2]
+    DF=[1,2,3]
     for i in range(0,layercount): #please note that I think this is pure witchcraft happening here
         yt=ys[i] #load y from ys and lets call it yt
         le=len(yt)
+        print(le)
         DFt=np.ones((le,le)) #alloc storage temporarily
         for j in range(0,le):
             DFt[j,:]*=yt[j]
@@ -91,20 +114,35 @@ for j in range(0,games):
         for j in range(0,le):
             DFt[:,j]*=yt[j]
         DF[i]=DFt
+    #DF is a Jacobian, thus is quadratic and symmetric
     
     #Use (L2) and (L3) to get the error signals of the layers
-    errorsignals=[1,2]
+    errorsignals=[1,2,3]
     errorsignals[layercount-1]=DF[layercount-1] # (L2), the error signal of the output layer can be computed directly
-    for i in reversed(range(0,layercount-1)):
-        errorsignals[i]=np.dot(errorsignals[i-1],np.dot(weights[i-1],DF[i-1])) # (L3), does python fucking get that?
+    for i in range(2,layercount+1):
+        errdet=np.dot(weights[layercount-i+1].T,DF[layercount-i]) #temporary
+        errorsignals[layercount-i]=np.dot(errorsignals[layercount-i+1].T,errdet) # (L3), does python fucking get that?
     
     #Use (L1) to get the sought derivatives
-    Dy=[1,2]
-    for i in [1]:  #range(0,layercount): #this does somehow not work, dimensions dont fit
-        Dy[i]=np.dot(errorsignals[i],ys[i]) # (L1), do we need to transpose?
-
-
-
+    Dy=[1,2,3]
+    for i in range(0,layercount): #this does somehow not work, dimensions dont fit
+        Dy[i]=np.matmul(errorsignals[i],ys[layercount-1-i]) # (L1), do we need to transpose?
+    
+    print(Dy[0].shape,Dy[1].shape)
+    
+    #Compute the Gradient of the error fct for Gradient descent
+    err=[1,2,3]
+    for i in range(0,layercount):
+        diff = y - targ
+        wdiff = diff * Dy[i]
+        err[i]=wdiff
+        
+    #Apply Gradient Descent to weight matrices
+    eta=0.1 # learning rate
+    for i in [1]: #range(0,layercount):
+        weights[i]-=eta*err[i]
+        
+    
 
 #End of Main Loop
         
@@ -142,18 +180,7 @@ print("Suggested move: Field number", suggestedmove+1, "with a value of",np.roun
   
 
 #Learning Part (highly experimental!!!)
-def compute_error(suggested, target): #compare the prediction with the answer/target
-    totalError = 0
-    if suggested == target:
-        totalError = 0 #We have no Error if the NN did what was expected of it
-    else:
-        totalError = y[suggested] - y[target]  #The Error could be like here the difference of output-prob between target and suggested move
-    return totalError
 
-def compute_l2_error (suggested, target): #Returns the total mean square (l2-norm) error (not tested yet)
-    diff = np.absolute(suggested - target)
-    Error = np.sqrt(np.inner(diff,diff))
-    return Error
 
 
 print("We are ",np.round(compute_error(suggestedmove,2)*100,2),"% away from the right solution move.")#test, lets just say that 2 would be the best move for now
