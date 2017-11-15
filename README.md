@@ -1,6 +1,8 @@
 # GoNet
 A students Project on GO.
 
+The game Go is perhaps one of the most challenging of classical games for artificial intelligence due to its huge search space and the difficulty of evaluating moves and board positions. The goal of this project is to develop from scratch a learning machine, e.g., based on a neural network architecture, that plays at best Go on a reduced size board. The network would be trained with the results of gaming against minimax algorithms of different moves tree depths. For detailed info contact M.Sc. Bernhard Werner at M10 Technische Universität München.
+
 
 On using GitHub:
 1) create an account on GitHub
