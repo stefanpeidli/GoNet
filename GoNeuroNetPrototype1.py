@@ -114,29 +114,36 @@ for j in range(0,games):
         for j in range(0,le):
             DFt[:,j]*=yt[j]
         DF[i]=DFt
-    #DF is a Jacobian, thus is quadratic and symmetric
+    #DF is a Jacobian, thus it is quadratic and symmetric
     
     #Use (L2) and (L3) to get the error signals of the layers
     errorsignals=[1,2,3]
     errorsignals[layercount-1]=DF[layercount-1] # (L2), the error signal of the output layer can be computed directly
     for i in range(2,layercount+1):
-        errdet=np.dot(weights[layercount-i+1].T,DF[layercount-i]) #temporary
-        errorsignals[layercount-i]=np.dot(errorsignals[layercount-i+1].T,errdet) # (L3), does python fucking get that?
+        errdet=np.matmul(weights[layercount-i+1].T,DF[layercount-i]) #temporary
+        errorsignals[layercount-i]=np.dot(errorsignals[layercount-i+1],errdet) # (L3), does python fucking get that?
     
-    #Use (L1) to get the sought derivatives
-    Dy=[1,2,3]
-    for i in range(0,layercount): #this does somehow not work, dimensions dont fit
-        Dy[i]=np.matmul(errorsignals[i],ys[layercount-1-i]) # (L1), do we need to transpose?
+    #Use (D3) to compute err_errorsignal as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
+    err_errorsignal=[1,2,3]
+    errorbyyzero = out-targ #gives a dim(out) dimensional vector denoting the derivative of the error fct by the output vector
+    for i in range(0,layercount):
+        err_errorsignal[i]=np.dot(errorbyyzero,errorsignals[i]) #this is the matrix variant of D3
     
-    print(Dy[0].shape,Dy[1].shape)
     
+    #Use (2.2) to get the sought derivatives
+    errorbyweights=[1,2,3]
+    for i in range(0,layercount):
+        
+        errorbyweights[i]=np.matmul(errorsignals[i],ys[layercount+1-i]) # (L1), do we need to transpose?
+    
+    """
     #Compute the Gradient of the error fct for Gradient descent
     err=[1,2,3]
     for i in range(0,layercount):
         diff = y - targ
-        wdiff = diff * Dy[i]
+        wdiff = diff * errorbyweights[i]
         err[i]=wdiff
-        
+       """ 
     #Apply Gradient Descent to weight matrices
     eta=0.1 # learning rate
     for i in [1]: #range(0,layercount):
