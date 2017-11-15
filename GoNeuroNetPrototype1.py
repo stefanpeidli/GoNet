@@ -12,21 +12,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 #Specifications of the game
-n=9 # 3x3 board
+n=9 # 9x9 board
 
 # Parameters of the NN
-layercount = 3
-n_hidden_1 = 10 # 1st layer number of neurons
-n_hidden_2 = 40 # 2nd layer number of neurons
+
+n_hidden_1 = 100 # 1st layer number of neurons
+n_hidden_2 = 100 # 2nd layer number of neurons
 n_hidden_3 = n*n # 3rd layer number of neurons
 num_input = n*n # data input format (board fields)
 num_classes = 3 # data input total classes (empty=0, white=1, black=-1)
 
+layers=[n*n,200,100,512,100,n*n] #please leave the first and last equal zu n^2 for now
+layercount = len(layers)-1
 
 #Input Test Data n x n
-games=4; #random potentially illegal boards as test data
+games=1000; #random potentially illegal boards as test data
 testdata = np.random.uniform(-1.5,1.5,(games,n*n))
 testdata = testdata.round()
+for i in range(1,games):
+    testdata[i]=testdata[0]
 targ=abs(np.random.normal(0,4,n*n)) #create random target
 targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
 
@@ -36,14 +40,14 @@ targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
 # Initialize the weights
 # here by a normal distribution
 mu=0
-sigma=1
+sigma=3
 
-w1=np.random.normal(mu, sigma, (num_input,n_hidden_1))
-w2=np.random.normal(mu, sigma, (n_hidden_1,n_hidden_2))
-w3=np.random.normal(mu, sigma, (n_hidden_2,n_hidden_3))
-wout=np.random.normal(mu, sigma, (n_hidden_3,num_input))
+weights=[0]*layercount
+for i in range(0,layercount):
+    weights[i]=np.random.normal(mu, sigma, (layers[i],layers[i+1]))
+wout=np.random.normal(mu, 0, (n_hidden_3,num_input)) #How to choose these? They dont represent a layer (?)
 
-weights=[w1,w2,w3]
+
 
 
 
@@ -52,6 +56,9 @@ weights=[w1,w2,w3]
  #   'b2': tf.Variable(tf.random_normal([n_hidden_2])),
   #  'out': tf.Variable(tf.random_normal([num_classes]))
 #}
+  
+  
+errorsbyepoch=[0]*games
 
 
 ###Function Definition yard
@@ -90,8 +97,8 @@ def compute_ms_error (suggested, target): #Returns the total mean square error (
 
 layers=[n_hidden_1,n_hidden_2,n_hidden_3]
 
-for j in range(0,games):
-    y = testdata[j]
+for epoch in range(0,games):
+    y = testdata[epoch]
     ys = [0]*layercount
     #Forward-propagate
     for i in range(0,layercount): 
@@ -100,13 +107,14 @@ for j in range(0,games):
         y = softmax(s)
         ys[i]=y #save the y values for backprop (?)
     out=y
+    if(epoch==0):
+        firstout=y #save first epoch output for comparison and visualization
     
     #Calc derivatives/Jacobian of the activationfct in every layer (i dont have a good feeling about this)
-    DF=[1,2,3]
+    DF=[0]*layercount
     for i in range(0,layercount): #please note that I think this is pure witchcraft happening here
         yt=ys[i] #load y from ys and lets call it yt
         le=len(yt)
-        print(le)
         DFt=np.ones((le,le)) #alloc storage temporarily
         for j in range(0,le):
             DFt[j,:]*=yt[j]
@@ -117,61 +125,64 @@ for j in range(0,games):
     #DF is a Jacobian, thus it is quadratic and symmetric
     
     #Use (L2) and (L3) to get the error signals of the layers
-    errorsignals=[1,2,3]
+    errorsignals=[0]*layercount
     errorsignals[layercount-1]=DF[layercount-1] # (L2), the error signal of the output layer can be computed directly
     for i in range(2,layercount+1):
         errdet=np.matmul(weights[layercount-i+1].T,DF[layercount-i]) #temporary
         errorsignals[layercount-i]=np.dot(errorsignals[layercount-i+1],errdet) # (L3), does python fucking get that?
     
-    #Use (D3) to compute err_errorsignal as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
-    err_errorsignal=[1,2,3]
+    #Use (D3) to compute err_errorsignals as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
+    err_errorsignals=[0]*layercount
     errorbyyzero = out-targ #gives a dim(out) dimensional vector denoting the derivative of the error fct by the output vector
     for i in range(0,layercount):
-        err_errorsignal[i]=np.dot(errorbyyzero,errorsignals[i]) #this is the matrix variant of D3
+        err_errorsignals[i]=np.dot(errorbyyzero,errorsignals[i]) #this is the matrix variant of D3
     
     
-    #Use (2.2) to get the sought derivatives
-    errorbyweights=[1,2,3]
-    for i in range(0,layercount):
-        
-        errorbyweights[i]=np.matmul(errorsignals[i],ys[layercount+1-i]) # (L1), do we need to transpose?
+    #Use (2.2) to get the sought derivatives. Observe that this is an outer product, though not mentioned in the source (Fuck you Heining, you bastard)
+    errorbyweights=[0]*layercount
+    errorbyweights[0] = np.outer(err_errorsignals[0],testdata[epoch]).T #Why do i need .T here?
+    for i in range(1,layercount): 
+        errorbyweights[i]=np.outer(err_errorsignals[i-1],ys[i]) # (L1), do we need to transpose?
     
-    """
-    #Compute the Gradient of the error fct for Gradient descent
-    err=[1,2,3]
-    for i in range(0,layercount):
-        diff = y - targ
-        wdiff = diff * errorbyweights[i]
-        err[i]=wdiff
-       """ 
-    #Apply Gradient Descent to weight matrices
+    #Compute the change of weights, that means, then apply actualization step of Gradient Descent to weight matrices
     eta=0.1 # learning rate
-    for i in [1]: #range(0,layercount):
-        weights[i]-=eta*err[i]
-        
-    
+    deltaweights=[0]*layercount
+    for i in range(0,layercount):
+        deltaweights[i]=-eta*errorbyweights[i]
+        weights[i]= weights[i] + deltaweights[i]
+
+    errorsbyepoch[epoch]=compute_ms_error (y, targ)
 
 #End of Main Loop
         
 suggestedmove=np.argmax(y)
 
-a=np.ones((3,3))
-a[:,0]*=3
-a[0,:]+=1
-#print(a)
-#print(np.dot(a,a))
+
+#Plot the error:
+plt.figure(0)
+plt.title("Error Plot")
+plt.ylabel("Mean square Error")
+plt.xlabel("Epochs")
+plt.plot(range(0,games),errorsbyepoch)
 
 #Plot the results:
-plt.title("Neuronal Net Output Plot")
-plt.ylabel("quality in percentage")
-plt.xlabel("Board field number")
+f, axarr = plt.subplots(3, sharex=True)
+plt.figure(1)
+axarr[0].set_title("Neuronal Net Output Plot: First epoch vs last epoch vs target")
+#axarr[1].set_title("Target")
+axarr[1].set_ylabel("quality in percentage")
+axarr[2].set_xlabel("Board field number")
 #plt.xticks( range(1,(n*n)+1) )  # this looks super ugly if n is higher than 3 because ticks are to dense then.
-plt.ylim( (0,y[suggestedmove]*1.1) )  # set the ylim to ymin, ymax, the 1.1 is an offset for cosmetic reasons
-plt.bar(range(1,(n*n+1)), y)
+#plt.ylim( (0,y[suggestedmove]*1.1) )  # set the ylim to ymin, ymax, the 1.1 is an offset for cosmetic reasons
+axarr[1].bar(range(1,(n*n+1)), out)
+axarr[0].bar(range(1,(n*n+1)), firstout)
+axarr[2].bar(range(1,(n*n+1)), targ)
+
 
 #Visualization of the output on a board representation:
+#plt.figure(2)
 image = np.zeros(n*n)
-image = y
+image = out
 image = image.reshape((n, n)) # Reshape things into a nxn grid.
 row_labels = reversed(np.array(range(n))+1) #fuck Python
 col_labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
@@ -180,33 +191,20 @@ plt.xticks(range(n), col_labels)
 plt.yticks(range(n), row_labels)
 plt.show()
 
-
+""" To be added (?)
+#Visualization of the input on a board representation:
+image = np.zeros(n*n)
+image = testdata[0]
+image = image.reshape((n, n)) # Reshape things into a nxn grid.
+row_labels = reversed(np.array(range(n))+1) #fuck Python
+col_labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+plt.matshow(image)
+plt.xticks(range(n), col_labels)
+plt.yticks(range(n), row_labels)
+plt.show()
+"""
 
 print("Suggested move: Field number", suggestedmove+1, "with a value of",np.round(100*y[suggestedmove],2),"%.") 
 
-  
-
-#Learning Part (highly experimental!!!)
-
-
-
 print("We are ",np.round(compute_error(suggestedmove,2)*100,2),"% away from the right solution move.")#test, lets just say that 2 would be the best move for now
-
-"""
-def step_gradient(weights, learningRate):
-    b_gradient = 0
-    m_gradient = 0
-    N = float(len(points))
-    for i in range(0, len(points)):
-        x = points[i, 0]
-        y = points[i, 1]
-        b_gradient += -(2/N) * (y - ((m_current * x) + b_current))
-        m_gradient += -(2/N) * x * (y - ((m_current * x) + b_current))
-    new_b = b_current - (learningRate * b_gradient)
-    new_m = m_current - (learningRate * m_gradient)
-    return [new_b, new_m]
-    
-"""
-
-
 
