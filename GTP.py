@@ -40,13 +40,18 @@ class GTP:
         print("GTP: Told client: " + s)
 
     def error_client(self, s):
-        sys.stdout.write('? ' + s + '\n\n')
-        sys.stdout.flush()
+        self.fclient.write('? ' + s + '\n\n')
+        self.fclient.flush()
         print("GTP: Sent error message to client: " + s)
 
     def list_commands(self):
         commands = ["protocol_version", "name", "version", "boardsize", "clearboard", "komi", "play", "genmove",
-                    "list_commands", "quit"]
+                    "list_commands", "known_commands", "quit"]
+        self.tell_client("\n".join(commands))
+
+    def known_commands(self):
+        commands = ["protocol_version", "name", "version", "boardsize", "clearboard", "komi", "play", "genmove",
+                    "list_commands", "known_commands", "quit"]
         self.tell_client("\n".join(commands))
 
     def set_board_size(self, line):
@@ -77,7 +82,7 @@ class GTP:
 
     def stone_played(self, line):
         stone = colour_from_str(line.split()[1])
-        if "pass" in line.split()[2]:
+        if ("pass" in line.split()[2]):
             print("GTP: ", colour_names[stone], " passed")
             self.engine.player_passed(stone)
         else:
@@ -96,7 +101,7 @@ class GTP:
         print("GTP: asked to generate move for", colour_names[stone])
 
         coords = self.engine.play_legal_move(self.engine.board, stone)
-        if coords:
+        if coords != "pass":
             x, y = coords
             print("GTP: engine generated move (%d,%d) for" % (x, y), colour_names[stone])
             self.tell_client(str_from_coords(x, y))
@@ -109,13 +114,14 @@ class GTP:
 
     def quit(self):
         print("GTP: Quitting")
-        self.tell_client("")
-        sys.stdout.close()  # Close log file
+        self.tell_client(" ")
+        self.fclient.close()  # Close log file
         exit(0)
 
     def loop(self):
         while True:
             line = sys.stdin.readline().strip()
+            line = line.lower()
             if len(line) == 0: return
             print("Client sent: " + line)
 
@@ -127,6 +133,8 @@ class GTP:
                 self.tell_client(self.engine.version())
             elif line.startswith("list_commands"):  # List supported commands
                 self.list_commands()
+            elif line.startswith("known_commands"):  # List known commands
+                self.known_commands()
             elif line.startswith("quit"):  # Quit
                 self.quit()
             elif line.startswith("boardsize"):  # Board size
@@ -142,11 +150,11 @@ class GTP:
             elif line.startswith("showboard"):
                 self.show_board()
             else:
-                self.error_client("Didn't recognize")
+                self.error_client("command unknown: " + line)
 
 def test():
     engine = Engine(5)
-    logfile = "log_1.txt"
+    logfile = "log_2.txt"
     gtp = GTP(engine, logfile)
     # gtp.list_commands()
     gtp.loop()

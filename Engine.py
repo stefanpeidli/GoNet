@@ -28,17 +28,15 @@ class Engine:
             self.board.play_stone(x, y, stone)
 
     def play_legal_move(self, board, stone):
-        move_list = []
+        move_list = ["pass"]
         for i in range(board.N):
             for j in range(board.N):
                 if board.play_is_legal(i, j, stone):
                     move_list.append((i, j))
-        if move_list == []:
-            print("kein legaler zug möglich")
-            return 0
         ch = random.choice(move_list)
         print(ch)
-        board.play_stone(ch[0], ch[1], stone)
+        if ch != "pass":
+            board.play_stone(ch[0], ch[1], stone)
         return ch
 
 
