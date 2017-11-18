@@ -13,7 +13,7 @@ This Script converts a sgf file into a board matrix (alligne into a vector)
 import sgf
 import numpy as np
 
-filedirectory="C:/Users/Stefan/Documents/GO-Games Dataset/dgs/game_4.sgf"
+filedirectory="C:/Users/Stefan/Documents/GO-Games Dataset/dgs/game_2981.sgf"
 with open(filedirectory) as f:
     collection = sgf.parse(f.read())
     
@@ -31,3 +31,4 @@ for i in range(1,len(nod)):
         datam[ord(m[0]) - 97,ord(m[1]) - 97]=player[i-1]
 data=datam.ravel()
         
+print(nod[0].properties)

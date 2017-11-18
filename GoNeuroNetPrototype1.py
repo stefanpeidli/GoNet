@@ -26,12 +26,19 @@ layers=[n*n,200,100,512,100,n*n] #please leave the first and last equal zu n^2 f
 layercount = len(layers)-1
 
 #Input Test Data n x n
-games=100; #random potentially illegal boards as test data
-testdata = np.random.uniform(-1.5,1.5,(games,n*n))
-testdata[0] = data #load data
-testdata = testdata.round()-0.25 # I use this offset for now, because it is convenient an prevents a zero input
-for i in range(1,games):
-    testdata[i]=testdata[0]
+datamanual= False
+if datamanual:
+    games=100; #random potentially illegal boards as test data
+    testdata = np.random.uniform(-1.5,1.5,(games,n*n))
+    #testdata[0] = data #load data from another script
+    testdata = testdata.round()-0.25 # I use this offset for now, because it is convenient an prevents a zero input
+    for i in range(1,games):
+        testdata[i]=testdata[0]
+else:
+    games=len(gameslist)
+    testdata = gameslist
+
+
 targ=abs(np.random.normal(0,4,n*n)) #create random target
 targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
 
