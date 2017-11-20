@@ -26,11 +26,19 @@ layers=[n*n,200,100,512,100,n*n] #please leave the first and last equal zu n^2 f
 layercount = len(layers)-1
 
 #Input Test Data n x n
-games=1000; #random potentially illegal boards as test data
-testdata = np.random.uniform(-1.5,1.5,(games,n*n))
-testdata = testdata.round()
-for i in range(1,games):
-    testdata[i]=testdata[0]
+datamanual= False
+if datamanual:
+    games=100; #random potentially illegal boards as test data
+    testdata = np.random.uniform(-1.5,1.5,(games,n*n))
+    #testdata[0] = data #load data from another script
+    testdata = testdata.round()-0.25 # I use this offset for now, because it is convenient an prevents a zero input
+    for i in range(1,games):
+        testdata[i]=testdata[0]
+else:
+    games=len(gameslist)
+    testdata = gameslist
+
+
 targ=abs(np.random.normal(0,4,n*n)) #create random target
 targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
 
@@ -40,24 +48,16 @@ targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
 # Initialize the weights
 # here by a normal distribution
 mu=0
-sigma=3
-
+sigma=2
 weights=[0]*layercount
 for i in range(0,layercount):
-    weights[i]=np.random.normal(mu, sigma, (layers[i],layers[i+1]))
-wout=np.random.normal(mu, 0, (n_hidden_3,num_input)) #How to choose these? They dont represent a layer (?)
+    weights[i]=np.random.normal(mu, sigma, (layers[i]+1,layers[i+1]))#edit: the +1 in the input dimension is for the bias
+#wout=np.random.normal(mu, 0, (n_hidden_3,num_input)) #How to choose these? They dont represent a layer (?)
 
 
+#Hint:b=a[:-1,:] this is a handy formulation to delete the last column, Thus ~W=W[:-1,1]
 
 
-
-#biases = { # do we need bias?
-    #'b1': tf.Variable(tf.random_normal([n_hidden_1])),
- #   'b2': tf.Variable(tf.random_normal([n_hidden_2])),
-  #  'out': tf.Variable(tf.random_normal([num_classes]))
-#}
-  
-  
 errorsbyepoch=[0]*games
 
 
@@ -98,22 +98,23 @@ def compute_ms_error (suggested, target): #Returns the total mean square error (
 layers=[n_hidden_1,n_hidden_2,n_hidden_3]
 
 for epoch in range(0,games):
-    y = testdata[epoch]
+    y = np.append(testdata[epoch],[1])
     ys = [0]*layercount
     #Forward-propagate
     for i in range(0,layercount): 
-        w = np.transpose(weights[i]) #anders machen!
+        w = np.transpose(weights[i]) #anders machen?
         s = w.dot(y)
-        y = softmax(s)
+        y = np.append(softmax(s),[1])
         ys[i]=y #save the y values for backprop (?)
     out=y
     if(epoch==0):
-        firstout=y #save first epoch output for comparison and visualization
+        firstout=y[:-1] #save first epoch output for comparison and visualization
     
     #Calc derivatives/Jacobian of the activationfct in every layer (i dont have a good feeling about this)
     DF=[0]*layercount
     for i in range(0,layercount): #please note that I think this is pure witchcraft happening here
         yt=ys[i] #load y from ys and lets call it yt
+        yt=yt[:-1] #the last entry is from the offset, we don't need this
         le=len(yt)
         DFt=np.ones((le,le)) #alloc storage temporarily
         for j in range(0,le):
@@ -128,12 +129,13 @@ for epoch in range(0,games):
     errorsignals=[0]*layercount
     errorsignals[layercount-1]=DF[layercount-1] # (L2), the error signal of the output layer can be computed directly
     for i in range(2,layercount+1):
-        errdet=np.matmul(weights[layercount-i+1].T,DF[layercount-i]) #temporary
+        w=weights[layercount-i+1].T
+        errdet=np.matmul(w[:,:-1],DF[layercount-i]) #temporary
         errorsignals[layercount-i]=np.dot(errorsignals[layercount-i+1],errdet) # (L3), does python fucking get that?
     
     #Use (D3) to compute err_errorsignals as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
     err_errorsignals=[0]*layercount
-    errorbyyzero = out-targ #gives a dim(out) dimensional vector denoting the derivative of the error fct by the output vector
+    errorbyyzero = out[:-1]-targ #gives a dim(out) dimensional vector denoting the derivative of the error fct by the output vector
     for i in range(0,layercount):
         err_errorsignals[i]=np.dot(errorbyyzero,errorsignals[i]) #this is the matrix variant of D3
     
@@ -142,16 +144,16 @@ for epoch in range(0,games):
     errorbyweights=[0]*layercount
     errorbyweights[0] = np.outer(err_errorsignals[0],testdata[epoch]).T #Why do i need .T here?
     for i in range(1,layercount): 
-        errorbyweights[i]=np.outer(err_errorsignals[i-1],ys[i]) # (L1), do we need to transpose?
+        errorbyweights[i]=np.outer(err_errorsignals[i-1],ys[i][:-1]) # (L1), do we need to transpose?
     
     #Compute the change of weights, that means, then apply actualization step of Gradient Descent to weight matrices
     eta=0.1 # learning rate
     deltaweights=[0]*layercount
     for i in range(0,layercount):
         deltaweights[i]=-eta*errorbyweights[i]
-        weights[i]= weights[i] + deltaweights[i]
+        weights[i][:-1,:]= weights[i][:-1,:]+ deltaweights[i] #Problem: atm we only adjust non-bias weights. Change that!
 
-    errorsbyepoch[epoch]=compute_ms_error (y, targ)
+    errorsbyepoch[epoch]=compute_ms_error (y[:-1], targ)
 
 #End of Main Loop
         
@@ -174,15 +176,15 @@ axarr[1].set_ylabel("quality in percentage")
 axarr[2].set_xlabel("Board field number")
 #plt.xticks( range(1,(n*n)+1) )  # this looks super ugly if n is higher than 3 because ticks are to dense then.
 #plt.ylim( (0,y[suggestedmove]*1.1) )  # set the ylim to ymin, ymax, the 1.1 is an offset for cosmetic reasons
-axarr[1].bar(range(1,(n*n+1)), out)
+axarr[1].bar(range(1,(n*n+1)), out[:-1])
 axarr[0].bar(range(1,(n*n+1)), firstout)
 axarr[2].bar(range(1,(n*n+1)), targ)
 
-
+"""
 #Visualization of the output on a board representation:
 #plt.figure(2)
 image = np.zeros(n*n)
-image = out
+image = out[:-1]
 image = image.reshape((n, n)) # Reshape things into a nxn grid.
 row_labels = reversed(np.array(range(n))+1) #fuck Python
 col_labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
@@ -190,6 +192,8 @@ plt.matshow(image)
 plt.xticks(range(n), col_labels)
 plt.yticks(range(n), row_labels)
 plt.show()
+"""
+
 
 """ To be added (?)
 #Visualization of the input on a board representation:
