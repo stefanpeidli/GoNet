@@ -63,7 +63,7 @@ def importsgf(file):
 # Now import them all up to game 1000
 
 n=9 #board size
-mg=50 #maximal game suffix "NUMBER" to be checked (first game is game_4.sgf)
+mg=50000 #maximal game suffix "NUMBER" to be checked (first game is game_4.sgf)
 filedir="C:/Users/Stefan/Documents/GO-Games Dataset/dgs/" #format: "+game_NUMBER.sgf", change this to your directory!
 gameslist=[] #stores the games
 gameIDs=[] #stores the suffix
@@ -75,7 +75,7 @@ for i in range(0,mg):
         #gameIDs=np.append(gameIDs,i)
         gameIDs=np.append(gameIDs,i)
 
-#gameslist=gameslist[gameIDs.astype(int),:]
+#by now, gameslist is a list of games that contain Boards
 
     
     

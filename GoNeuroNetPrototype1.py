@@ -22,28 +22,35 @@ n_hidden_3 = n*n # 3rd layer number of neurons
 num_input = n*n # data input format (board fields)
 num_classes = 3 # data input total classes (empty=0, white=1, black=-1)
 
-layers=[n*n,88,46,41,34,n*n] #please leave the first and last equal zu n^2 for now
+layers=[n*n,100,100,100,n*n] #please leave the first and last equal zu n^2 for now
 layercount = len(layers)-1
 
 #Input Test Data n x n
 datamanual= False
 if not datamanual:
-    games=10000; #random potentially illegal boards as test data
+    games=2000; #random potentially illegal boards as test data
     testdata = np.random.uniform(-1.5,1.5,(games,n*n))
     #testdata[0] = data #load data from another script
     testdata = testdata.round()-0.25 # I use this offset for now, because it is convenient an prevents a zero input
     for i in range(1,games):
         testdata[i]=testdata[0]
-else:
+else:#won't work until we have real data and statistics to it
     games=len(gameslist)
     testdata = gameslist
 
 
-targ=abs(np.random.normal(0,4,n*n)) #create random target
+#random target
+targ=abs(np.random.normal(0,40,n*n)) #create random target
 targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
-
-
-
+"""
+#manual target, manual statistics
+targ=np.zeros(n*n)
+targ[4]=5
+targ[50]=2
+targ[75]=1
+targ[30]=10
+targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
+"""
 
 # Initialize the weights
 # here by a normal distribution
@@ -168,7 +175,7 @@ for epoch in range(0,games):
         errorbyweights[i]=np.outer(err_errorsignals[i-1],ys[i][:-1]) # (L1)
     
     #Compute the change of weights, that means, then apply actualization step of Gradient Descent to weight matrices
-    eta=0.1 # learning rate
+    eta=0.001 # learning rate
     deltaweights=[0]*layercount
     for i in range(0,layercount):
         deltaweights[i]=-eta*errorbyweights[i]
