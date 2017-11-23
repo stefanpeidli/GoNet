@@ -62,6 +62,7 @@ def importsgf(file):
 #print(importsgf("C:/Users/Stefan/Documents/GO-Games Dataset/dgs/game_4.sgf"))
 
 # Now import them all up to game 1000
+
 def stefantest():
     n=9 #board size
     mg=50 #maximal game suffix "NUMBER" to be checked (first game is game_4.sgf)
@@ -77,7 +78,7 @@ def stefantest():
             #gameIDs=np.append(gameIDs,i)
             gameIDs=np.append(gameIDs,i)
 
-#gameslist=gameslist[gameIDs.astype(int),:]
+#by now, gameslist is a list of games that contain Boards
 
 
 def importTrainingData():
