@@ -22,13 +22,13 @@ n_hidden_3 = n*n # 3rd layer number of neurons
 num_input = n*n # data input format (board fields)
 num_classes = 3 # data input total classes (empty=0, white=1, black=-1)
 
-layers=[n*n,200,100,512,100,n*n] #please leave the first and last equal zu n^2 for now
+layers=[n*n,88,46,41,34,n*n] #please leave the first and last equal zu n^2 for now
 layercount = len(layers)-1
 
 #Input Test Data n x n
 datamanual= False
-if datamanual:
-    games=100; #random potentially illegal boards as test data
+if not datamanual:
+    games=10000; #random potentially illegal boards as test data
     testdata = np.random.uniform(-1.5,1.5,(games,n*n))
     #testdata[0] = data #load data from another script
     testdata = testdata.round()-0.25 # I use this offset for now, because it is convenient an prevents a zero input
@@ -48,17 +48,18 @@ targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
 # Initialize the weights
 # here by a normal distribution
 mu=0
-sigma=2
+sigma=1
 weights=[0]*layercount
 for i in range(0,layercount):
-    weights[i]=np.random.normal(mu, sigma, (layers[i]+1,layers[i+1]))#edit: the +1 in the input dimension is for the bias
+    weights[i]=np.random.normal(mu, sigma, (layers[i+1],layers[i]+1))#edit: the +1 in the input dimension is for the bias
 #wout=np.random.normal(mu, 0, (n_hidden_3,num_input)) #How to choose these? They dont represent a layer (?)
 
 
 #Hint:b=a[:-1,:] this is a handy formulation to delete the last column, Thus ~W=W[:-1,1]
 
 
-errorsbyepoch=[0]*games
+errorsbyepoch=[0]*games #mean squared error
+abserrorbyepoch=[0]*games #absolute error
 
 
 ###Function Definition yard
@@ -78,12 +79,9 @@ def softmax_prime(x):#check if this actually works...
     return jac
 
 def compute_error(suggested, target): #compare the prediction with the answer/target
-    totalError = 0
-    if suggested == target:
-        totalError = 0 #We have no Error if the NN did what was expected of it
-    else:
-        totalError = y[suggested] - y[target]  #The Error could be like here the difference of output-prob between target and suggested move
-    return totalError
+    diff = np.absolute(suggested - target)
+    Error = np.inner(diff,np.ones(len(target)))
+    return Error
 
 def compute_ms_error (suggested, target): #Returns the total mean square error (not tested yet)
     diff = np.absolute(suggested - target)
@@ -102,15 +100,20 @@ for epoch in range(0,games):
     ys = [0]*layercount
     #Forward-propagate
     for i in range(0,layercount): 
-        w = np.transpose(weights[i]) #anders machen?
-        s = w.dot(y)
-        y = np.append(softmax(s),[1])
+        W = weights[i] #anders machen?
+        s = W.dot(y)
+        if i==layercount-1: #softmax as activationfct only in last layer    
+            y = np.append(softmax(s),[1]) #We append 1 for the bias
+        else: #in all other hidden layers we use tanh as activation fct
+            y = np.append(np.tanh(s),[1]) #We append 1 for the bias
         ys[i]=y #save the y values for backprop (?)
     out=y
     if(epoch==0):
         firstout=y[:-1] #save first epoch output for comparison and visualization
     
-    #Calc derivatives/Jacobian of the activationfct in every layer (i dont have a good feeling about this)
+    #Backpropagation
+    
+    #Calc derivatives/Jacobian of the softmax activationfct in every layer (i dont have a good feeling about this): Update: I tested this section, it actually works correctly for sure
     DF=[0]*layercount
     for i in range(0,layercount): #please note that I think this is pure witchcraft happening here
         yt=ys[i] #load y from ys and lets call it yt
@@ -124,13 +127,31 @@ for epoch in range(0,games):
             DFt[:,j]*=yt[j]
         DF[i]=DFt
     #DF is a Jacobian, thus it is quadratic and symmetric
+
+    #Calc Jacobian of tanh
+    DFtan=[0]*layercount
+    for i in range(0,layercount): #please note that I think this is pure witchcraft happening here
+        yt=ys[i] #load y from ys and lets call it yt
+        yt=yt[:-1] #the last entry is from the offset, we don't need this
+        le=len(yt)
+        u=1-yt*yt
+        DFtan[i]=np.diag(u)
+    
+    
+    
     
     #Use (L2) and (L3) to get the error signals of the layers
     errorsignals=[0]*layercount
-    errorsignals[layercount-1]=DF[layercount-1] # (L2), the error signal of the output layer can be computed directly
+    errorsignals[layercount-1]=DF[layercount-1] # (L2), the error signal of the output layer can be computed directly, here we actually use softmax
     for i in range(2,layercount+1):
-        w=weights[layercount-i+1].T
-        errdet=np.matmul(w[:,:-1],DF[layercount-i]) #temporary
+        """if i==layercount+1:#softmax
+            w=weights[layercount-i+1]
+            errdet=np.matmul(w[:,:-1],DF[layercount-i]) #temporary
+            errorsignals[layercount-i]=np.dot(errorsignals[layercount-i+1],errdet) # (L3), does python fucking get that?
+        else:"""
+        w=weights[layercount-i+1]
+        DFt=DFtan[layercount-i] #tanh
+        errdet=np.matmul(w[:,:-1],DFt) #temporary
         errorsignals[layercount-i]=np.dot(errorsignals[layercount-i+1],errdet) # (L3), does python fucking get that?
     
     #Use (D3) to compute err_errorsignals as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
@@ -141,19 +162,20 @@ for epoch in range(0,games):
     
     
     #Use (2.2) to get the sought derivatives. Observe that this is an outer product, though not mentioned in the source (Fuck you Heining, you bastard)
-    errorbyweights=[0]*layercount
-    errorbyweights[0] = np.outer(err_errorsignals[0],testdata[epoch]).T #Why do i need .T here?
+    errorbyweights=[0]*layercount #dE/dW
+    errorbyweights[0] = np.outer(err_errorsignals[0],testdata[epoch]).T #Why do I need to transpose here???
     for i in range(1,layercount): 
-        errorbyweights[i]=np.outer(err_errorsignals[i-1],ys[i][:-1]) # (L1), do we need to transpose?
+        errorbyweights[i]=np.outer(err_errorsignals[i-1],ys[i][:-1]) # (L1)
     
     #Compute the change of weights, that means, then apply actualization step of Gradient Descent to weight matrices
     eta=0.1 # learning rate
     deltaweights=[0]*layercount
     for i in range(0,layercount):
         deltaweights[i]=-eta*errorbyweights[i]
-        weights[i][:-1,:]= weights[i][:-1,:]+ deltaweights[i] #Problem: atm we only adjust non-bias weights. Change that!
+        weights[i][:,:-1]= weights[i][:,:-1]+ deltaweights[i].T #Problem: atm we only adjust non-bias weights. Change that!
 
     errorsbyepoch[epoch]=compute_ms_error (y[:-1], targ)
+    abserrorbyepoch[epoch]=compute_error (y[:-1], targ)
 
 #End of Main Loop
         
@@ -162,27 +184,36 @@ suggestedmove=np.argmax(y)
 
 #Plot the error:
 plt.figure(0)
-plt.title("Error Plot")
+plt.title("(Mean square) Error Plot")
 plt.ylabel("Mean square Error")
 plt.xlabel("Epochs")
 plt.plot(range(0,games),errorsbyepoch)
 
+plt.figure(1)
+plt.title("(Absolute) Error Plot")
+plt.ylabel("Absolute Error")
+plt.xlabel("Epochs")
+ax = plt.gca()
+plt.ylim( 0, 2 )
+plt.plot(range(0,games),abserrorbyepoch)
+
+
 #Plot the results:
 f, axarr = plt.subplots(3, sharex=True)
-plt.figure(1)
+plt.figure(2)
 axarr[0].set_title("Neuronal Net Output Plot: First epoch vs last epoch vs target")
 #axarr[1].set_title("Target")
 axarr[1].set_ylabel("quality in percentage")
 axarr[2].set_xlabel("Board field number")
 #plt.xticks( range(1,(n*n)+1) )  # this looks super ugly if n is higher than 3 because ticks are to dense then.
 #plt.ylim( (0,y[suggestedmove]*1.1) )  # set the ylim to ymin, ymax, the 1.1 is an offset for cosmetic reasons
-axarr[1].bar(range(1,(n*n+1)), out[:-1])
-axarr[0].bar(range(1,(n*n+1)), firstout)
-axarr[2].bar(range(1,(n*n+1)), targ)
+axarr[1].bar(range(1,(n*n+1)), out[:-1]) #output of last epoch
+axarr[0].bar(range(1,(n*n+1)), firstout) #output of first epoch
+axarr[2].bar(range(1,(n*n+1)), targ) #target distribution
 
 """
 #Visualization of the output on a board representation:
-#plt.figure(2)
+#plt.figure(3)
 image = np.zeros(n*n)
 image = out[:-1]
 image = image.reshape((n, n)) # Reshape things into a nxn grid.
@@ -210,5 +241,5 @@ plt.show()
 
 print("Suggested move: Field number", suggestedmove+1, "with a value of",np.round(100*y[suggestedmove],2),"%.") 
 
-print("We are ",np.round(compute_error(suggestedmove,2)*100,2),"% away from the right solution move.")#test, lets just say that 2 would be the best move for now
+#print("We are ",np.round(compute_error(suggestedmove,2)*100,2),"% away from the right solution move.")#test, lets just say that 2 would be the best move for now
 

@@ -3,13 +3,15 @@
 Created on Mon Nov 20 12:38:11 2017
 
 @author: Stefan
+
+Note: Up to now, this way of constructing the data structure is abandoned
 """
 
 import numpy as np
 
 n=9
 
-games=gameslist
+games=gameslist #load from MultiSgftoBoardconverter
 """ Create test games
 gamelength=2 #average 9x9 game length according to google is 45
 numberofgames=6
@@ -47,11 +49,11 @@ def giveweights(nodes,edges,board): #gives weights (from which one can compute t
     [order,index]=findboard(nodes,board) #missing: check if this is not error message
     return [edges[order][index],nodes[order+1]]
 
-def augment(nodes,edges,game,weight): #augments the graph=nodes,edges by a game(currently all games same quality):
-    for i in range(1,len(game)-1):#first and last (?) board not of interest
-        preboard=game[i-1]
-        pb=findboard(nodes,preboard)
-        board=game[i]
+def augment(nodes,edges,game,weight): #augments the graph=(nodes,edges) by a game (currently all games same quality(weight=const)):
+    for i in range(1,len(game)-1): #first and last (?) board not of interest
+        preboard=game[i-1] #the board before
+        pb=findboard(nodes,preboard) #check where this board is in the graph (must be there since we added it in the timestep before, or is empty board)
+        board=game[i] #the board we will add to the graph
         b=findboard(nodes,board) #check if that board already exists in the graph
         if type(b) is str: #board not yet in graph, add it and adjust edges accordingly
             order=countstones(board)
@@ -65,34 +67,34 @@ def augment(nodes,edges,game,weight): #augments the graph=nodes,edges by a game(
             nodes[order].append(board)
             print("board added")
             #add edges to all nodes from prelayer to the new node
-            print("len of prelayer edges is",len(edges[pb[0]]))
+            print("len of prelayer edges is",len(edges[pb[0]])," with layer beeing: ",edges[pb[0]])
             if len(edges[pb[0]])==0:
                    edges[pb[0]].append(weight) #what if we warp?
             else:
                 for j in range(0,len(edges[pb[0]])):#BUG: this is always an empty range
                     print(j,"khkijldhjhaslkh")
                     if j==pb[1]:
-                        edges[pb[0]][j].append(weight)
+                        edges[pb[0]][j].append(weight) #this edge describes the move leading from preboard to board.
                     else:
-                        edges[pb[0]][j].append(29)
+                        edges[pb[0]][j].append(0) #those edges are new, those moves have not been played yet, so we set them to zero weight
 
-        else: #board already in graph
-            print(b,"board is known")
+        else: #board already exists in the graph, thus we simply add weights to existing edges.
+            print("board is known as a board at [layer,index] =",b)
             print([pb[0]],[pb[1]],[b[1]])
-            edges[pb[0]][pb[1]][b[1]]+=weight
+            edges[pb[0]][pb[1]][b[1]]+=weight #BUG: out of range
 
 
 
 #create a test starting graph
 nodes=list(( [ [np.zeros(n*n)] , [games[0][1],games[1][1]],[games[0][2],games[1][2]] ] )) # root node and two test layers
-edges=list(( [ [[1,20]] , [[3,-6],[10,4]] ] ))
+edges=list(( [ [[1,20]] , [[3,-6],[10,5]] ] ))
 
 
 
 
-print(findboard(nodes,games[1][1]))
-print(giveweights(nodes,edges,games[1][1]))
+#print(findboard(nodes,games[1][1]))
+#print(giveweights(nodes,edges,games[1][1]))
 
-#augment(nodes,edges,games[0],1)
+augment(nodes,edges,games[0],1)
 
     
