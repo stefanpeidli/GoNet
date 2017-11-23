@@ -55,7 +55,7 @@ targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
 # Initialize the weights
 # here by a normal distribution
 mu=0
-sigma=1
+sigma=0.5
 weights=[0]*layercount
 for i in range(0,layercount):
     weights[i]=np.random.normal(mu, sigma, (layers[i+1],layers[i]+1))#edit: the +1 in the input dimension is for the bias
@@ -67,6 +67,7 @@ for i in range(0,layercount):
 
 errorsbyepoch=[0]*games #mean squared error
 abserrorbyepoch=[0]*games #absolute error
+KLdbyepoch=[0]*games #Kullback-Leibler divergence
 
 
 ###Function Definition yard
@@ -77,7 +78,7 @@ def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum()
 
-# the derivative of the activation fct
+# the derivative of the activation fct, dont need this...
 def softmax_prime(x):#check if this actually works...
     """Compute the jacobian of the softmax fct of x"""
     SM = softmax(x)
@@ -93,6 +94,11 @@ def compute_error(suggested, target): #compare the prediction with the answer/ta
 def compute_ms_error (suggested, target): #Returns the total mean square error (not tested yet)
     diff = np.absolute(suggested - target)
     Error = 0.5*np.inner(diff,diff)
+    return Error
+
+def compute_KL_divergence (suggested,target): #Compute Kullback-Leibler divergence
+    diff=suggested/target
+    Error = - np.inner(target*np.log(diff),np.ones(len(target)))
     return Error
 
 
@@ -163,7 +169,8 @@ for epoch in range(0,games):
     
     #Use (D3) to compute err_errorsignals as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
     err_errorsignals=[0]*layercount
-    errorbyyzero = out[:-1]-targ #gives a dim(out) dimensional vector denoting the derivative of the error fct by the output vector
+    #errorbyyzero = out[:-1]-targ #Mean-squared-error
+    errorbyyzero = -targ/out[:-1] #Kullback-Leibler divergence
     for i in range(0,layercount):
         err_errorsignals[i]=np.dot(errorbyyzero,errorsignals[i]) #this is the matrix variant of D3
     
@@ -183,6 +190,7 @@ for epoch in range(0,games):
 
     errorsbyepoch[epoch]=compute_ms_error (y[:-1], targ)
     abserrorbyepoch[epoch]=compute_error (y[:-1], targ)
+    KLdbyepoch[epoch]=compute_KL_divergence(y[:-1], targ)
 
 #End of Main Loop
         
@@ -190,24 +198,24 @@ suggestedmove=np.argmax(y)
 
 
 #Plot the error:
-plt.figure(0)
-plt.title("(Mean square) Error Plot")
-plt.ylabel("Mean square Error")
-plt.xlabel("Epochs")
-plt.plot(range(0,games),errorsbyepoch)
 
-plt.figure(1)
-plt.title("(Absolute) Error Plot")
-plt.ylabel("Absolute Error")
-plt.xlabel("Epochs")
-ax = plt.gca()
-plt.ylim( 0, 2 )
-plt.plot(range(0,games),abserrorbyepoch)
+f, axa = plt.subplots(3, sharex=True)
+axa[0].set_title("Error Plot")
+axa[0].set_ylabel("Mean square Error")
+axa[0].plot(range(0,games),errorsbyepoch)
 
+#plt.title("(Absolute) Error Plot")
+axa[1].set_ylabel("Absolute Error")
+axa[1].set_ylim( 0, 2 )
+axa[1].plot(range(0,games),abserrorbyepoch)
+
+axa[2].set_xlabel("Epochs")
+axa[2].set_ylabel("K-L divergence")
+axa[2].plot(range(0,games),KLdbyepoch)
 
 #Plot the results:
+plt.figure(1)
 f, axarr = plt.subplots(3, sharex=True)
-plt.figure(2)
 axarr[0].set_title("Neuronal Net Output Plot: First epoch vs last epoch vs target")
 #axarr[1].set_title("Target")
 axarr[1].set_ylabel("quality in percentage")
