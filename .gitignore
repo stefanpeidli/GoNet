@@ -3,6 +3,14 @@
 # the PyCharm IDE creates this folder
 .idea/
 
+#games from Bernhard
+dgs/
+
+#paddy:
+Flush.py
+log_1.txt
+log_2.txt
+
 ##################################################################
 # All the rest here is the preset python .gitignore from github ;)
 # Byte-compiled / optimized / DLL files
