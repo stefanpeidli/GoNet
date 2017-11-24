@@ -99,10 +99,9 @@ def importTrainingData(folder, von, bis):
     for i in range(von, bis):
         board.clear()
         currfile = filedir + "game_" + str(i) + ".sgf"
-        if type(dic) is not str:
-            gameIDs = np.append(gameIDs, i)
 
         if os.path.exists(currfile):
+            gameIDs = np.append(gameIDs, i)
             with open(currfile) as f:
                 collection = sgf.parse(f.read())
 
@@ -117,14 +116,13 @@ def importTrainingData(folder, von, bis):
                 moves[i - 1] = list(nod[i].properties.values())[0][0]
                 player[i - 1] = int(((ord(list(nod[i].properties.keys())[0][0]) - 66) / 21 - 0.5) * 2)
                 m = moves[i - 1]
-                if len(m) == 2 and type(m) is str:
-                    if ord(m[0]) - 97 > 0:  # there are some corrupted files with e.g. "54" as entry, (game 2981)
-                        datam[ord(m[0]) - 97, ord(m[1]) - 97] = player[i - 1]
+                if len(m) > 0 and type(m) is str:
+                    if 97+n > ord(m[0])  > 97 :  # there are some corrupted files with e.g. "54" as entry, (game 2981)
+                        datam[ord(m[1]) - 97, ord(m[0]) - 97] = player[i - 1]
                 data[i] = datam.flatten()
 
 
                 if player[i-1] == -1:    # Trainieren das Netzwerk nur für Spieler Schwarz. wenn weiß: Flip colors B=-1, W=+1
-
                     if str(data[i-1]) in dic:
                         dic[str(data[i-1])] += np.absolute(data[i] - data[i-1])
                     else:
@@ -136,7 +134,6 @@ def importTrainingData(folder, von, bis):
                             data_i_1[count] = -1 * data[i-1][count]
                         else:
                             data_i_1[count] = 0
-                    print(data_i_1)
                     if str(data_i_1) in dic:
                         dic[str(data_i_1)] += np.absolute(data[i] - data[i-1])
                     else:
@@ -144,14 +141,18 @@ def importTrainingData(folder, von, bis):
                 # now we play the move on the board and see if we have to remove stones
                 coords = toCoords(np.absolute(data[i] - data[i-1]))
                 if type(coords) is not str:
-                    print(coords[1])
-                    board.play_stone(coords[0],coords[1],player[i-1])
+                    board.play_stone(coords[1],coords[0],player[i-1])
                     data[i] = board.vertices.flatten()
+                    datam = board.vertices
 
     return dic
 
 
 
 
-#dic = importTrainingData()
+dic = importTrainingData("dgs",1,5000)
 #print(dic)
+print("\n")
+#for entry in dic:
+ #      print ('\n', entry, '\n', dic[entry], '\n')
+print(dic[str(np.zeros(9*9,dtype=np.int32))])
