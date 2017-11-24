@@ -125,11 +125,10 @@ def importTrainingData():
                             data_i_1[count] = -1 * data[i-1][count]
                         else:
                             data_i_1[count] = 0
-                    data_i = -1 * data[i]
-                    if str(data_i) in dic:
-                        dic[str(data_i_1)] += np.absolute(data_i - data_i_1)
+                    if str(data_i_1) in dic:
+                        dic[str(data_i_1)] += np.absolute(data[i] - data[i-1])
                     else:
-                        dic[str(data_i_1)] = np.absolute(data_i - data_i_1)
+                        dic[str(data_i_1)] = np.absolute(data[i] - data[i-1])
 
     return dic
 
