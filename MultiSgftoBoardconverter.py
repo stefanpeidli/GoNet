@@ -89,11 +89,72 @@ def toCoords(data):
     else: return "Error"
 
 
+
+dic = defaultdict(np.ndarray)
+
+def addToDict(prevData, currData, player):
+    if player == -1:  # Trainieren das Netzwerk nur für Spieler Schwarz. wenn weiß: Flip colors B=-1, W=+1
+        if str(prevData) in dic:
+            dic[str(prevData)] += np.absolute(currData - prevData)
+        else:
+            dic[str(prevData)] = np.absolute(currData - prevData)
+    else:
+        data_i_1 = np.zeros(9 * 9, dtype=np.int32)
+        for count in range(len(prevData)):
+            if prevData[count] != 0:
+                data_i_1[count] = -1 * prevData[count]
+            else:
+                data_i_1[count] = 0
+        if str(data_i_1) in dic:
+            dic[str(data_i_1)] += np.absolute(currData - prevData)
+        else:
+            dic[str(data_i_1)] = np.absolute(currData - prevData)
+
+def addToDictWithSymmetries(prevData, datam, player):
+    prevDataTemp = prevData.reshape((9,9))
+    temp = (datam, prevDataTemp)
+    temp2 = (np.flip(temp[0],1),np.flip(temp[1],1))
+    symmats = [temp]
+    if not np.array_equal(temp[0],temp2[0]):
+        symmats.append(temp2)
+    for i in range(3):
+        temp = (np.rot90(temp[0]),np.rot90(temp[1]))
+        temp2 = (np.rot90(temp2[0]),np.rot90(temp2[1]))
+        for i in range(len(symmats)):
+            if np.array_equal(temp[0],symmats[i][0]):
+                break
+            elif i == len(symmats)-1:
+                symmats.append(temp)
+        for i in range(len(symmats)):
+            if np.array_equal(temp2[0],symmats[i][0]):
+                break
+            elif i == len(symmats)-1:
+                symmats.append(temp2)
+
+    for rots in symmats:
+        currData = rots[0].flatten()
+        prevData = rots[1].flatten()
+        if player == -1:  # Trainieren das Netzwerk nur für Spieler Schwarz. wenn weiß: Flip colors B=-1, W=+1
+            if str(prevData) in dic:
+                dic[str(prevData)] += np.absolute(currData - prevData)
+            else:
+                dic[str(prevData)] = np.absolute(currData - prevData)
+        else:
+            data_i_1 = np.zeros(9 * 9, dtype=np.int32)
+            for count in range(len(prevData)):
+                if prevData[count] != 0:
+                    data_i_1[count] = -1 * prevData[count]
+                else:
+                    data_i_1[count] = 0
+            if str(data_i_1) in dic:
+                dic[str(data_i_1)] += np.absolute(currData - prevData)
+            else:
+                dic[str(data_i_1)] = np.absolute(currData - prevData)
+
 def importTrainingData(folder, von, bis):
     n = 9  # board size
     dir_path = os.path.dirname(os.path.realpath(__file__))
     filedir = dir_path + "/" + folder + "/"
-    dic = defaultdict(np.ndarray)
     gameIDs = []  # stores the suffix
     board = Board(n)
     for i in range(von, bis):
@@ -113,31 +174,18 @@ def importTrainingData(folder, von, bis):
             data[0] = np.zeros(n * n, dtype=np.int32)  # first board of the game is always empty board
             datam = np.zeros((n, n), dtype=np.int32)
             for i in range(1, len(nod)):
+                # first we extract the next move
                 moves[i - 1] = list(nod[i].properties.values())[0][0]
                 player[i - 1] = int(((ord(list(nod[i].properties.keys())[0][0]) - 66) / 21 - 0.5) * 2)
                 m = moves[i - 1]
                 if len(m) > 0 and type(m) is str:
-                    if 97+n > ord(m[0])  > 97 :  # there are some corrupted files with e.g. "54" as entry, (game 2981)
+                    if 97+n > ord(m[0]) > 97:  # there are some corrupted files with e.g. "54" as entry, (game 2981)
                         datam[ord(m[1]) - 97, ord(m[0]) - 97] = player[i - 1]
                 data[i] = datam.flatten()
 
+                addToDictWithSymmetries(data[i - 1], datam, player[i-1])
+                #addToDict(data[i-1], data[i], player[i-1])
 
-                if player[i-1] == -1:    # Trainieren das Netzwerk nur für Spieler Schwarz. wenn weiß: Flip colors B=-1, W=+1
-                    if str(data[i-1]) in dic:
-                        dic[str(data[i-1])] += np.absolute(data[i] - data[i-1])
-                    else:
-                        dic[str(data[i-1])] = np.absolute(data[i] - data[i-1])
-                else:
-                    data_i_1 = np.zeros(n*n, dtype=np.int32)
-                    for count in range(len(data[i-1])):
-                        if data[i-1][count] != 0:
-                            data_i_1[count] = -1 * data[i-1][count]
-                        else:
-                            data_i_1[count] = 0
-                    if str(data_i_1) in dic:
-                        dic[str(data_i_1)] += np.absolute(data[i] - data[i-1])
-                    else:
-                        dic[str(data_i_1)] = np.absolute(data[i] - data[i-1])
                 # now we play the move on the board and see if we have to remove stones
                 coords = toCoords(np.absolute(data[i] - data[i-1]))
                 if type(coords) is not str:
@@ -145,14 +193,11 @@ def importTrainingData(folder, von, bis):
                     data[i] = board.vertices.flatten()
                     datam = board.vertices
 
-    return dic
 
-
-
-
-dic = importTrainingData("dgs",1,5000)
+importTrainingData("dgs",1,1000)
 #print(dic)
 print("\n")
 #for entry in dic:
- #      print ('\n', entry, '\n', dic[entry], '\n')
-print(dic[str(np.zeros(9*9,dtype=np.int32))])
+       #print ('\n', np.matrix(entry).reshape((9,9)), '\n', dic[entry].reshape((9,9)), '\n')
+       #print('\n', entry, '\n', dic[entry], '\n')
+print(dic[str(np.zeros(9*9,dtype=np.int32))].reshape((9,9)))
