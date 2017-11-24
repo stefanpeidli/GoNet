@@ -11,6 +11,7 @@ import sgf
 import numpy as np
 import os
 from collections import defaultdict
+from Board import *
 
 def importsgf_old(file):
     if os.path.exists(file):
@@ -80,15 +81,23 @@ def stefantest():
 
 #by now, gameslist is a list of games that contain Boards
 
+def toCoords(data):
+    if np.linalg.norm(data) == 1:
+        for entry in range(len(data)):
+            if data[entry] == 1:
+                return entry % 9, int(entry / 9)
+    else: return "Error"
 
-def importTrainingData():
+
+def importTrainingData(folder, von, bis):
     n = 9  # board size
-    mg = 50  # maximal game suffix "NUMBER" to be checked (first game is game_4.sgf)
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    filedir = dir_path + "/dgs/"
+    filedir = dir_path + "/" + folder + "/"
     dic = defaultdict(np.ndarray)
     gameIDs = []  # stores the suffix
-    for i in range(0, mg):
+    board = Board(n)
+    for i in range(von, bis):
+        board.clear()
         currfile = filedir + "game_" + str(i) + ".sgf"
         if type(dic) is not str:
             gameIDs = np.append(gameIDs, i)
@@ -102,8 +111,8 @@ def importTrainingData():
             moves = [0] * (len(nod) - 1)  # the node at 0 is the game info (i think)
             player = [0] * (len(nod) - 1)  # we need to keep track of who played that move, B=-1, W=+1
             data = [0] * len(nod)
-            data[0] = np.zeros(n * n)  # first board of the game is always empty board
-            datam = np.zeros((n, n))
+            data[0] = np.zeros(n * n, dtype=np.int32)  # first board of the game is always empty board
+            datam = np.zeros((n, n), dtype=np.int32)
             for i in range(1, len(nod)):
                 moves[i - 1] = list(nod[i].properties.values())[0][0]
                 player[i - 1] = int(((ord(list(nod[i].properties.keys())[0][0]) - 66) / 21 - 0.5) * 2)
@@ -113,28 +122,36 @@ def importTrainingData():
                         datam[ord(m[0]) - 97, ord(m[1]) - 97] = player[i - 1]
                 data[i] = datam.flatten()
 
-                if player[i-1] == 1:
+
+                if player[i-1] == -1:    # Trainieren das Netzwerk nur für Spieler Schwarz. wenn weiß: Flip colors B=-1, W=+1
+
                     if str(data[i-1]) in dic:
                         dic[str(data[i-1])] += np.absolute(data[i] - data[i-1])
                     else:
                         dic[str(data[i-1])] = np.absolute(data[i] - data[i-1])
                 else:
-                    data_i_1 = np.zeros(n*n)
+                    data_i_1 = np.zeros(n*n, dtype=np.int32)
                     for count in range(len(data[i-1])):
                         if data[i-1][count] != 0:
                             data_i_1[count] = -1 * data[i-1][count]
                         else:
                             data_i_1[count] = 0
-                    data_i = -1 * data[i]
-                    if str(data_i) in dic:
-                        dic[str(data_i_1)] += np.absolute(data_i - data_i_1)
+                    print(data_i_1)
+                    if str(data_i_1) in dic:
+                        dic[str(data_i_1)] += np.absolute(data[i] - data[i-1])
                     else:
-                        dic[str(data_i_1)] = np.absolute(data_i - data_i_1)
+                        dic[str(data_i_1)] = np.absolute(data[i] - data[i-1])
+                # now we play the move on the board and see if we have to remove stones
+                coords = toCoords(np.absolute(data[i] - data[i-1]))
+                if type(coords) is not str:
+                    print(coords[1])
+                    board.play_stone(coords[0],coords[1],player[i-1])
+                    data[i] = board.vertices.flatten()
 
     return dic
 
 
 
 
-dic = importTrainingData()
-print(dic)
+#dic = importTrainingData()
+#print(dic)

@@ -8,8 +8,8 @@ import numpy as np
 
 class Stone:
     Empty = 0
-    Black = 1
-    White = 2
+    Black = -1
+    White = 1
 
 colour_names = { Stone.Empty:"Empty", Stone.Black:"Black", Stone.White:"White", }
 
