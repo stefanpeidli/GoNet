@@ -122,7 +122,9 @@ def importTrainingData(folder, von, bis):
                         datam[ord(m[0]) - 97, ord(m[1]) - 97] = player[i - 1]
                 data[i] = datam.flatten()
 
+
                 if player[i-1] == -1:    # Trainieren das Netzwerk nur für Spieler Schwarz. wenn weiß: Flip colors B=-1, W=+1
+
                     if str(data[i-1]) in dic:
                         dic[str(data[i-1])] += np.absolute(data[i] - data[i-1])
                     else:
