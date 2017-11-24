@@ -12,4 +12,5 @@ for entry in dic:
         count3 += 1
     else:
         print ('\n', entry, '\n', dic[entry], '\n')
+
 print('0: ', count0, '\n', '3: ', count3)
