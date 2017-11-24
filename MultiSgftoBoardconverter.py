@@ -81,11 +81,11 @@ def stefantest():
 #by now, gameslist is a list of games that contain Boards
 
 
-def importTrainingData():
+def importTrainingData(folder):
     n = 9  # board size
     mg = 50  # maximal game suffix "NUMBER" to be checked (first game is game_4.sgf)
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    filedir = dir_path + "/dgs/"
+    filedir = dir_path + "/" + folder + "/"
     dic = defaultdict(np.ndarray)
     gameIDs = []  # stores the suffix
     for i in range(0, mg):
@@ -135,5 +135,5 @@ def importTrainingData():
 
 
 
-dic = importTrainingData()
-print(dic)
+#dic = importTrainingData()
+#print(dic)
