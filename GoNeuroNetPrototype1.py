@@ -1,31 +1,22 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed Nov  8 11:00:05 2017
-
-@author: Stefan
-
+@author: Stefan Peidli
+License: MIT
 Tags: Policy-net, Neural Network
-
 """
-#import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 
-#Specifications of the game
+### Specifications of the game
 n=9 # 9x9 board
 
-# Parameters of the NN
-
-n_hidden_1 = 100 # 1st layer number of neurons
-n_hidden_2 = 100 # 2nd layer number of neurons
-n_hidden_3 = n*n # 3rd layer number of neurons
+### Parameters of the NN
 num_input = n*n # data input format (board fields)
-num_classes = 3 # data input total classes (empty=0, white=1, black=-1)
+num_classes = 3 # data input total classes
+eta = 0.001 # learning rate
+layers = [n*n,100,100,100,n*n] #please leave the first and last equal zu n^2 for now
 
-layers=[n*n,100,100,100,n*n] #please leave the first and last equal zu n^2 for now
-layercount = len(layers)-1
-
-#Input Test Data n x n
+### Input Test Data n x n
 datamanual= False
 if not datamanual:
     games=2000; #random potentially illegal boards as test data
@@ -37,7 +28,6 @@ if not datamanual:
 else:#won't work until we have real data and statistics to it
     games=len(gameslist)
     testdata = gameslist
-
 
 #random target
 targ=abs(np.random.normal(0,40,n*n)) #create random target
@@ -51,47 +41,42 @@ targ[75]=1
 targ[30]=10
 targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
 """
-
-# Initialize the weights
-# here by a normal distribution
-mu=0
-sigma=0.5
-weights=[0]*layercount
+### Initialize the weights
+# here by a normal distribution N(mu,sigma)
+layercount = len(layers)-1
+mu, sigma = 0, 0.4
+weights=[0]*layercount #alloc memory
 for i in range(0,layercount):
     weights[i]=np.random.normal(mu, sigma, (layers[i+1],layers[i]+1))#edit: the +1 in the input dimension is for the bias
-#wout=np.random.normal(mu, 0, (n_hidden_3,num_input)) #How to choose these? They dont represent a layer (?)
 
-
+### Alloc memory for the error statistics
 #Hint:b=a[:-1,:] this is a handy formulation to delete the last column, Thus ~W=W[:-1,1]
-
-
 errorsbyepoch=[0]*games #mean squared error
 abserrorbyepoch=[0]*games #absolute error
 KLdbyepoch=[0]*games #Kullback-Leibler divergence
 
-
-###Function Definition yard
+### Function Definition yard
   
 # activation function
 def softmax(x):
     """Compute softmax values for each sets of scores in x."""
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum()
-
+"""
 # the derivative of the activation fct, dont need this...
 def softmax_prime(x):#check if this actually works...
-    """Compute the jacobian of the softmax fct of x"""
+    #Compute the jacobian of the softmax fct of x
     SM = softmax(x)
     #jac = np.outer(SM, (np.eye(x.size) - np.transpose(SM)) ) WRONG
     jac = SM.dot(np.eye(x.size)) - np.outer(SM, np.transpose(SM) )
     return jac
-
-def compute_error(suggested, target): #compare the prediction with the answer/target
+"""
+def compute_error(suggested, target): #compare the prediction with the answer/target, absolute error
     diff = np.absolute(suggested - target)
     Error = np.inner(diff,np.ones(len(target)))
     return Error
 
-def compute_ms_error (suggested, target): #Returns the total mean square error (not tested yet)
+def compute_ms_error (suggested, target): #Returns the total mean square error
     diff = np.absolute(suggested - target)
     Error = 0.5*np.inner(diff,diff)
     return Error
@@ -101,12 +86,7 @@ def compute_KL_divergence (suggested,target): #Compute Kullback-Leibler divergen
     Error = - np.inner(target*np.log(diff),np.ones(len(target)))
     return Error
 
-
-
-###The actual function
-    
-
-layers=[n_hidden_1,n_hidden_2,n_hidden_3]
+### The actual function
 
 for epoch in range(0,games):
     y = np.append(testdata[epoch],[1])
@@ -126,7 +106,7 @@ for epoch in range(0,games):
     
     #Backpropagation
     
-    #Calc derivatives/Jacobian of the softmax activationfct in every layer (i dont have a good feeling about this): Update: I tested this section, it actually works correctly for sure
+    #Calc derivatives/Jacobian of the softmax activationfct in every layer (i dont have a good feeling about this): Update: I tested this section, it actually works correctly for sure. ToDo: We need not compute this for all layers, only the last one (only layer that uses softmax...)
     DF=[0]*layercount
     for i in range(0,layercount): #please note that I think this is pure witchcraft happening here
         yt=ys[i] #load y from ys and lets call it yt
@@ -150,9 +130,6 @@ for epoch in range(0,games):
         u=1-yt*yt
         DFtan[i]=np.diag(u)
     
-    
-    
-    
     #Use (L2) and (L3) to get the error signals of the layers
     errorsignals=[0]*layercount
     errorsignals[layercount-1]=DF[layercount-1] # (L2), the error signal of the output layer can be computed directly, here we actually use softmax
@@ -174,7 +151,6 @@ for epoch in range(0,games):
     for i in range(0,layercount):
         err_errorsignals[i]=np.dot(errorbyyzero,errorsignals[i]) #this is the matrix variant of D3
     
-    
     #Use (2.2) to get the sought derivatives. Observe that this is an outer product, though not mentioned in the source (Fuck you Heining, you bastard)
     errorbyweights=[0]*layercount #dE/dW
     errorbyweights[0] = np.outer(err_errorsignals[0],testdata[epoch]).T #Why do I need to transpose here???
@@ -182,30 +158,26 @@ for epoch in range(0,games):
         errorbyweights[i]=np.outer(err_errorsignals[i-1],ys[i][:-1]) # (L1)
     
     #Compute the change of weights, that means, then apply actualization step of Gradient Descent to weight matrices
-    eta=0.001 # learning rate
     deltaweights=[0]*layercount
     for i in range(0,layercount):
         deltaweights[i]=-eta*errorbyweights[i]
         weights[i][:,:-1]= weights[i][:,:-1]+ deltaweights[i].T #Problem: atm we only adjust non-bias weights. Change that!
-
+    
+    #For Error statistics
     errorsbyepoch[epoch]=compute_ms_error (y[:-1], targ)
     abserrorbyepoch[epoch]=compute_error (y[:-1], targ)
     KLdbyepoch[epoch]=compute_KL_divergence(y[:-1], targ)
 
 #End of Main Loop
-        
-suggestedmove=np.argmax(y)
 
-
-#Plot the error:
+### Plot results and error:
 
 f, axa = plt.subplots(3, sharex=True)
 axa[0].set_title("Error Plot")
 axa[0].set_ylabel("Mean square Error")
 axa[0].plot(range(0,games),errorsbyepoch)
 
-#plt.title("(Absolute) Error Plot")
-axa[1].set_ylabel("Absolute Error")
+axa[1].set_ylabel("Abs Error")
 axa[1].set_ylim( 0, 2 )
 axa[1].plot(range(0,games),abserrorbyepoch)
 
@@ -217,13 +189,12 @@ axa[2].plot(range(0,games),KLdbyepoch)
 plt.figure(1)
 f, axarr = plt.subplots(3, sharex=True)
 axarr[0].set_title("Neuronal Net Output Plot: First epoch vs last epoch vs target")
-#axarr[1].set_title("Target")
-axarr[1].set_ylabel("quality in percentage")
-axarr[2].set_xlabel("Board field number")
-#plt.xticks( range(1,(n*n)+1) )  # this looks super ugly if n is higher than 3 because ticks are to dense then.
-#plt.ylim( (0,y[suggestedmove]*1.1) )  # set the ylim to ymin, ymax, the 1.1 is an offset for cosmetic reasons
-axarr[1].bar(range(1,(n*n+1)), out[:-1]) #output of last epoch
 axarr[0].bar(range(1,(n*n+1)), firstout) #output of first epoch
+
+axarr[1].set_ylabel("quality in percentage")
+axarr[1].bar(range(1,(n*n+1)), out[:-1]) #output of last epoch
+
+axarr[2].set_xlabel("Board field number")
 axarr[2].bar(range(1,(n*n+1)), targ) #target distribution
 
 """
@@ -253,8 +224,6 @@ plt.xticks(range(n), col_labels)
 plt.yticks(range(n), row_labels)
 plt.show()
 """
-
-print("Suggested move: Field number", suggestedmove+1, "with a value of",np.round(100*y[suggestedmove],2),"%.") 
 
 #print("We are ",np.round(compute_error(suggestedmove,2)*100,2),"% away from the right solution move.")#test, lets just say that 2 would be the best move for now
 
