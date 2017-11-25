@@ -1,4 +1,4 @@
-from MultiSgftoBoardconverter import *
+from TrainingDataFromSgf import *
 
 
 dic = importTrainingData('Test_files')
