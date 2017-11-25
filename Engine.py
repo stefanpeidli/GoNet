@@ -3,19 +3,18 @@ from Board import *
 import random
 
 
-class Engine:
+class BaseEngine(object):
+    def __init__(self, n):
+        self.create_board(n)
 
-    def __init__(self, N):
-        self.create_board(N)
-
-    def create_board(self, N):
-        self.board = Board(N)
+    def create_board(self, n):
+        self.board = Board(n)
 
     def name(self):
         return "Akira"
 
     def version(self):
-        return "1.0"
+        assert False
 
     def set_komi(self, komi):
         pass
@@ -26,6 +25,16 @@ class Engine:
     def stone_played(self, x, y, stone):
         if self.board.play_is_legal(x, y, stone):
             self.board.play_stone(x, y, stone)
+
+    def play_legal_move(self, board, stone):
+        assert False
+
+class Engine(BaseEngine):
+    def __init__(self,n):
+        super(Engine, self).__init__(n)
+
+    def version(self):
+        return "1.0"
 
     def play_legal_move(self, board, stone):
         move_list = ["pass"]
@@ -39,6 +48,16 @@ class Engine:
             board.play_stone(ch[0], ch[1], stone)
         return ch
 
+class IntelligentEngine(BaseEngine):
+    def __init__(self,n):
+        super(IntelligentEngine, self).__init__(n)
+
+    def version(self):
+        return "2.0"
+
+    # need to get move from Neural Network here (forward propagate the current board)
+    def play_legal_move(self, board, stone):
+        pass
 
 def test():
     engine = Engine(5)
