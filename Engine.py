@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from Board import *
+from PolicyNet import *
 import random
 
 
@@ -51,13 +52,19 @@ class Engine(BaseEngine):
 class IntelligentEngine(BaseEngine):
     def __init__(self,n):
         super(IntelligentEngine, self).__init__(n)
+        self.PolicyNet=PolicyNet #untrained
+        self.PolicyNet.__init__(self.PolicyNet)
+        
 
     def version(self):
         return "2.0"
 
     # need to get move from Neural Network here (forward propagate the current board)
     def play_legal_move(self, board, stone):
-        pass
+        move=self.PolicyNet.Propagate(self.PolicyNet,board)
+        board.play_stone(move[0], move[1], stone)
+        print("The Policy Network considers",move,"as the best move.")
+        
 
 def test():
     engine = Engine(5)
@@ -84,3 +91,13 @@ def test2():
     engine.board.show()
 
 #test2()
+
+def test3():
+    engine = IntelligentEngine(9)
+    engine.board.play_stone(1,0,Stone.Black)
+    engine.board.play_stone(0,1,Stone.Black)
+    engine.board.show()
+    engine.play_legal_move(engine.board, Stone.White)
+    engine.board.show()
+
+test3()

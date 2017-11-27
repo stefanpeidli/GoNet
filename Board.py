@@ -21,7 +21,7 @@ def flipped_stone(stone):
     else:
         return Stone.Black
 
-# Standardbasis des R2
+# Standardbasis des R2 (Das ist keine Basis du Lurch :P)
 dxdys = [(1, 0), (0, 1), (-1, 0), (0, -1)]
     
 class Board:
