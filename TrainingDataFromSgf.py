@@ -187,8 +187,12 @@ class TrainingData:
 t = TrainingData()
 t.importTrainingData("dgs",1,1000)
 #print(dic)
+"""
 print("\n")
 for entry in t.dic:
+    if np.sum(t.dic[entry].reshape((9,9)))>0:
        print ('\n', np.matrix(entry).reshape((9,9)), '\n', t.dic[entry].reshape((9,9)), '\n')
        #print('\n', entry, '\n', t.dic[entry], '\n')
 #print(t.dic[str(np.zeros(9*9,dtype=np.int32))].reshape((9,9)))
+"""
+

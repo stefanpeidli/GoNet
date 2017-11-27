@@ -94,6 +94,7 @@ def test2():
 
 def test3():
     engine = IntelligentEngine(9)
+    engine.PolicyNet=NN
     engine.board.play_stone(1,0,Stone.Black)
     engine.board.play_stone(0,1,Stone.Black)
     engine.board.show()
