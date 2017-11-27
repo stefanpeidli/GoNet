@@ -184,7 +184,7 @@ class PolicyNet:
             return [firstout,out]
    
     
-    def Propagate(self, board):
+    def Propagate(self,board):
         #convert board to NeuroNet format (81-dim vector. TODO: Check for color of NN-training and flip if needed! For now, for convenience, i just subtract 0.25. We should do it similar to Heining by setting: -1.35:w, 0.45:empty, 1.05:b)
         board=board.vertices
         if len(board)!=81:
@@ -198,7 +198,7 @@ class PolicyNet:
             W = self.weights[i] #anders machen?
             s = W.dot(y)
             if i==self.layercount-1: #softmax as activationfct only in last layer    
-                y = np.append(softmax(s),[1]) #We append 1 for the bias
+                y = np.append(self.softmax(s),[1]) #We append 1 for the bias
             else: #in all other hidden layers we use tanh as activation fct
                 y = np.append(np.tanh(s),[1]) #We append 1 for the bias
             ys[i]=y #save the y values for backprop (?)
