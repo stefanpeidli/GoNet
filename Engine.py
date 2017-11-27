@@ -61,7 +61,7 @@ class IntelligentEngine(BaseEngine):
 
     # need to get move from Neural Network here (forward propagate the current board)
     def play_legal_move(self, board, stone):
-        move=self.PolicyNet.Propagate(self.PolicyNet,board)
+        move=self.PolicyNet.Propagate(board)
         board.play_stone(move[0], move[1], stone)
         print("The Policy Network considers",move,"as the best move.")
         

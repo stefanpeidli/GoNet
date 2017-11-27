@@ -12,6 +12,7 @@ import numpy as np
 import os
 from collections import defaultdict
 from Board import *
+from Hashable import Hashable
 
 def importsgf_old(file):
     if os.path.exists(file):
@@ -165,7 +166,10 @@ class TrainingData:
             currBoardVector = rotatedPair[0].flatten()
             prevBoardVector = rotatedPair[1].flatten()
             if player == -1:  # Trainieren das Netzwerk nur für Spieler Schwarz. wenn weiß: Flip colors B=-1, W=+1
+                if Hashable(prevBoardVector) in self.dic:
+                    self.dic[Hashable(prevBoardVector)] += np.absolute(currBoardVector - prevBoardVector)
                 else:
+                    self.dic[Hashable(prevBoardVector)] = np.absolute(currBoardVector - prevBoardVector)
             else:
                 invPrevBoardVector = np.zeros(9 * 9, dtype=np.int32)
                 for count in range(len(prevBoardVector)):
@@ -173,7 +177,10 @@ class TrainingData:
                         invPrevBoardVector[count] = -1 * prevBoardVector[count]
                     else:
                         invPrevBoardVector[count] = 0
+                if Hashable(invPrevBoardVector) in self.dic:
+                    self.dic[Hashable(invPrevBoardVector)] += np.absolute(currBoardVector - prevBoardVector)
                 else:
+                    self.dic[Hashable(invPrevBoardVector)] = np.absolute(currBoardVector - prevBoardVector)
 
 # end class TrainingData
 
