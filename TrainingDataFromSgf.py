@@ -12,6 +12,7 @@ import numpy as np
 import os
 from collections import defaultdict
 from Board import *
+from Hashable import Hashable
 
 def importsgf_old(file):
     if os.path.exists(file):
@@ -165,10 +166,10 @@ class TrainingData:
             currBoardVector = rotatedPair[0].flatten()
             prevBoardVector = rotatedPair[1].flatten()
             if player == -1:  # Trainieren das Netzwerk nur für Spieler Schwarz. wenn weiß: Flip colors B=-1, W=+1
-                if str(prevBoardVector) in self.dic:
-                    self.dic[str(prevBoardVector)] += np.absolute(currBoardVector - prevBoardVector)
+                if Hashable(prevBoardVector) in self.dic:
+                    self.dic[Hashable(prevBoardVector)] += np.absolute(currBoardVector - prevBoardVector)
                 else:
-                    self.dic[str(prevBoardVector)] = np.absolute(currBoardVector - prevBoardVector)
+                    self.dic[Hashable(prevBoardVector)] = np.absolute(currBoardVector - prevBoardVector)
             else:
                 invPrevBoardVector = np.zeros(9 * 9, dtype=np.int32)
                 for count in range(len(prevBoardVector)):
@@ -176,10 +177,10 @@ class TrainingData:
                         invPrevBoardVector[count] = -1 * prevBoardVector[count]
                     else:
                         invPrevBoardVector[count] = 0
-                if str(invPrevBoardVector) in self.dic:
-                    self.dic[str(invPrevBoardVector)] += np.absolute(currBoardVector - prevBoardVector)
+                if Hashable(invPrevBoardVector) in self.dic:
+                    self.dic[Hashable(invPrevBoardVector)] += np.absolute(currBoardVector - prevBoardVector)
                 else:
-                    self.dic[str(invPrevBoardVector)] = np.absolute(currBoardVector - prevBoardVector)
+                    self.dic[Hashable(invPrevBoardVector)] = np.absolute(currBoardVector - prevBoardVector)
 
 # end class TrainingData
 
@@ -189,6 +190,6 @@ t.importTrainingData("dgs",1,1000)
 #print(dic)
 print("\n")
 for entry in t.dic:
-       print ('\n', np.matrix(entry).reshape((9,9)), '\n', t.dic[entry].reshape((9,9)), '\n')
+       print ('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
        #print('\n', entry, '\n', t.dic[entry], '\n')
 #print(t.dic[str(np.zeros(9*9,dtype=np.int32))].reshape((9,9)))
