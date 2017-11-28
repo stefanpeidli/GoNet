@@ -6,6 +6,7 @@ Tags: Policy-net, Neural Network
 """
 import numpy as np
 import matplotlib.pyplot as plt
+from Hashable import Hashable
 
 class PolicyNet:
     def __init__(self):
@@ -97,11 +98,12 @@ class PolicyNet:
     
     def Learnpropagate(self,eta ,trainingdata):
         for entry in trainingdata.dic:
-            bagga=entry[:-1]
-            bagga=bagga[1:]
-            testdata=np.fromstring(bagga, dtype=int, sep=' ')-0.25
+            #bagga=entry[:-1]
+            #bagga=bagga[1:]
+            #testdata=np.fromstring(bagga, dtype=int, sep=' ')-0.25
+            testdata=Hashable.unwrap(entry)
             targ=trainingdata.dic[entry].reshape(9*9)
-            if(np.sum(targ)>0):
+            if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 y = np.append(testdata,[1])
                 ys = [0]*self.layercount
                 #Forward-propagate
@@ -265,7 +267,7 @@ class PolicyNet:
         """
     
     #print("We are ",np.round(compute_error(suggestedmove,2)*100,2),"% away from the right solution move.")#test, lets just say that 2 would be the best move for now
-"""
+
 #Tests
 if 'NN' not in locals():
     NN=PolicyNet()
@@ -273,7 +275,7 @@ games=1000
 #[testdata,targ] = NN.generate_data(games)
 eta=0.01
 testdata=t #load from TDFsgf
-for i in range(0,5):
+for i in range(0,1):
     [firstout,out]=NN.Learnpropagate(eta ,testdata)
 print(NN.weights)
 #NN.visualize(games,firstout,out,targ) #atm only works if games=2000
@@ -282,5 +284,5 @@ print(NN.weights)
 #eg=NN.Propagate(ag)
 #print(ag)
 #print(eg)
-"""
+
 

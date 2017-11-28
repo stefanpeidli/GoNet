@@ -186,7 +186,7 @@ class TrainingData:
 
 # run
 t = TrainingData()
-t.importTrainingData("dgs",1,1000)
+t.importTrainingData("dgs",1,10000)
 #print(dic)
 """
 print("\n")
