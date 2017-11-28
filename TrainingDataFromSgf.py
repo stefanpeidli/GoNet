@@ -185,19 +185,22 @@ class TrainingData:
 # end class TrainingData
 
 # run
-t = TrainingData()
-t.importTrainingData("dgs",1,10000)
-#print(dic)
-"""
-print("\n")
-for entry in t.dic:
-<<<<<<< HEAD
-    if np.sum(t.dic[entry].reshape((9,9)))>0:
-       print ('\n', np.matrix(entry).reshape((9,9)), '\n', t.dic[entry].reshape((9,9)), '\n')
-=======
-       print ('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
->>>>>>> 1707dc2c1eb6bdd51d884f4a4b5817c9c77fccd3
-       #print('\n', entry, '\n', t.dic[entry], '\n')
-#print(t.dic[str(np.zeros(9*9,dtype=np.int32))].reshape((9,9)))
-"""
+def test():
+    t = TrainingData()
+    t.importTrainingData("dgs",1,10)
 
+    """
+    for entry in t.dic:
+        if np.sum(t.dic[entry].reshape((9,9)))>0:
+           print ('\n', np.matrix(entry).reshape((9,9)), '\n', t.dic[entry].reshape((9,9)), '\n')
+           print ('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
+    
+           #print('\n', entry, '\n', t.dic[entry], '\n')
+    #print(t.dic[str(np.zeros(9*9,dtype=np.int32))].reshape((9,9)))
+    """
+    for entry in t.dic:
+        testdata = Hashable.unwrap(entry)
+        targ = t.dic[entry].reshape(9*9)
+        print('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
+
+#test()

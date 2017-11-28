@@ -7,6 +7,7 @@ Tags: Policy-net, Neural Network
 import numpy as np
 import matplotlib.pyplot as plt
 from Hashable import Hashable
+from TrainingDataFromSgf import TrainingData
 
 class PolicyNet:
     def __init__(self):
@@ -274,7 +275,8 @@ if 'NN' not in locals():
 games=1000
 #[testdata,targ] = NN.generate_data(games)
 eta=0.01
-testdata=t #load from TDFsgf
+testdata=TrainingData()
+testdata.importTrainingData("dgs",1,10) #load from TDFsgf
 for i in range(0,1):
     [firstout,out]=NN.Learnpropagate(eta ,testdata)
 print(NN.weights)
