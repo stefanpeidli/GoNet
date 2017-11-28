@@ -67,7 +67,7 @@ class PolicyNet:
     ### Function Definition yard
       
     # activation function
-    def softmax(x):
+    def softmax(self,x):
         """Compute softmax values for each sets of scores in x."""
         e_x = np.exp(x - np.max(x))
         return e_x / e_x.sum()
@@ -112,7 +112,7 @@ class PolicyNet:
                     W = self.weights[i] #anders machen?
                     s = W.dot(y)
                     if i==self.layercount-1: #softmax as activationfct only in last layer    
-                        y = np.append(self.softmax(s),[1]) #We append 1 for the bias
+                        y = np.append(self.softmax(self,s),[1]) #We append 1 for the bias
                     else: #in all other hidden layers we use tanh as activation fct
                         y = np.append(np.tanh(s),[1]) #We append 1 for the bias
                     ys[i]=y #save the y values for backprop (?)
