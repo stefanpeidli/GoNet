@@ -9,6 +9,11 @@ import matplotlib.pyplot as plt
 from Hashable import Hashable
 from TrainingDataFromSgf import TrainingData
 
+def softmax(x):
+        """Compute softmax values for each sets of scores in x."""
+        e_x = np.exp(x - np.max(x))
+        return e_x / e_x.sum()
+
 class PolicyNet:
     def __init__(self):
         ### Specifications of the game
@@ -67,10 +72,12 @@ class PolicyNet:
     ### Function Definition yard
       
     # activation function
+    """
     def softmax(self,x):
-        """Compute softmax values for each sets of scores in x."""
+        #Compute softmax values for each sets of scores in x.
         e_x = np.exp(x - np.max(x))
         return e_x / e_x.sum()
+    """
     """
     # the derivative of the activation fct, dont need this...
     def softmax_prime(x):#check if this actually works...
