@@ -107,7 +107,6 @@ class TrainingData:
             id_list_prepped = pd.read_excel(dir_path + '/' + 'Training_Sets' + '/' + id_list + '.xlsx')["game_id"].values.tolist()
         else:
             id_list_prepped = id_list
-        print(id_list_prepped)
         filedir = dir_path + "/" + folder + "/"
         gameIDs = []  # stores the suffix
         for i in id_list_prepped:
