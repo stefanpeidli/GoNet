@@ -16,6 +16,7 @@ log_2.txt
 
 #Faruk:
 data_cleaning.py
+.DS_Store
 
 ##################################################################
 # All the rest here is the preset python .gitignore from github ;)
