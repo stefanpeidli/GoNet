@@ -13,6 +13,7 @@ import os
 from collections import defaultdict
 from Board import *
 from Hashable import Hashable
+import pandas as pd
 
 def importsgf_old(file):
     if os.path.exists(file):
@@ -99,16 +100,22 @@ class TrainingData:
                     return entry % 9, int(entry / 9)
         else: return "Error"
 
-    def importTrainingData(self, folder, von, bis):
-
+    def importTrainingData(self, folder, id_list=range(1000)):
         dir_path = os.path.dirname(os.path.realpath(__file__))
+      #  print(dir_path + "\ + 'Training_Sets' + '\' + id_list + '.xsl')
+        if type(id_list) is str:
+            id_list_prepped = pd.read_excel(dir_path + '/' + 'Training_Sets' + '/' + id_list + '.xlsx')["game_id"].values.tolist()
+        else:
+            id_list_prepped = id_list
+        print(id_list_prepped)
         filedir = dir_path + "/" + folder + "/"
         gameIDs = []  # stores the suffix
-        for i in range(von, bis):
+        for i in id_list_prepped:
             currfile = filedir + "game_" + str(i) + ".sgf"
             if os.path.exists(currfile):
                 gameIDs = np.append(gameIDs, i)
                 self.importSingleFile(currfile)
+
 
     def importSingleFile(self, currfile):
         with open(currfile) as f:
@@ -187,20 +194,25 @@ class TrainingData:
 # run
 def test():
     t = TrainingData()
-    t.importTrainingData("dgs",1,10)
-
-    """
-    for entry in t.dic:
-        if np.sum(t.dic[entry].reshape((9,9)))>0:
-           print ('\n', np.matrix(entry).reshape((9,9)), '\n', t.dic[entry].reshape((9,9)), '\n')
-           print ('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
-    
-           #print('\n', entry, '\n', t.dic[entry], '\n')
-    #print(t.dic[str(np.zeros(9*9,dtype=np.int32))].reshape((9,9)))
+    t.importTrainingData("dgs", 'new_data_1')
     """
     for entry in t.dic:
         testdata = Hashable.unwrap(entry)
         targ = t.dic[entry].reshape(9*9)
         print('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
+    """
+    print('\n', t.dic[Hashable(np.zeros(t.n * t.n, dtype=np.int32))].reshape((9,9)), '\n')
 
-#test()
+"""
+    for entry in t.dic:
+        
+        if np.sum(t.dic[entry].reshape((9, 9))) > 0:
+           print ('\n', np.matrix(entry).reshape((9,9)), '\n', t.dic[entry].reshape((9,9)), '\n')
+           print ('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
+        
+        print('\n', entry, '\n', t.dic[entry], '\n')
+"""
+
+
+
+test()

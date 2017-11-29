@@ -6,10 +6,16 @@
 #games from Bernhard
 dgs/
 
+#Training_Sets: top secret
+Training_Sets/
+
 #paddy:
 Flush.py
 log_1.txt
 log_2.txt
+
+#Faruk:
+data_cleaning.py
 
 ##################################################################
 # All the rest here is the preset python .gitignore from github ;)
