@@ -2,6 +2,7 @@
 from Board import *
 from PolicyNet import *
 import random
+from TrainingDataFromSgf import TrainingData
 
 
 class BaseEngine(object):
@@ -52,18 +53,29 @@ class Engine(BaseEngine):
 class IntelligentEngine(BaseEngine):
     def __init__(self,n):
         super(IntelligentEngine, self).__init__(n)
-        self.PolicyNet=PolicyNet #untrained
-        self.PolicyNet.__init__(self.PolicyNet)
-        
+        self.PolicyNet=PolicyNet() #untrained
+        self.PolicyNet.loadweightsfromfile('savedweights.npz')
 
     def version(self):
         return "2.0"
 
     # need to get move from Neural Network here (forward propagate the current board)
     def play_legal_move(self, board, stone):
-        move=self.PolicyNet.Propagate(self.PolicyNet,board)
-        board.play_stone(move[0], move[1], stone)
-        print("The Policy Network considers",move,"as the best move.")
+        out=self.PolicyNet.Propagate(board)
+        while len(out)>0:
+            move=np.argmax(out) # Problem: What happens if this is not unique?
+            x=int(move%9)
+            y=int(np.floor(move/9))
+            coords=(x,y) #check if this is right, i dont think so. The counting is wrong
+            if board.play_is_legal(coords[0],coords[1], stone):
+                board.play_stone(coords[0],coords[1], stone)
+                print("The Policy Network considers",coords,"as the best move.")
+                return coords
+            else:
+                out.remove(move)
+        print("The Policy Network considers",coords,"as the best move.")
+        return "pass"
+        
         
 
 def test():

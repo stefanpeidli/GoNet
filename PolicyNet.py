@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Hashable import Hashable
 from TrainingDataFromSgf import TrainingData
+import os
 
 def softmax(x):
         """Compute softmax values for each sets of scores in x."""
@@ -21,7 +22,7 @@ class PolicyNet:
         
         ### Parameters of the NN
         self.eta = 0.001 # learning rate
-        self.layers = [self.n*self.n,100,100,100,self.n*self.n] #please leave the first and last equal zu n^2 for now
+        self.layers = [self.n*self.n,1000,self.n*self.n] #please leave the first and last equal zu n^2 for now
         
         ### Initialize the weights
         # here by a normal distribution N(mu,sigma)
@@ -106,10 +107,7 @@ class PolicyNet:
     
     def Learnpropagate(self,eta ,trainingdata):
         for entry in trainingdata.dic:
-            #bagga=entry[:-1]
-            #bagga=bagga[1:]
-            #testdata=np.fromstring(bagga, dtype=int, sep=' ')-0.25
-            testdata=Hashable.unwrap(entry)
+            testdata=Hashable.unwrap(entry)-0.25
             targ=trainingdata.dic[entry].reshape(9*9)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 y = np.append(testdata,[1])
@@ -119,7 +117,7 @@ class PolicyNet:
                     W = self.weights[i] #anders machen?
                     s = W.dot(y)
                     if i==self.layercount-1: #softmax as activationfct only in last layer    
-                        y = np.append(self.softmax(self,s),[1]) #We append 1 for the bias
+                        y = np.append(softmax(s),[1]) #We append 1 for the bias
                     else: #in all other hidden layers we use tanh as activation fct
                         y = np.append(np.tanh(s),[1]) #We append 1 for the bias
                     ys[i]=y #save the y values for backprop (?)
@@ -208,16 +206,19 @@ class PolicyNet:
             W = self.weights[i] #anders machen?
             s = W.dot(y)
             if i==self.layercount-1: #softmax as activationfct only in last layer    
-                y = np.append(self.softmax(s),[1]) #We append 1 for the bias
+                y = np.append(softmax(s),[1]) #We append 1 for the bias
             else: #in all other hidden layers we use tanh as activation fct
                 y = np.append(np.tanh(s),[1]) #We append 1 for the bias
             ys[i]=y #save the y values for backprop (?)
         out=y[:-1]
+        """
         move=np.argmax(out)
         x=int(move%9)
         y=int(np.floor(move/9))
         move2=[x,y] #check if this is right, i dont think so. The counting is wrong
         return move2
+        """
+        return out
     
     ### Plot results and error:
     def visualize(self, games, firstout, out, targ):
@@ -276,22 +277,45 @@ class PolicyNet:
     
     #print("We are ",np.round(compute_error(suggestedmove,2)*100,2),"% away from the right solution move.")#test, lets just say that 2 would be the best move for now
 
+    def saveweights(self,filename):
+        #for i in range(len(self.weights)):
+        np.savez(filename,self.weights)
+        
+    def loadweightsfromfile(self,filename):
+        # if file doesnt exist, do nothing
+            if os.path.exists(filename):
+                with np.load(filename) as data:
+                    self.weights=[]
+                    for i in range(len(data['arr_0'])):
+                        self.weights.append(data['arr_0'][i])
+            elif os.path.exists(filename + ".npz"):
+                with np.load(filename + ".npz") as data:
+                    self.weights=[]
+                    for i in range(len(data['arr_0'])):
+                        self.weights.append(data['arr_0'][i])
+                
 #Tests
-if 'NN' not in locals():
-    NN=PolicyNet()
-games=1000
-#[testdata,targ] = NN.generate_data(games)
-eta=0.01
-testdata=TrainingData()
-testdata.importTrainingData("dgs",1,10) #load from TDFsgf
-for i in range(0,1):
-    [firstout,out]=NN.Learnpropagate(eta ,testdata)
-print(NN.weights)
-#NN.visualize(games,firstout,out,targ) #atm only works if games=2000
-#zer=np.zeros(81)
-#ag=Board(9)
-#eg=NN.Propagate(ag)
-#print(ag)
-#print(eg)
+def test():
+    if 'NN' not in locals():
+        NN=PolicyNet()
+    games=2000
+    #[testdata,targ] = NN.generate_data(games)
+    eta=0.01
+    testdata=TrainingData()
+    testdata.importTrainingData("dgs",1,10) #load from TDFsgf
+    for i in range(0,1):
+        [firstout,out]=NN.Learnpropagate(eta ,testdata)
+    NN.saveweights('savedweights')
+    
+    PP=PolicyNet()
+    PP.loadweightsfromfile('savedweights.npz')
+    
+    #NN.visualize(games,firstout,out,targ) #atm only works if games=2000
+    #zer=np.zeros(81)
+    #ag=Board(9)
+    #eg=NN.Propagate(ag)
+    #print(ag)
+    #print(eg)
 
+#test()
 

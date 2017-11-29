@@ -134,11 +134,6 @@ for epoch in range(0,games):
     errorsignals=[0]*layercount
     errorsignals[layercount-1]=DF[layercount-1] # (L2), the error signal of the output layer can be computed directly, here we actually use softmax
     for i in range(2,layercount+1):
-        """if i==layercount+1:#softmax
-            w=weights[layercount-i+1]
-            errdet=np.matmul(w[:,:-1],DF[layercount-i]) #temporary
-            errorsignals[layercount-i]=np.dot(errorsignals[layercount-i+1],errdet) # (L3), does python fucking get that?
-        else:"""
         w=weights[layercount-i+1]
         DFt=DFtan[layercount-i] #tanh
         errdet=np.matmul(w[:,:-1],DFt) #temporary
@@ -224,6 +219,10 @@ plt.xticks(range(n), col_labels)
 plt.yticks(range(n), row_labels)
 plt.show()
 """
+
+#
+
+
 
 #print("We are ",np.round(compute_error(suggestedmove,2)*100,2),"% away from the right solution move.")#test, lets just say that 2 would be the best move for now
 
