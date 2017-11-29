@@ -39,8 +39,6 @@ class PolicyNet:
         self.abserrorbyepoch=[0]*games #absolute error
         self.KLdbyepoch=[0]*games #Kullback-Leibler divergence
         
-    def read_data(self,dictionary):
-        aaaaaa=1
         
     def generate_data(self,games):
         ### Input Test Data n x n
@@ -88,24 +86,43 @@ class PolicyNet:
         jac = SM.dot(np.eye(x.size)) - np.outer(SM, np.transpose(SM) )
         return jac
     """
-    def compute_error(self,suggested, target): #compare the prediction with the answer/target, absolute error
+    def compute_error(self, suggested, target): #compare the prediction with the answer/target, absolute error
         diff = np.absolute(suggested - target)
         Error = np.inner(diff,np.ones(len(target)))
         return Error
     
-    def compute_ms_error (self,suggested, target): #Returns the total mean square error
+    def compute_ms_error (self, suggested, target): #Returns the total mean square error
         diff = np.absolute(suggested - target)
         Error = 0.5*np.inner(diff,diff)
         return Error
     
-    def compute_KL_divergence (self,suggested,target): #Compute Kullback-Leibler divergence
-        diff=suggested/target
-        Error = - np.inner(target*np.log(diff),np.ones(len(target)))
+    def compute_KL_divergence (self, suggested,target): #Compute Kullback-Leibler divergence, now stable!
+        t=target[target!=0] #->we'd divide by 0 else, does not have inpact on error anyway ->Problem: We don't punish the NN for predicting non-zero values on zero target!
+        s=suggested[target!=0]
+        diff=s/t #this is stable
+        Error = - np.inner(t*np.log(diff),np.ones(len(t)))
         return Error
     
-    ### The actual function
+    ### The actual functions
     
-    def Learnpropagate(self,eta ,trainingdata):
+    def Learnsplit(self, eta, trainingdata, trainingrate, tolerance, maxepochs):
+        N = len(trainingdata.dic)
+        splitindex = int(round(N*trainingrate))
+        trainingset, testset = TrainingData(), TrainingData()
+        trainingset.dic = dict(list(trainingdata.dic.items())[:splitindex])
+        testset.dic = dict(list(trainingdata.dic.items())[splitindex:])
+        
+        
+        error = tolerance + 1
+        epochs = 0
+        while error > tolerance and epochs < maxepochs:
+            epochs += 1
+            self.Learnpropagate(eta, trainingset)
+            error = self.PropagateSet(testset)
+        return [error,epochs]
+    
+    
+    def Learnpropagate(self, eta, trainingdata):
         for entry in trainingdata.dic:
             testdata=Hashable.unwrap(entry)-0.25
             targ=trainingdata.dic[entry].reshape(9*9)
@@ -189,7 +206,9 @@ class PolicyNet:
                 self.abserrorbyepoch[0]=self.compute_error (y[:-1], targ)
                 self.KLdbyepoch[0]=self.compute_KL_divergence(y[:-1], targ)
                 
-            return [firstout,out]
+                error = self.compute_KL_divergence(y[:-1], targ)
+                
+            return [firstout,out,error]
    
     
     def Propagate(self,board):
@@ -219,6 +238,30 @@ class PolicyNet:
         return move2
         """
         return out
+    
+    def PropagateSet(self,testset):
+        error = 0
+        checked = 0
+        for entry in testset.dic:
+            testdata=Hashable.unwrap(entry)-0.25
+            targ=testset.dic[entry].reshape(9*9)
+            if(np.sum(targ)>0): #We can only learn if there are actual target vectors
+                y = np.append(testdata,[1])
+                ys = [0]*self.layercount
+                #Forward-propagate
+                for i in range(0,self.layercount): 
+                    W = self.weights[i] #anders machen?
+                    s = W.dot(y)
+                    if i==self.layercount-1: #softmax as activationfct only in last layer    
+                        y = np.append(softmax(s),[1]) #We append 1 for the bias
+                    else: #in all other hidden layers we use tanh as activation fct
+                        y = np.append(np.tanh(s),[1]) #We append 1 for the bias
+                    ys[i]=y #save the y values for backprop (?)
+                out=y[:-1]
+                error += self.compute_KL_divergence(y[:-1], targ)
+                checked += 1
+        error = error/checked #average over training set
+        return error
     
     ### Plot results and error:
     def visualize(self, games, firstout, out, targ):
@@ -301,22 +344,56 @@ class PolicyNet:
 #Tests
 def test():
     if 'NN' not in locals():
-        NN=PolicyNet()
+        NN = PolicyNet()
     games=2000
     #[testdata,targ] = NN.generate_data(games)
-    eta=0.01
-    testdata=TrainingData()
+    eta = 0.01
+    testdata = TrainingData()
     testdata.importTrainingData("dgs") #load from TDFsgf
     for i in range(0,1):
-        [firstout,out]=NN.Learnpropagate(eta ,testdata)
+        [firstout,out,error] = NN.Learnpropagate(eta ,testdata)
     #NN.saveweights('savedweights')
     
-    PP=PolicyNet()
+    PP = PolicyNet()
     PP.loadweightsfromfile('savedweights.npz')
-    
-    print(PP.layer,PP.layercount)
-    
+    #print(PP.layer,PP.layercount)
     #NN.visualize(games,firstout,out,targ) #atm only works if games=2000
-
+    
+    
 test()
-
+    
+def test2():
+    NN = PolicyNet()
+    eta = 0.05
+    trainingdata = TrainingData()
+    trainingdata.importTrainingData("dgs") #load from TDFsgf
+    datasize = len(trainingdata.dic)
+    trainingrate = 0.9
+    tolerance = 0.8
+    maxepochs = 200
+    [error,epochs]=NN.Learnsplit(eta,trainingdata, trainingrate, tolerance, maxepochs)
+    print("Datasize",datasize,"K-L-Error",error,"Epochs",epochs)
+    
+test2()
+    
+def test3():
+    PP = PolicyNet()
+    testset = TrainingData()
+    testset.importTrainingData("dgs") #load from TDFsgf
+    error = PP.PropagateSet(testset)
+    print('Error:',error)
+    
+#test3()
+    
+def test4():
+    suggested=np.array([0.1,0.8,0.1])
+    targ=np.array([0,1,0])
+    diff=suggested/targ
+    ddiff=suggested/(targ+0.0001) #disturbes method
+    print(- np.inner(targ*np.log(diff),np.ones(len(targ))))#instable
+    print(- np.inner(targ*np.log(ddiff),np.ones(len(targ))))#stable,slightly unaccurate
+    et=targ[targ!=0]
+    es=suggested[targ!=0]
+    df=es/et
+    print(- np.inner(et*np.log(df),np.ones(len(et))))#stable and accurate
+#test4()
