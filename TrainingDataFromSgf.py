@@ -193,7 +193,7 @@ class TrainingData:
 # run
 def test():
     t = TrainingData()
-    t.importTrainingData("dgs", 'new_data_1')
+    t.importTrainingData("dgs")
     """
     for entry in t.dic:
         testdata = Hashable.unwrap(entry)

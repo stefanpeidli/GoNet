@@ -22,7 +22,7 @@ class PolicyNet:
         
         ### Parameters of the NN
         self.eta = 0.001 # learning rate
-        self.layers = [self.n*self.n,1000,self.n*self.n] #please leave the first and last equal zu n^2 for now
+        self.layers = [self.n*self.n,100,100,self.n*self.n] #please leave the first and last equal zu n^2 for now
         
         ### Initialize the weights
         # here by a normal distribution N(mu,sigma)
@@ -286,8 +286,12 @@ class PolicyNet:
             if os.path.exists(filename):
                 with np.load(filename) as data:
                     self.weights=[]
+                    self.layer=[data['arr_0'][0].shape[1]] #there are n+1 layers if there are n weightmatrices
                     for i in range(len(data['arr_0'])):
                         self.weights.append(data['arr_0'][i])
+                        tempshape=data['arr_0'][i].shape
+                        self.layer.append(tempshape[0])
+                    self.layercount=len(self.layer)-1
             elif os.path.exists(filename + ".npz"):
                 with np.load(filename + ".npz") as data:
                     self.weights=[]
@@ -302,20 +306,17 @@ def test():
     #[testdata,targ] = NN.generate_data(games)
     eta=0.01
     testdata=TrainingData()
-    testdata.importTrainingData("dgs",1,10) #load from TDFsgf
+    testdata.importTrainingData("dgs") #load from TDFsgf
     for i in range(0,1):
         [firstout,out]=NN.Learnpropagate(eta ,testdata)
-    NN.saveweights('savedweights')
+    #NN.saveweights('savedweights')
     
     PP=PolicyNet()
     PP.loadweightsfromfile('savedweights.npz')
     
+    print(PP.layer,PP.layercount)
+    
     #NN.visualize(games,firstout,out,targ) #atm only works if games=2000
-    #zer=np.zeros(81)
-    #ag=Board(9)
-    #eg=NN.Propagate(ag)
-    #print(ag)
-    #print(eg)
 
-#test()
+test()
 
