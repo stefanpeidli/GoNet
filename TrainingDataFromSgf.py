@@ -183,25 +183,26 @@ class TrainingData:
 # run
 def test():
     t = TrainingData()
-    t.importTrainingData("dgs")
-    """
+    t.importTrainingData("dgs", range(2))
+
+    #print complete dictionary, don't if dic is big ;)
     for entry in t.dic:
         testdata = Hashable.unwrap(entry)
         targ = t.dic[entry].reshape(9*9)
         print('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
-    """
-    print('\n', t.dic[Hashable(np.zeros(t.n * t.n, dtype=np.int32))].reshape((9,9)), '\n')
 
-"""
+    #print cumulated move distribution for empty board
+    zeroMatrix = t.dic[Hashable(np.zeros(t.n * t.n, dtype=np.int32))]
+    print('\n', zeroMatrix.reshape((9,9)), '\n')
+    print(np.sum(zeroMatrix))
+
+    #print cumulated move distributions for boards with exactly one stone
+    secondMoveDist = np.zeros(9 * 9, dtype=np.int32)
     for entry in t.dic:
-        
-        if np.sum(t.dic[entry].reshape((9, 9))) > 0:
-           print ('\n', np.matrix(entry).reshape((9,9)), '\n', t.dic[entry].reshape((9,9)), '\n')
-           print ('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
-        
-        print('\n', entry, '\n', t.dic[entry], '\n')
-"""
+        if np.sum(Hashable.unwrap(entry)) == 1:
+            secondMoveDist = secondMoveDist + t.dic[entry]
+    print(secondMoveDist.reshape((9, 9)))
+    print(np.sum(secondMoveDist))
 
 
-
-test()
+#test()
