@@ -22,7 +22,7 @@ class PolicyNet:
         
         ### Parameters of the NN
         self.eta = 0.001 # learning rate
-        self.layers = [self.n*self.n,100,100,self.n*self.n] #please leave the first and last equal zu n^2 for now
+        self.layers = [self.n*self.n,100,200,300,200,100,self.n*self.n] #please leave the first and last equal zu n^2 for now
         
         ### Initialize the weights
         # here by a normal distribution N(mu,sigma)
@@ -87,6 +87,7 @@ class PolicyNet:
         for entry in trainingdata.dic:
             testdata=Hashable.unwrap(entry)-0.25
             targ=trainingdata.dic[entry].reshape(9*9)
+            targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 y = np.append(testdata,[1])
                 ys = [0]*self.layercount
@@ -203,11 +204,10 @@ class PolicyNet:
     def PropagateSet(self,testset):
         error = 0
         checked = 0
-        print('Deine scheiß Mudaaaaaaaa alrter')
-        print("Testdsetdic:", testset.dic)
         for entry in testset.dic:
             testdata=Hashable.unwrap(entry)-0.25
             targ=testset.dic[entry].reshape(9*9)
+            targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 y = np.append(testdata,[1])
                 ys = [0]*self.layercount
@@ -221,7 +221,6 @@ class PolicyNet:
                         y = np.append(np.tanh(s),[1]) #We append 1 for the bias
                     ys[i]=y #save the y values for backprop (?)
                 out=y[:-1]
-                print(targ)
                 error += self.compute_KL_divergence(y[:-1], targ)
                 checked += 1
         error = error/checked #average over training set
@@ -306,6 +305,7 @@ class PolicyNet:
                         self.weights.append(data['arr_0'][i])
                 
 #Tests
+
 def test():
     if 'NN' not in locals():
         NN = PolicyNet()
@@ -341,10 +341,14 @@ def test2():
 #test2()
     
 def test3():
-    PP = PolicyNet()
-    testset = TrainingData()
-    testset.importTrainingData("dgs") #load from TDFsgf
-    error = PP.PropagateSet(testset)
+    #PP = PolicyNet()
+    #testset = TrainingData()
+    #testset.importTrainingData("dgs","dan_data_10") #load from TDFsgf
+    error = TestNet.PropagateSet(testset)
+    print('Error:',error)
+    for i in range(10000):
+        TestNet.Learnpropagate(0.01,testset)
+    error = TestNet.PropagateSet(testset)
     print('Error:',error)
     
 test3()
@@ -365,8 +369,8 @@ def test4():
 def test5():
     NN1=PolicyNet()
     
+    
 #test5()
-
 
 
 

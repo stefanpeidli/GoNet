@@ -190,7 +190,7 @@ def test():
         targ = t.dic[entry].reshape(9*9)
         print('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
     """
-    print('\n', t.dic[Hashable(np.zeros(t.n * t.n, dtype=np.int32))].reshape((9,9)), '\n')
+    #print('\n', t.dic[Hashable(np.zeros(t.n * t.n, dtype=np.int32))].reshape((9,9)), '\n')
 
 """
     for entry in t.dic:
@@ -204,4 +204,4 @@ def test():
 
 
 
-test()
+#test()
