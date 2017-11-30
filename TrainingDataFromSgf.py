@@ -87,10 +87,12 @@ def stefantest():
 
 class TrainingData:
     #standard initialize with boardsize 9
-    def __init__(self):
+    def __init__(self, folder=None, id_list=range(1000)):
         self.n = 9
         self.board = Board(self.n)
         self.dic = defaultdict(np.ndarray)
+        if folder is not None:
+            self.importTrainingData(folder, id_list)
 
     #help method for converting a vector containing a move to the corresponding coord tuple
     def toCoords(self, vector):
@@ -205,4 +207,4 @@ def test():
     print(np.sum(secondMoveDist))
 
 
-test()
+#test()
