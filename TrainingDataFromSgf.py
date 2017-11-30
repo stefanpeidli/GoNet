@@ -190,11 +190,6 @@ def test():
         testdata = Hashable.unwrap(entry)
         targ = t.dic[entry].reshape(9*9)
         print('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
-<<<<<<< HEAD
-    """
-    #print('\n', t.dic[Hashable(np.zeros(t.n * t.n, dtype=np.int32))].reshape((9,9)), '\n')
-=======
->>>>>>> e117315b466b4e305895d041334dcf0426501894
 
     #print cumulated move distribution for empty board
     zeroMatrix = t.dic[Hashable(np.zeros(t.n * t.n, dtype=np.int32))]
