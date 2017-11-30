@@ -151,22 +151,12 @@ class TrainingData:
         prevBoardMatrix = prevBoardVector.reshape((9, 9))
         currPrevPair = (currBoardVector, prevBoardMatrix)
         flippedCurrPrevPair = (np.flip(currPrevPair[0], 1), np.flip(currPrevPair[1], 1))
-        symmats = [currPrevPair]
-        if not np.array_equal(currPrevPair[0], flippedCurrPrevPair[0]):
-            symmats.append(flippedCurrPrevPair)
+        symmats = [currPrevPair, flippedCurrPrevPair]
         for i in range(3):
             currPrevPair = (np.rot90(currPrevPair[0]), np.rot90(currPrevPair[1]))
             flippedCurrPrevPair = (np.rot90(flippedCurrPrevPair[0]), np.rot90(flippedCurrPrevPair[1]))
-            for i in range(len(symmats)):
-                if np.array_equal(currPrevPair[0], symmats[i][0]):
-                    break
-                elif i == len(symmats) - 1:
-                    symmats.append(currPrevPair)
-            for i in range(len(symmats)):
-                if np.array_equal(flippedCurrPrevPair[0], symmats[i][0]):
-                    break
-                elif i == len(symmats) - 1:
-                    symmats.append(flippedCurrPrevPair)
+            symmats.append(currPrevPair)
+            symmats.append(flippedCurrPrevPair)
 
         for rotatedPair in symmats:
             currBoardVector = rotatedPair[0].flatten()
@@ -214,4 +204,4 @@ def test():
 
 
 
-#test()
+test()

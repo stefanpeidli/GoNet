@@ -53,7 +53,7 @@ class Engine(BaseEngine):
 class IntelligentEngine(BaseEngine):
     def __init__(self,n):
         super(IntelligentEngine, self).__init__(n)
-        self.PolicyNet=PolicyNet() #untrained
+        self.PolicyNet = PolicyNet() #untrained
         self.PolicyNet.loadweightsfromfile('savedweights.npz')
 
     def version(self):
