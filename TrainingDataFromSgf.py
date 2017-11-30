@@ -205,4 +205,4 @@ def test():
     print(np.sum(secondMoveDist))
 
 
-#test()
+test()
