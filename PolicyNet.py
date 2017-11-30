@@ -203,6 +203,8 @@ class PolicyNet:
     def PropagateSet(self,testset):
         error = 0
         checked = 0
+        print('Deine scheiß Mudaaaaaaaa alrter')
+        print("Testdsetdic:", testset.dic)
         for entry in testset.dic:
             testdata=Hashable.unwrap(entry)-0.25
             targ=testset.dic[entry].reshape(9*9)
@@ -219,6 +221,7 @@ class PolicyNet:
                         y = np.append(np.tanh(s),[1]) #We append 1 for the bias
                     ys[i]=y #save the y values for backprop (?)
                 out=y[:-1]
+                print(targ)
                 error += self.compute_KL_divergence(y[:-1], targ)
                 checked += 1
         error = error/checked #average over training set
@@ -321,7 +324,7 @@ def test():
     #NN.visualize(games,firstout,out,targ) #atm only works if games=2000
     
     
-test()
+#test()
     
 def test2():
     NN = PolicyNet()
@@ -335,7 +338,7 @@ def test2():
     [error,epochs]=NN.Learnsplit(eta,trainingdata, trainingrate, tolerance, maxepochs)
     print("Datasize was",datasize,",K-L-Error:",error[-1:][0],",Epochs:",epochs)
     
-test2()
+#test2()
     
 def test3():
     PP = PolicyNet()
@@ -344,7 +347,7 @@ def test3():
     error = PP.PropagateSet(testset)
     print('Error:',error)
     
-#test3()
+test3()
     
 def test4():
     suggested=np.array([0.1,0.8,0.1])
@@ -358,3 +361,14 @@ def test4():
     df=es/et
     print(- np.inner(et*np.log(df),np.ones(len(et))))#stable and accurate
 #test4()
+    
+def test5():
+    NN1=PolicyNet()
+    
+#test5()
+
+
+
+
+
+
