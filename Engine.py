@@ -69,11 +69,11 @@ class IntelligentEngine(BaseEngine):
             coords=(x,y) #check if this is right, i dont think so. The counting is wrong
             if board.play_is_legal(coords[0],coords[1], stone):
                 board.play_stone(coords[0],coords[1], stone)
-                print("The Policy Network considers",coords,"as the best move.")
+                print("The Policy Network considers",coords,"as the best move with a distribution value of",str(round(out[move]*100))+"%",".")
                 return coords
             else:
                 out.remove(move)
-        print("The Policy Network considers",coords,"as the best move.")
+        print("The Policy Network considers passing as the best move with a relative confidence of THIS IS NO OUTPUT YET.")
         return "pass"
         
         

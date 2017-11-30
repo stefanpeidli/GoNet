@@ -39,35 +39,6 @@ class PolicyNet:
         self.abserrorbyepoch=[0]*games #absolute error
         self.KLdbyepoch=[0]*games #Kullback-Leibler divergence
         
-        
-    def generate_data(self,games):
-        ### Input Test Data n x n
-        datamanual= False
-        if not datamanual:
-            #games=2000; #random potentially illegal boards as test data
-            testdata = np.random.uniform(-1.5,1.5,(games,self.n*self.n))
-            #testdata[0] = data #load data from another script
-            testdata = testdata.round()-0.25 # I use this offset for now, because it is convenient an prevents a zero input
-            for i in range(1,games):
-                testdata[i]=testdata[0]
-        else:#load from Converter script
-            games=len(gameslist)
-            testdata = gameslist
-        
-        #random target
-        targ=abs(np.random.normal(0,40,self.n*self.n)) #create random target
-        targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
-        """
-        #manual target, manual statistics
-        targ=np.zeros(n*n)
-        targ[4]=5
-        targ[50]=2
-        targ[75]=1
-        targ[30]=10
-        targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
-        """
-        return [testdata,targ]
-        
     ### Function Definition yard
       
     # activation function
@@ -76,15 +47,6 @@ class PolicyNet:
         #Compute softmax values for each sets of scores in x.
         e_x = np.exp(x - np.max(x))
         return e_x / e_x.sum()
-    """
-    """
-    # the derivative of the activation fct, dont need this...
-    def softmax_prime(x):#check if this actually works...
-        #Compute the jacobian of the softmax fct of x
-        SM = softmax(x)
-        #jac = np.outer(SM, (np.eye(x.size) - np.transpose(SM)) ) WRONG
-        jac = SM.dot(np.eye(x.size)) - np.outer(SM, np.transpose(SM) )
-        return jac
     """
     def compute_error(self, suggested, target): #compare the prediction with the answer/target, absolute error
         diff = np.absolute(suggested - target)
@@ -112,13 +74,12 @@ class PolicyNet:
         trainingset.dic = dict(list(trainingdata.dic.items())[:splitindex])
         testset.dic = dict(list(trainingdata.dic.items())[splitindex:])
         
-        
-        error = tolerance + 1
+        error = [tolerance+1]
         epochs = 0
-        while error > tolerance and epochs < maxepochs:
+        while error[-1:][0] > tolerance and epochs < maxepochs:
             epochs += 1
             self.Learnpropagate(eta, trainingset)
-            error = self.PropagateSet(testset)
+            error.append(self.PropagateSet(testset))
         return [error,epochs]
     
     
@@ -372,7 +333,7 @@ def test2():
     tolerance = 0.8
     maxepochs = 200
     [error,epochs]=NN.Learnsplit(eta,trainingdata, trainingrate, tolerance, maxepochs)
-    print("Datasize",datasize,"K-L-Error",error,"Epochs",epochs)
+    print("Datasize was",datasize,",K-L-Error:",error[-1:][0],",Epochs:",epochs)
     
 test2()
     
