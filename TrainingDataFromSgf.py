@@ -14,6 +14,7 @@ from collections import defaultdict
 from Board import *
 from Hashable import Hashable
 import pandas as pd
+import time
 
 def importsgf_old(file):
     if os.path.exists(file):
@@ -91,6 +92,7 @@ class TrainingData:
         self.n = 9
         self.board = Board(self.n)
         self.dic = defaultdict(np.ndarray)
+        self.test = 0
         if folder is not None:
             self.importTrainingData(folder, id_list)
 
@@ -132,7 +134,13 @@ class TrainingData:
         for i in range(1, len(node)):
             # first we extract the next move
             moves[i - 1] = list(node[i].properties.values())[0][0]
-            player[i - 1] = int(((ord(list(node[i].properties.keys())[0][0]) - 66) / 21 - 0.5) * 2)
+            if list(node[i].properties.keys())[0][0] == 'B':
+                player[i - 1] = -1
+            elif list(node[i].properties.keys())[0][0] == 'W':
+                player[i - 1] = 1
+            else:
+                break #ERROR
+            #player[i - 1] = int(((ord(list(node[i].properties.keys())[0][0]) - 66) / 21 - 0.5) * 2)
             m = moves[i - 1]
             if len(m) > 0 and type(m) is str:
                 if 97+self.n > ord(m[0]) > 97:  # there are some corrupted files with e.g. "54" as entry, (game 2981)
@@ -184,8 +192,7 @@ class TrainingData:
 
 # run
 def test():
-    t = TrainingData()
-    t.importTrainingData("dgs", range(2))
+    t = TrainingData("dgs", range(2))
 
     #print complete dictionary, don't if dic is big ;)
     for entry in t.dic:
@@ -208,3 +215,17 @@ def test():
 
 
 #test()
+
+def test2():
+    start = time.clock()
+    l = []
+    t = TrainingData("dgs", range(0,100))
+    length = 0
+    for entry in t.dic:
+        length += 1
+    l.append(length)
+    print(l)
+    print(time.clock()-start)
+    print(t.test)
+
+test2()

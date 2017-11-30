@@ -68,11 +68,11 @@ class PolicyNet:
         epochs = 0
         while error[-1:][0] > tolerance and epochs < maxEpochs:
             epochs += 1
-            self.Learnpropagate(eta, trainingData)
+            self.LearnPropagate(eta, trainingData)
             error.append(self.PropagateSet(evaluateData))
         return [error, epochs]
 
-    def Learnpropagate(self, eta, trainingData):
+    def LearnPropagate(self, eta, trainingData):
         for entry in trainingData.dic:
             boardVector = Hashable.unwrap(entry) - 0.25
             moveMatrix = trainingData.dic[entry].reshape(9 * 9)
@@ -80,87 +80,92 @@ class PolicyNet:
 
             if (sumOfEntries > 0):  # We can only learn if there are actual target vectors
                 moveMatrix = moveMatrix / sumOfEntries
-                boardVectorWithBias = np.append(boardVector, [1])
-                layers = [0] * self.layercount
+                self.LearnPropagateOne(eta, moveMatrix, boardVector)
 
-                # Forward-propagate
-                for i in range(0, self.layercount):
-                    layerResult = self.weights[i].dot(boardVectorWithBias)
-                    if i == self.layercount - 1:
-                        boardVectorWithBias = np.append(softmax(layerResult), [1])
-                    else:
-                        boardVectorWithBias = np.append(np.tanh(layerResult), [1])
-                    layers[i] = boardVectorWithBias  # save the y values for backprop (?)
-                out = boardVectorWithBias
-                # if 'firstout' not in locals():
-                #    firstout=y[:-1] #save first epoch output for comparison and visualization
+    def LearnPropagateOne(self, eta, moveMatrix, boardVector):
+        boardVectorWithBias = np.append(boardVector, [1])
+        DF = [0] * self.layercount
 
-                # Backpropagation
+        layers, out = self.forwardPropagate(boardVectorWithBias)
 
-                # Calc derivatives/Jacobian of the softmax activationfct in every layer (i dont have a good feeling about this):
-                #  Update: I tested this section, it actually works correctly for sure.
-                #  ToDo: We need not compute this for all layers, only the last one (only layer that uses softmax...)
-                # please note that I think this is pure witchcraft happening here
-                DF = [0] * self.layercount
-                outputOfLastLayer = layers[self.layercount - 1]  # load y from ys and lets call it yt
-                outputOfLastLayer = outputOfLastLayer[:-1]  # the last entry is from the offset, we don't need this
-                length = len(outputOfLastLayer)
-                DFt = np.ones((length, length))  # alloc storage temporarily
-                for j in range(0, length):
-                    DFt[j, :] *= outputOfLastLayer[j]
-                DFt = np.identity(length) - DFt
-                for j in range(0, length):
-                    DFt[:, j] *= outputOfLastLayer[j]
-                DF[self.layercount - 1] = DFt
-                # DF is a Jacobian, thus it is quadratic and symmetric
+        # if 'firstout' not in locals():
+        #    firstout=y[:-1] #save first epoch output for comparison and visualization
 
-                # Calc Jacobian of tanh
-                DFtan = [0] * self.layercount
-                for i in range(0, self.layercount):  # please note that I think this is pure witchcraft happening here
-                    outputOfLastLayer = layers[i]  # load y from ys and lets call it yt
-                    outputOfLastLayer = outputOfLastLayer[:-1]  # the last entry is from the offset, we don't need this
-                    u = 1 - outputOfLastLayer * outputOfLastLayer
-                    DFtan[i] = np.diag(u)
+        DF[self.layercount - 1] = self.softMaxDF(layers[self.layercount -1])
 
-                # Use (L2) and (L3) to get the error signals of the layers
-                errorsignals = [0] * self.layercount
-                errorsignals[self.layercount - 1] = DF[
-                    self.layercount - 1]  # (L2), the error signal of the output layer can be computed directly, here we actually use softmax
-                for i in range(2, self.layercount + 1):
-                    w = self.weights[self.layercount - i + 1]
-                    DFt = DFtan[self.layercount - i]  # tanh
-                    errdet = np.matmul(w[:, :-1], DFt)  # temporary
-                    errorsignals[self.layercount - i] = np.dot(errorsignals[self.layercount - i + 1],
-                                                               errdet)  # (L3), does python fucking get that?
+        # Calc Jacobian of tanh
+        DFtan = [0] * self.layercount
+        for i in range(0, self.layercount):  # please note that I think this is pure witchcraft happening here
+            outputOfLastLayer = layers[i]  # load y from ys and lets call it yt
+            outputOfLastLayer = outputOfLastLayer[:-1]  # the last entry is from the offset, we don't need this
+            u = 1 - outputOfLastLayer * outputOfLastLayer
+            DFtan[i] = np.diag(u)
 
-                # Use (D3) to compute err_errorsignals as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
-                err_errorsignals = [0] * self.layercount
-                errorbyyzero = out[:-1] - moveMatrix  # Mean-squared-error
-                # errorbyyzero = -targ/out[:-1] #Kullback-Leibler divergence
-                for i in range(0, self.layercount):
-                    err_errorsignals[i] = np.dot(errorbyyzero, errorsignals[i])  # this is the matrix variant of D3
+        # Use (L2) and (L3) to get the error signals of the layers
+        errorsignals = [0] * self.layercount
+        errorsignals[self.layercount - 1] = DF[
+            self.layercount - 1]  # (L2), the error signal of the output layer can be computed directly, here we actually use softmax
+        for i in range(2, self.layercount + 1):
+            w = self.weights[self.layercount - i + 1]
+            DFt = DFtan[self.layercount - i]  # tanh
+            errdet = np.matmul(w[:, :-1], DFt)  # temporary
+            errorsignals[self.layercount - i] = np.dot(errorsignals[self.layercount - i + 1],
+                                                       errdet)  # (L3), does python fucking get that?
 
-                # Use (2.2) to get the sought derivatives. Observe that this is an outer product, though not mentioned in the source
-                errorbyweights = [0] * self.layercount  # dE/dW
-                errorbyweights[0] = np.outer(err_errorsignals[0], boardVector).T  # Why do I need to transpose here???
-                for i in range(1, self.layercount):
-                    errorbyweights[i] = np.outer(err_errorsignals[i - 1], layers[i][:-1])  # (L1)
+        # Use (D3) to compute err_errorsignals as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
+        err_errorsignals = [0] * self.layercount
+        errorbyyzero = out[:-1] - moveMatrix  # Mean-squared-error
+        # errorbyyzero = -targ/out[:-1] #Kullback-Leibler divergence
+        for i in range(0, self.layercount):
+            err_errorsignals[i] = np.dot(errorbyyzero, errorsignals[i])  # this is the matrix variant of D3
 
-                # Compute the change of weights, that means, then apply actualization step of Gradient Descent to weight matrices
-                deltaweights = [0] * self.layercount
-                for i in range(0, self.layercount):
-                    deltaweights[i] = -eta * errorbyweights[i]
-                    self.weights[i][:, :-1] = self.weights[i][:, :-1] + deltaweights[
-                        i].T  # Problem: atm we only adjust non-bias weights. Change that!
+        # Use (2.2) to get the sought derivatives. Observe that this is an outer product, though not mentioned in the source
+        errorbyweights = [0] * self.layercount  # dE/dW
+        errorbyweights[0] = np.outer(err_errorsignals[0], boardVector).T  # Why do I need to transpose here???
+        for i in range(1, self.layercount):
+            errorbyweights[i] = np.outer(err_errorsignals[i - 1], layers[i][:-1])  # (L1)
 
-                # For Error statistics
-                self.errorsbyepoch.append(self.compute_ms_error(boardVectorWithBias[:-1], moveMatrix))
-                self.abserrorbyepoch[0] = self.compute_error(boardVectorWithBias[:-1], moveMatrix)
-                self.KLdbyepoch[0] = self.compute_KL_divergence(boardVectorWithBias[:-1], moveMatrix)
+        # Compute the change of weights, that means, then apply actualization step of Gradient Descent to weight matrices
+        deltaweights = [0] * self.layercount
+        for i in range(0, self.layercount):
+            deltaweights[i] = -eta * errorbyweights[i]
+            self.weights[i][:, :-1] = self.weights[i][:, :-1] + deltaweights[
+                i].T  # Problem: atm we only adjust non-bias weights. Change that!
 
-                error = self.compute_ms_error(boardVectorWithBias[:-1], moveMatrix)
+        # For Error statistics
+        self.errorsbyepoch.append(self.compute_ms_error(boardVectorWithBias[:-1], moveMatrix))
+        self.abserrorbyepoch[0] = self.compute_error(boardVectorWithBias[:-1], moveMatrix)
+        self.KLdbyepoch[0] = self.compute_KL_divergence(boardVectorWithBias[:-1], moveMatrix)
 
-                # return [firstout,out,error]
+        error = self.compute_ms_error(boardVectorWithBias[:-1], moveMatrix)
+
+        # return [firstout,out,error]
+
+    def forwardPropagate(self, boardVectorWithBias):
+        layers = [0] * self.layercount
+        for i in range(0, self.layercount):
+            layerResult = self.weights[i].dot(boardVectorWithBias)
+            if i == self.layercount - 1:
+                boardVectorWithBias = np.append(softmax(layerResult), [1])
+            else:
+                boardVectorWithBias = np.append(np.tanh(layerResult), [1])
+            layers[i] = boardVectorWithBias  # save the y values for backprop (?)
+        return layers, boardVectorWithBias
+
+    def softMaxDF(self, outputOfLastLayer):  # load y from ys and lets call it yt
+        outputOfLastLayer = outputOfLastLayer[:-1]  # the last entry is from the offset, we don't need this
+        length = len(outputOfLastLayer)
+        DFt = np.ones((length, length))  # alloc storage temporarily
+        for j in range(0, length):
+            DFt[j, :] *= outputOfLastLayer[j]
+        DFt = np.identity(length) - DFt
+        for j in range(0, length):
+            DFt[:, j] *= outputOfLastLayer[j]
+        return DFt
+        # DF is a Jacobian, thus it is quadratic and symmetric
+
+
+
 
     def Propagate(self, board):
         # convert board to NeuroNet format (81-dim vector. TODO: Check for color of NN-training and flip if needed! For now, for convenience, i just subtract 0.25. We should do it similar to Heining by setting: -1.35:w, 0.45:empty, 1.05:b)
@@ -304,7 +309,7 @@ def test():
     testdata = TrainingData()
     testdata.importTrainingData("dgs")  # load from TDFsgf
     for i in range(0, 1):
-        [firstout, out, error] = NN.Learnpropagate(eta, testdata)
+        [firstout, out, error] = NN.LearnPropagate(eta, testdata)
     # NN.saveweights('savedweights')
 
     PP = PolicyNet()
@@ -320,11 +325,19 @@ def test2():
     eta = 0.01
     trainingData = TrainingData("dgs", "dan_data_10")
     # evaluateData = TrainingData("dgs", "dan_data_10")
+    l = []
+    for i in range(10):
+        t = TrainingData("dgs", 'dan_data_10')
+        l.append(len(t.dic))
+    print(l)
     evaluateData = trainingData
-    dataSize = len(trainingData.dic)
+    i=0
+    for entry in trainingData.dic:
+        i+=1
+    dataSize = i
     trainingRate = 0.9
-    tolerance = 0.8
-    maxEpochs = 200
+    tolerance = 0.5
+    maxEpochs = 1
     startTime = time.clock()
     [error, epochs] = NN.LearnSplit(eta, trainingData, evaluateData, trainingRate, tolerance, maxEpochs)
     print("Datasize was", dataSize, ",Error:", error[-1:][0], ",Epochs:", epochs, "\nTime:",
@@ -341,7 +354,7 @@ def test3():
     error = TestNet.PropagateSet(testset)
     print('Error:', error)
     for i in range(10000):
-        TestNet.Learnpropagate(0.01, testset)
+        TestNet.LearnPropagate(0.01, testset)
     error = TestNet.PropagateSet(testset)
     print('Error:', error)
 
