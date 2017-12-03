@@ -27,9 +27,10 @@ class PolicyNet:
         ### Initialize the weights
         # here by a normal distribution N(mu,sigma)
         self.layercount = len(self.layers)-1
-        mu, sigma = 0, 0.4
+        mu=0
         self.weights=[0]*self.layercount #alloc memory
         for i in range(0,self.layercount):
+            sigma = 1/np.sqrt(self.layers[i+1]) #vgl Heining #TODO:Check if inputs are well-behaved (approx. normalized)
             self.weights[i]=np.random.normal(mu, sigma, (self.layers[i+1],self.layers[i]+1))#edit: the +1 in the input dimension is for the bias
         
         ### Alloc memory for the error statistics
@@ -341,15 +342,15 @@ def test2():
 #test2()
     
 def test3():
-    #PP = PolicyNet()
-    #testset = TrainingData()
-    #testset.importTrainingData("dgs","dan_data_10") #load from TDFsgf
+    TestNet = PolicyNet()
+    testset = TrainingData()
+    testset.importTrainingData("dgs","dan_data_10") #load from TDFsgf
     error = TestNet.PropagateSet(testset)
-    print('Error:',error)
-    for i in range(10000):
-        TestNet.Learnpropagate(0.01,testset)
+    print('Initial Error:',error)
+    for i in range(1000):
+        TestNet.Learnpropagate(0.0001,testset)
     error = TestNet.PropagateSet(testset)
-    print('Error:',error)
+    print('Final Error:',error)
     
 test3()
     
