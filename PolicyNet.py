@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from Hashable import Hashable
 from TrainingDataFromSgf import TrainingData
 import os
+import time
 
 def softmax(x):
         """Compute softmax values for each sets of scores in x."""
@@ -195,8 +196,8 @@ class PolicyNet:
         for entry in batch.dic:
             testdata=Hashable.unwrap(entry)-0.25
             targ=batch.dic[entry].reshape(9*9)
-            targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
+                targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
                 y = np.append(testdata,[1])
                 ys = [0]*self.layercount
                 #Forward-propagate
@@ -288,7 +289,7 @@ class PolicyNet:
             error=error/counter #average error in that batch
         #now adjust weights
         for i in range(0,self.layercount):
-            if type(deltaweights_batch[i]) is not int: #in this case we had no target for every board in this batch
+            if type(deltaweights_batch[i]) is not int: #in this case we had no target for any board in this batch
                 self.weights[i][:,:-1]= self.weights[i][:,:-1]+ deltaweights_batch[i].T #Problem: atm we only adjust non-bias weights. Change that!
         return [firstout,out,error]
     
@@ -326,8 +327,8 @@ class PolicyNet:
         for entry in testset.dic:
             testdata=Hashable.unwrap(entry)-0.25
             targ=testset.dic[entry].reshape(9*9)
-            targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
+                targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
                 y = np.append(testdata,[1])
                 ys = [0]*self.layercount
                 #Forward-propagate
@@ -471,7 +472,7 @@ def test3():
     print('Initial Error:',error)
     er=[]
     for i in range(1000):
-        [firstout,out,err]=TestNet.Learnpropagate(0.00001,testset)
+        [firstout,out,err]=TestNet.Learnpropagate(0.001,testset)
         er.append(err)
     error = TestNet.PropagateSet(testset)
     print('Final Error:',error)
@@ -486,50 +487,57 @@ def test4():
     diff=suggested/targ
     ddiff=suggested/(targ+0.0001) #disturbes method
     print(- np.inner(targ*np.log(diff),np.ones(len(targ))))#instable
-    print(- np.inner(targ*np.log(ddiff),np.ones(len(targ))))#stable,slightly unaccurate
+    print(- np.inner(targ*np.log(ddiff),np.ones(len(targ))))#stable,slightly inaccurate
     et=targ[targ!=0]
     es=suggested[targ!=0]
     df=es/et
     print(- np.inner(et*np.log(df),np.ones(len(et))))#stable and accurate
 #test4()
-    
+   
 def test5():
-    TestNet = PolicyNet()
+    TestNet = PolicyNet() 
     testset = TrainingData()
     testset.importTrainingData("dgs","dan_data_10") #load from TDFsgf
     error = TestNet.PropagateSet(testset)
     print('Initial Error:',error)
     er=[]
     batcherror=[]
-    batchsize=100
+    batchsize=700
     [k,batches]=TestNet.splitintobatches(testset,batchsize)
-    for epoch in range(2):
+    epochs=3
+    for epoch in range(epochs):
         for i in range(k): #Learn all batches
-            [firstout,out,err]=TestNet.Learnpropagatebatch(0.00001,batches[i])
-            print("Batch",i+1,"Error",err)
+            [firstout,out,err]=TestNet.Learnpropagatebatch(0.001,batches[i])
             er.append(err)
         batcherror.append(np.sum(er)/len(er))
     error = TestNet.PropagateSet(testset)
     print('Final Error:',error)
     #TestNet.visualize_error(er)
-    plt.plot(range(2),batcherror)
-
+    plt.plot(range(epochs),batcherror)
     
-    good=0
-    bad=0
+#test5()
+    
+def test6(): #test for statistical well-behavedness of inputs (expect~0,Var~1)
+    testset = TrainingData()
+    testset.importTrainingData("dgs","dan_data_10") #load from TDFsgf
+    observation=[0]*81
+    abs_observation=[0]*81
     for entry in testset.dic:
-        targ=testset.dic[entry].reshape(9*9)
-        targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
-        if(np.sum(targ)>0):
-            good+=1
-        else:
-            bad+=1
-    print("Good",good,"bad",bad)
-    
-    
-test5()
-
-
-
+        testdata=Hashable.unwrap(entry)
+        observation+=testdata
+        abs_observation+=np.abs(testdata)
+    mu=observation/len(testset.dic)#sure with that divide?
+    mu2=np.round(mu.reshape((9,9)),3)
+    print("Expectation Value in Dan_10:")
+    print(mu2) #well-behaved if around zero
+    sig_observation=[0]*81
+    for entry in testset.dic:
+        testdata=Hashable.unwrap(entry)
+        sig_observation+=np.power(testdata-mu,2)
+    sigma=sig_observation/len(testset.dic)
+    sigma2=np.round(np.sqrt(sigma.reshape((9,9))),2)
+    print("Standard Deviation in Dan_10:")
+    print(sigma2) #well-behaved if around 1
+test6()
 
 
