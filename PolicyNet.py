@@ -517,7 +517,7 @@ def test5():
     
 #test5()
     
-def test6(): #test for statistical well-behavedness of inputs (expect~0,Var~1)
+def test6(): #test for statistical well-behavedness of unscaled inputs (expect~0,Var~1)
     testset = TrainingData()
     testset.importTrainingData("dgs","dan_data_10") #load from TDFsgf
     observation=[0]*81
@@ -538,6 +538,40 @@ def test6(): #test for statistical well-behavedness of inputs (expect~0,Var~1)
     sigma2=np.round(np.sqrt(sigma.reshape((9,9))),2)
     print("Standard Deviation in Dan_10:")
     print(sigma2) #well-behaved if around 1
+
 test6()
 
+def test7():
+    #test for statistical well-behavedness of scaled inputs (expect~0,Var~1)
+    testset = TrainingData()
+    testset.importTrainingData("dgs","dan_data_10") #load from TDFsgf
+    observation=[0]*81
+    abs_observation=[0]*81
+    for entry in testset.dic:
+        testdata=Hashable.unwrap(entry)
+        for i in range(len(testdata)):
+            if testdata[i]>0:
+                testdata[i]=1.05
+            else: 
+                if testdata[i]<0:
+                    testdata[i]=-1.35
+                else: 
+                    if testdata[i]==0:
+                        testdata[i]=0.45
+        observation+=testdata
+        abs_observation+=np.abs(testdata)
+    mu=observation/len(testset.dic)#sure with that divide?
+    mu2=np.round(mu.reshape((9,9)),3)
+    print("Expectation Value in Dan_10:")
+    print(mu2) #well-behaved if around zero
+    sig_observation=[0]*81
+    for entry in testset.dic:
+        testdata=Hashable.unwrap(entry)-0.25
+        sig_observation+=np.power(testdata-mu,2)
+    sigma=sig_observation/len(testset.dic)
+    sigma2=np.round(np.sqrt(sigma.reshape((9,9))),2)
+    print("Standard Deviation in Dan_10:")
+    print(sigma2) #well-behaved if around 1
+    
+test7()
 
