@@ -18,6 +18,9 @@ log_2.txt
 data_cleaning.py
 .DS_Store
 
+#Stefan:
+Saved_Weights/
+
 ##################################################################
 # All the rest here is the preset python .gitignore from github ;)
 # Byte-compiled / optimized / DLL files
