@@ -102,11 +102,12 @@ class PolicyNet:
 
     
     def Learnpropagate(self, eta, trainingdata):
+        counter, error= 0, 0
         for entry in trainingdata.dic:
             testdata=Hashable.unwrap(entry)-0.25
             targ=trainingdata.dic[entry].reshape(9*9)
-            targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
+                targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
                 y = np.append(testdata,[1])
                 ys = [0]*self.layercount
                 #Forward-propagate
@@ -186,9 +187,11 @@ class PolicyNet:
                 self.abserrorbyepoch.append(self.compute_error (y[:-1], targ))
                 self.KLdbyepoch.append(self.compute_KL_divergence(y[:-1], targ))
                 
-                error = self.compute_KL_divergence(y[:-1], targ)
-                
-            return [firstout,out,error]
+                counter += 1
+                error += self.compute_KL_divergence(y[:-1], targ)
+                #error = self.compute_KL_divergence(y[:-1], targ)
+            error=error/counter #average error over training set
+        return [firstout,out,error]
    
     def Learnpropagatebatch(self, eta, batch): #takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
         deltaweights_batch=[0]*self.layercount
@@ -448,8 +451,6 @@ def test():
     PP = PolicyNet()
     PP.loadweightsfromfile('Saved_Weights','testsavedweights')
 
-    
-    
 test()
     
 def test2():
@@ -498,25 +499,49 @@ def test4():
    
 def test5():
     TestNet = PolicyNet() 
+    w=TestNet.weights
     testset = TrainingData()
     testset.importTrainingData("dgs","dan_data_10") #load from TDFsgf
-    error = TestNet.PropagateSet(testset)
-    print('Initial Error:',error)
-    er=[]
-    batcherror=[]
+    t1=time.time()
+    errorinit = TestNet.PropagateSet(testset)
+    tinit=time.time()-t1
+    print('Initial Error:',errorinit,'Time:',tinit)
+    epochs=2
+    eta=0.001
+    
+    #Batch learning
+    er=[] #errors in all the batches
+    batcherror=[] #average batch error in each epoch
     batchsize=700
+    t1=time.time()
     [k,batches]=TestNet.splitintobatches(testset,batchsize)
-    epochs=3
+    t2=time.time()
     for epoch in range(epochs):
         for i in range(k): #Learn all batches
-            [firstout,out,err]=TestNet.Learnpropagatebatch(0.001,batches[i])
+            [firstout,out,err]=TestNet.Learnpropagatebatch(eta,batches[i])
             er.append(err)
         batcherror.append(np.sum(er)/len(er))
-    error = TestNet.PropagateSet(testset)
-    print('Final Error:',error)
-    #TestNet.visualize_error(er)
-    plt.plot(range(epochs),batcherror)
+    t3=time.time()
     
-#test5()
+    error = TestNet.PropagateSet(testset)
+    print('Final Error:',error,"Time:",t3-t2,"where the splitting took additionally",t2-t1)
+    #TestNet.visualize_error(er)
+    
+    #Now without batchs
+    TestNet.weights=w #reset weights
+    errors2=[]
+    t1=time.time()
+    for epoch in range(epochs):
+        [firstout,out,err]=TestNet.Learnpropagate(eta,testset)
+        errors2.append(err)
+    t2=time.time()
+    error = TestNet.PropagateSet(testset)
+    print('Final Error:',error,"Time:",t2-t1)
+        
+    #plot results
+    plt.plot(range(epochs),batcherror,'b')
+    plt.plot(range(epochs),errors2,'r')
+    
+test5()
 
 
