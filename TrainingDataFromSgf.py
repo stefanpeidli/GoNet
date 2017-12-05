@@ -98,11 +98,12 @@ class TrainingData:
 
     #help method for converting a vector containing a move to the corresponding coord tuple
     def toCoords(self, vector):
+        vector=vector.flatten()
         if np.linalg.norm(vector) == 1:
             for entry in range(len(vector)):
                 if vector[entry] == 1:
                     return entry % 9, int(entry / 9)
-        else: return "Error"
+        else: return None
 
     def importTrainingData(self, folder, id_list=range(1000)):
         dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -124,42 +125,34 @@ class TrainingData:
         with open(currfile) as f:
             collection = sgf.parse(f.read())
 
-        game = collection[0]  # some collections have more games than one, I ignore them for now
-        node = game.nodes
-        moves = [0] * (len(node) - 1)  # the node at 0 is the game info (i think)
-        player = [0] * (len(node) - 1)  # we need to keep track of who played that move, B=-1, W=+1
-        boards = [0] * len(node)
-        boards[0] = np.zeros(self.n * self.n, dtype=np.int32)  # first board of the game is always empty board
-        boardMatrix = np.zeros((self.n, self.n), dtype=np.int32)
+        # some collections have more games than one, I ignore them for now
+        node = collection[0].nodes
+        # first board of the game is always empty board
+        prevBoardMatrix = np.zeros((self.n, self.n), dtype=np.int32)
+        currBoardMatrix = np.zeros((self.n, self.n), dtype=np.int32)
+
         for i in range(1, len(node)):
             # first we extract the next move
-            moves[i - 1] = list(node[i].properties.values())[0][0]
-            if list(node[i].properties.keys())[0][0] == 'B':
-                player[i - 1] = -1
-            elif list(node[i].properties.keys())[0][0] == 'W':
-                player[i - 1] = 1
-            else:
-                break #ERROR
-            #player[i - 1] = int(((ord(list(node[i].properties.keys())[0][0]) - 66) / 21 - 0.5) * 2)
-            m = moves[i - 1]
-            if len(m) > 0 and type(m) is str:
-                if 97+self.n > ord(m[0]) > 97:  # there are some corrupted files with e.g. "54" as entry, (game 2981)
-                    boardMatrix[ord(m[1]) - 97, ord(m[0]) - 97] = player[i - 1]
-            boards[i] = boardMatrix.flatten()
+            move = list(node[i].properties.values())[0][0]
+            # we need to keep track of who played that move, B=-1, W=+1
+            stone = int(((ord(list(node[i].properties.keys())[0][0]) - 66) / 21 - 0.5) * 2)
+            if len(move) > 0 and type(move) is str:
+                if 97+self.n > ord(move[0]) > 97:  # there are some corrupted files with e.g. "54" as entry, (game 2981)
+                    currBoardMatrix[ord(move[1]) - 97, ord(move[0]) - 97] = stone
 
-            self.addToDict(boards[i - 1], boardMatrix, player[i - 1])
+            self.addToDict(prevBoardMatrix, currBoardMatrix, stone)
 
             # now we play the move on the board and see if we have to remove stones
-            coords = self.toCoords(np.absolute(boards[i] - boards[i - 1]))
-            if type(coords) is not str:
-                self.board.play_stone(coords[1],coords[0],player[i-1])
-                boards[i] = self.board.vertices.flatten()
-                boardMatrix = self.board.vertices
+            coords = self.toCoords(np.absolute(currBoardMatrix - prevBoardMatrix))
+            if coords is not None:
+                self.board.play_stone(coords[1],coords[0],stone)
+                prevBoardMatrix = np.copy(self.board.vertices)
+                currBoardMatrix = np.copy(self.board.vertices)
 
-    #help method: adds tuple (board,move) to dictionary for every possible rotation
-    def addToDict(self, prevBoardVector, currBoardVector, player):
-        prevBoardMatrix = prevBoardVector.reshape((9, 9))
-        currPrevPair = (currBoardVector, prevBoardMatrix)
+
+                #help method: adds tuple (board,move) to dictionary for every possible rotation
+    def addToDict(self, prevBoardMatrix, currBoardMatrix, player):
+        currPrevPair = (currBoardMatrix, prevBoardMatrix)
         flippedCurrPrevPair = (np.flip(currPrevPair[0], 1), np.flip(currPrevPair[1], 1))
         symmats = [currPrevPair, flippedCurrPrevPair]
         for i in range(3):
@@ -196,9 +189,9 @@ def test():
 
     #print complete dictionary, don't if dic is big ;)
     for entry in t.dic:
-        testdata = Hashable.unwrap(entry)
-        targ = t.dic[entry].reshape(9*9)
-        print('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
+         testdata = Hashable.unwrap(entry)
+         targ = t.dic[entry].reshape(9*9)
+         print('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
 
     #print cumulated move distribution for empty board
     zeroMatrix = t.dic[Hashable(np.zeros(t.n * t.n, dtype=np.int32))]
@@ -214,7 +207,7 @@ def test():
     print(np.sum(secondMoveDist))
 
 
-#test()
+test()
 
 def test2():
     start = time.clock()
@@ -228,4 +221,4 @@ def test2():
     print(time.clock()-start)
     print(t.test)
 
-test2()
+#test2()
