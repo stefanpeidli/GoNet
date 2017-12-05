@@ -409,26 +409,29 @@ class PolicyNet:
     
     #print("We are ",np.round(compute_error(suggestedmove,2)*100,2),"% away from the right solution move.")#test, lets just say that 2 would be the best move for now
 
-    def saveweights(self,filename):
-        #for i in range(len(self.weights)):
-        np.savez(filename,self.weights)
+    def saveweights(self,folder,filename):
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        file = dir_path + "/" + folder + "/" + filename
+        np.savez(file,self.weights)
         
-    def loadweightsfromfile(self,filename):
+    def loadweightsfromfile(self,folder,filename):
         # if file doesnt exist, do nothing
-            if os.path.exists(filename):
-                with np.load(filename) as data:
-                    self.weights=[]
-                    self.layer=[data['arr_0'][0].shape[1]] #there are n+1 layers if there are n weightmatrices
-                    for i in range(len(data['arr_0'])):
-                        self.weights.append(data['arr_0'][i])
-                        tempshape=data['arr_0'][i].shape
-                        self.layer.append(tempshape[0])
-                    self.layercount=len(self.layer)-1
-            elif os.path.exists(filename + ".npz"):
-                with np.load(filename + ".npz") as data:
-                    self.weights=[]
-                    for i in range(len(data['arr_0'])):
-                        self.weights.append(data['arr_0'][i])
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        file = dir_path + "/" + folder + "/" + filename
+        if os.path.exists(file):
+            with np.load(file) as data:
+                self.weights=[]
+                self.layer=[data['arr_0'][0].shape[1]] #there are n+1 layers if there are n weightmatrices
+                for i in range(len(data['arr_0'])):
+                    self.weights.append(data['arr_0'][i])
+                    tempshape=data['arr_0'][i].shape
+                    self.layer.append(tempshape[0])
+                self.layercount=len(self.layer)-1
+        elif os.path.exists(file + ".npz"):
+            with np.load(file + ".npz") as data:
+                self.weights=[]
+                for i in range(len(data['arr_0'])):
+                    self.weights.append(data['arr_0'][i])
                 
 #Tests
 
@@ -440,15 +443,14 @@ def test():
     testdata.importTrainingData("dgs") #load from TDFsgf
     for i in range(0,1):
         NN.Learnpropagate(eta ,testdata)
-    #NN.saveweights('savedweights')
+    NN.saveweights('Saved_Weights','testsavedweights')
     
     PP = PolicyNet()
-    PP.loadweightsfromfile('savedweights.npz')
-    #print(PP.layer,PP.layercount)
-    NN.visualize(games,firstout,out,targ) #atm only works if games=2000
+    PP.loadweightsfromfile('Saved_Weights','testsavedweights')
+
     
     
-#test()
+test()
     
 def test2():
     NN = PolicyNet()
@@ -539,7 +541,7 @@ def test6(): #test for statistical well-behavedness of unscaled inputs (expect~0
     print("Standard Deviation in Dan_10:")
     print(sigma2) #well-behaved if around 1
 
-test6()
+#test6()
 
 def test7():
     #test for statistical well-behavedness of scaled inputs (expect~0,Var~1)
@@ -573,5 +575,5 @@ def test7():
     print("Standard Deviation in Dan_10:")
     print(sigma2) #well-behaved if around 1
     
-test7()
+#test7()
 
