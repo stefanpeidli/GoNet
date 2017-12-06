@@ -124,7 +124,7 @@ class TrainingData:
     def importSingleFile(self, currfile):
         with open(currfile) as f:
             collection = sgf.parse(f.read())
-
+        self.board.clear()
         # some collections have more games than one, I ignore them for now
         node = collection[0].nodes
         # first board of the game is always empty board
@@ -132,13 +132,15 @@ class TrainingData:
         currBoardMatrix = np.zeros((self.n, self.n), dtype=np.int32)
 
         for i in range(1, len(node)):
-            # first we extract the next move
+            # first we extract the next move, e.g. 'bb'
             move = list(node[i].properties.values())[0][0]
             # we need to keep track of who played that move, B=-1, W=+1
             stone = int(((ord(list(node[i].properties.keys())[0][0]) - 66) / 21 - 0.5) * 2)
-            if len(move) > 0 and type(move) is str:
-                if 97+self.n > ord(move[0]) > 97:  # there are some corrupted files with e.g. "54" as entry, (game 2981)
-                    currBoardMatrix[ord(move[1]) - 97, ord(move[0]) - 97] = stone
+            # if file says bs, then stop reading file
+            if not (stone == 1 or stone == -1): return
+            if not (len(move) > 0 and type(move) is str and 97+self.n > ord(move[0]) > 97): return
+
+            currBoardMatrix[ord(move[1]) - 97, ord(move[0]) - 97] = stone
 
             self.addToDict(prevBoardMatrix, currBoardMatrix, stone)
 
@@ -185,13 +187,13 @@ class TrainingData:
 
 # run
 def test():
-    t = TrainingData("dgs", range(2))
+    t = TrainingData("dgs", range(10000))
 
     #print complete dictionary, don't if dic is big ;)
-    for entry in t.dic:
-         testdata = Hashable.unwrap(entry)
-         targ = t.dic[entry].reshape(9*9)
-         print('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
+    # for entry in t.dic:
+    #      testdata = Hashable.unwrap(entry)
+    #      targ = t.dic[entry].reshape(9*9)
+    #      print('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
 
     #print cumulated move distribution for empty board
     zeroMatrix = t.dic[Hashable(np.zeros(t.n * t.n, dtype=np.int32))]
@@ -201,8 +203,9 @@ def test():
     #print cumulated move distributions for boards with exactly one stone
     secondMoveDist = np.zeros(9 * 9, dtype=np.int32)
     for entry in t.dic:
-        if np.sum(Hashable.unwrap(entry)) == 1:
-            secondMoveDist = secondMoveDist + t.dic[entry]
+        thisis = Hashable.unwrap(entry)
+        if np.sum(np.absolute(thisis)) == 1:
+            secondMoveDist += t.dic[entry]
     print(secondMoveDist.reshape((9, 9)))
     print(np.sum(secondMoveDist))
 
