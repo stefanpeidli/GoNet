@@ -382,4 +382,4 @@ def test3():
     print(secondMoveDist.reshape((9, 9)))
     print(np.sum(secondMoveDist))
     print("\nTime " + str(time.clock()-start))
-test3()
+#test3()
