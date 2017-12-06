@@ -128,7 +128,7 @@ class PolicyNet:
                 
                 #Calc derivatives/Jacobian of the softmax activationfct in every layer (i dont have a good feeling about this): Update: I tested this section, it actually works correctly for sure. ToDo: We need not compute this for all layers, only the last one (only layer that uses softmax...)
                 DF=[0]*self.layercount
-                for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
+                for i in range(self.layercount-2,self.layercount): #please note that I think this is pure witchcraft happening here
                     yt=ys[i] #load y from ys and lets call it yt
                     yt=yt[:-1] #the last entry is from the offset, we don't need this
                     le=len(yt)
@@ -469,17 +469,22 @@ def test2():
 def test3():
     TestNet = PolicyNet()
     testset = TrainingDataSgf("dgs","dan_data_10")
+    epochs=10
+    eta = 0.01
+    t=time.time()
     error = TestNet.PropagateSet(testset)
-    print('Initial Error:',error)
+    print('Initial Error:',error, "Propagation took",np.round(time.time()-t,3),"seconds.")
+    print("Learning was done with batch size 1, vanilla Gradient Descent and Learning rate",eta)
     er=[]
-    for i in range(1000):
-        [firstout,out,err]=TestNet.Learnpropagate(0.001,testset)
+    for i in range(epochs):
+        t=time.time()
+        [firstout,out,err]=TestNet.Learnpropagate(eta, testset)
+        print("epoch number",i,"took",np.round(time.time()-t,3),"seconds.")
         er.append(err)
     error = TestNet.PropagateSet(testset)
     print('Final Error:',error)
-    TestNet.visualize_error(er)
+    #TestNet.visualize_error(er)
 
-    
 #test3()
    
 def test5():
