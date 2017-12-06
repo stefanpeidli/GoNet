@@ -539,9 +539,9 @@ def test5():
     print('Final Error:',error,"Time:",t2-t1)
         
     #plot results
-    plt.plot(range(epochs),batcherror,'b')
-    plt.plot(range(epochs),errors2,'r')
+    #plt.plot(range(epochs),batcherror,'b')
+    #plt.plot(range(epochs),errors2,'r')
     
-test5()
+#test5()
 
 

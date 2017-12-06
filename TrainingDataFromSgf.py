@@ -361,21 +361,21 @@ def test():
 
 
 # test()
-
+    
 def test2():
     start = time.clock()
     l = []
-    t = TrainingData("dgs", range(0, 100))
+    t = TrainingData("dgs",range(0,100))
+    end = time.clock()
     length = 0
     for entry in t.dic:
         length += 1
     l.append(length)
-    print(l)
-    print(time.clock() - start)
-    print(t.test)
+    print("imported distinct boards:",length)
+    print("importing took", np.round(end - start,3), "seconds")
+    
 
-
-# test2()
+test2()
 
 def test3():
     start = time.clock()
