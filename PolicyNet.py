@@ -11,6 +11,7 @@ from TrainingDataFromSgf import TrainingData #legacy
 from TrainingDataFromSgf import TrainingDataSgf
 import os
 import time
+import datetime
 
 def softmax(x):
         """Compute softmax values for each sets of scores in x."""
@@ -128,7 +129,7 @@ class PolicyNet:
                 
                 #Calc derivatives/Jacobian of the softmax activationfct in every layer (i dont have a good feeling about this): Update: I tested this section, it actually works correctly for sure. ToDo: We need not compute this for all layers, only the last one (only layer that uses softmax...)
                 DF=[0]*self.layercount
-                for i in range(self.layercount-2,self.layercount): #please note that I think this is pure witchcraft happening here
+                for i in range(self.layercount-1,self.layercount): #please note that I think this is pure witchcraft happening here
                     yt=ys[i] #load y from ys and lets call it yt
                     yt=yt[:-1] #the last entry is from the offset, we don't need this
                     le=len(yt)
@@ -221,7 +222,7 @@ class PolicyNet:
                 
                 #Calc derivatives/Jacobian of the softmax activationfct in every layer (i dont have a good feeling about this): Update: I tested this section, it actually works correctly for sure. ToDo: We need not compute this for all layers, only the last one (only layer that uses softmax...)
                 DF=[0]*self.layercount
-                for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
+                for i in range(self.layercount-1,self.layercount): #please note that I think this is pure witchcraft happening here
                     yt=ys[i] #load y from ys and lets call it yt
                     yt=yt[:-1] #the last entry is from the offset, we don't need this
                     le=len(yt)
@@ -469,20 +470,27 @@ def test2():
 def test3():
     TestNet = PolicyNet()
     testset = TrainingDataSgf("dgs","dan_data_10")
-    epochs=10
+    epochs=20
     eta = 0.01
     t=time.time()
-    error = TestNet.PropagateSet(testset)
-    print('Initial Error:',error, "Propagation took",np.round(time.time()-t,3),"seconds.")
+    initerror = TestNet.PropagateSet(testset)
+    print("Propagation took",np.round(time.time()-t,3),"seconds.")
     print("Learning was done with batch size 1, vanilla Gradient Descent and Learning rate",eta)
     er=[]
+    totaltime=time.time()
     for i in range(epochs):
         t=time.time()
         [firstout,out,err]=TestNet.Learnpropagate(eta, testset)
         print("epoch number",i,"took",np.round(time.time()-t,3),"seconds.")
         er.append(err)
     error = TestNet.PropagateSet(testset)
-    print('Final Error:',error)
+    print(error,'Final Error:')
+    print(initerror,'Initial Error:')
+    print("total time needed:",time.time()-totaltime)
+    
+    #save results:
+    name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(eta*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"Dan10"
+    TestNet.saveweights('Saved_Weights',name)
     #TestNet.visualize_error(er)
 
 #test3()
