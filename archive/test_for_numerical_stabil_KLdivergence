@@ -1,0 +1,12 @@
+def test4():
+    suggested=np.array([0.1,0.8,0.1])
+    targ=np.array([0,1,0])
+    diff=suggested/targ
+    ddiff=suggested/(targ+0.0001) #disturbes method
+    print(- np.inner(targ*np.log(diff),np.ones(len(targ))))#instable
+    print(- np.inner(targ*np.log(ddiff),np.ones(len(targ))))#stable,slightly inaccurate
+    et=targ[targ!=0]
+    es=suggested[targ!=0]
+    df=es/et
+    print(- np.inner(et*np.log(df),np.ones(len(et))))#stable and accurate
+#test4()
