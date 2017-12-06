@@ -7,7 +7,8 @@ Tags: Policy-net, Neural Network
 import numpy as np
 import matplotlib.pyplot as plt
 from Hashable import Hashable
-from TrainingDataFromSgf import TrainingData
+from TrainingDataFromSgf import TrainingData #legacy
+from TrainingDataFromSgf import TrainingDataSgf
 import os
 import time
 
@@ -72,7 +73,7 @@ class PolicyNet:
     def Learnsplit(self, eta, trainingdata, trainingrate, tolerance, maxepochs):
         N = len(trainingdata.dic)
         splitindex = int(round(N*trainingrate))
-        trainingset, testset = TrainingData(), TrainingData()
+        trainingset, testset = TrainingData(), TrainingData() #TODO: check if this is fine with TraingDataSgf method
         trainingset.dic = dict(list(trainingdata.dic.items())[:splitindex])
         testset.dic = dict(list(trainingdata.dic.items())[splitindex:])
         
@@ -91,7 +92,7 @@ class PolicyNet:
         k = int(np.ceil(N/batchsize))
         #splitindices=[]
         Batch_sets=[0]*k
-        Batch_sets[0]=TrainingData()
+        Batch_sets[0]=TrainingData() #TODO: check if this is fine with TraingDataSgf method
         Batch_sets[0].dic = dict(list(trainingdata.dic.items())[:batchsize])
         for i in range(k-1):
             Batch_sets[i]=TrainingData()
@@ -442,8 +443,7 @@ def test():
     if 'NN' not in locals():
         NN = PolicyNet()
     eta = 0.01
-    testdata = TrainingData()
-    testdata.importTrainingData("dgs") #load from TDFsgf
+    testdata = TrainingDataSgf("dgs",range(0,1000))
     for i in range(0,1):
         NN.Learnpropagate(eta ,testdata)
     NN.saveweights('Saved_Weights','testsavedweights')
@@ -451,13 +451,12 @@ def test():
     PP = PolicyNet()
     PP.loadweightsfromfile('Saved_Weights','testsavedweights')
 
-test()
+#test()
     
 def test2():
     NN = PolicyNet()
     eta = 0.05
-    trainingdata = TrainingData()
-    trainingdata.importTrainingData("dgs") #load from TDFsgf
+    trainingdata = TrainingDataSgf("dgs",range(0,1000))
     datasize = len(trainingdata.dic)
     trainingrate = 0.9
     tolerance = 0.8
@@ -469,8 +468,7 @@ def test2():
     
 def test3():
     TestNet = PolicyNet()
-    testset = TrainingData()
-    testset.importTrainingData("dgs","dan_data_10") #load from TDFsgf
+    testset = TrainingDataSgf("dgs","dan_data_10")
     error = TestNet.PropagateSet(testset)
     print('Initial Error:',error)
     er=[]
@@ -483,25 +481,11 @@ def test3():
 
     
 #test3()
-    
-def test4():
-    suggested=np.array([0.1,0.8,0.1])
-    targ=np.array([0,1,0])
-    diff=suggested/targ
-    ddiff=suggested/(targ+0.0001) #disturbes method
-    print(- np.inner(targ*np.log(diff),np.ones(len(targ))))#instable
-    print(- np.inner(targ*np.log(ddiff),np.ones(len(targ))))#stable,slightly inaccurate
-    et=targ[targ!=0]
-    es=suggested[targ!=0]
-    df=es/et
-    print(- np.inner(et*np.log(df),np.ones(len(et))))#stable and accurate
-#test4()
    
 def test5():
     TestNet = PolicyNet() 
     w=TestNet.weights
-    testset = TrainingData()
-    testset.importTrainingData("dgs","dan_data_10") #load from TDFsgf
+    testset = TrainingDataSgf("dgs","dan_data_10")
     t1=time.time()
     errorinit = TestNet.PropagateSet(testset)
     tinit=time.time()-t1

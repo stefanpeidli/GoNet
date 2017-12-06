@@ -365,17 +365,20 @@ def test():
 def test2():
     start = time.clock()
     l = []
-    t = TrainingData("dgs",range(0,100))
+    #ranged=1000
+    #t = TrainingDataSgf("dgs",range(0,ranged))
+    t=TrainingDataSgf("dgs","dan_data_10")
     end = time.clock()
     length = 0
     for entry in t.dic:
         length += 1
     l.append(length)
+    #print("Range:",ranged)
     print("imported distinct boards:",length)
     print("importing took", np.round(end - start,3), "seconds")
     
 
-test2()
+#test2()
 
 def test3():
     start = time.clock()
