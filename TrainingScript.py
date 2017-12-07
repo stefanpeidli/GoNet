@@ -95,9 +95,9 @@ def TrainingBasicDan10(PolicyNetwork,learningrate,epochs,stoch_coeff):
     print(initerror,'Initial Error:')
     print("total time needed:",time.time()-totaltime)
     #save results:
-    name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(eta*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"Dan10"
-    PolicyNetwork.saveweights('Saved_Weights',name)
-    print("weights have been saved to",name)
+    #name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(eta*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"Dan10"
+    #PolicyNetwork.saveweights('Saved_Weights',name)
+    #print("weights have been saved to",name)
     return errors_by_epoch
 
    
@@ -212,7 +212,7 @@ if your_name is "Stefan":
     #hier schreibe ich mein training rein
     print("halo I bims")
     
-    training_program = 2
+    training_program = 3
 
     if training_program == 1:
         #3 epochs = 1 minute
@@ -237,5 +237,15 @@ if your_name is "Stefan":
         plt.plot(range(0,epochs),errors_by_epoch2)
         plt.plot(range(0,epochs),errors_by_epoch3)
         
-
-
+    if training_program == 3:
+        PN=PolicyNet()
+        epochs = 10
+        
+        errors_by_epoch1 = TrainingBasicDan10(PN,0.1,epochs,0.3)
+        errors_by_epoch2 = TrainingBasicDan10(PN,0.01,epochs,0.7)
+        errors_by_epoch3 = TrainingBasicDan10(PN,0.001,epochs,0.8)
+        errors_by_epoch4 = TrainingBasicDan10(PN,0.0005,epochs,0.9)
+        
+        name="weightsdelight"
+        PN.saveweights('Saved_Weights',name)
+        plt.plot(range(0,epochs*4),[errors_by_epoch1,errors_by_epoch2,errors_by_epoch3,errors_by_epoch4])
