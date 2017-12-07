@@ -58,12 +58,12 @@ On saving and loading weights:
         
 """
 
-def TrainingBasic(PolicyNetwork,learningrate,epochs,sgfrange):
+def TrainingBasic(PolicyNetwork,learningrate,epochs,sgfrange, stoch_coeff):
     eta = learningrate
     testdata = TrainingDataSgf("dgs",range(0,sgfrange))
     errors_by_epoch=[]
     for i in range(0,epochs):
-        [f,o,error] = PolicyNetwork.Learnpropagate(eta ,testdata)
+        [f,o,error] = PolicyNetwork.Learnpropagate(eta ,testdata, stoch_coeff)
         errors_by_epoch.append(error)
     return errors_by_epoch
 
@@ -164,7 +164,8 @@ if your_name is "Paddy":
     learningrate = 0.01
     epochs = 1  # one epoch ~ 25 seconds
     sgfrange = 10
-    TrainingBasic(MyNetwork, learningrate, epochs, sgfrange)
+    stoch_coeff = 0.2
+    TrainingBasic(MyNetwork, learningrate, epochs, sgfrange, stoch_coeff)
     name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
         int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "sgfrange" + str(sgfrange)
     MyNetwork.saveweights('Saved_Weights', name)
@@ -209,30 +210,31 @@ if your_name is "Faruk":
 """
 
 
-training_program = 2
+if your_name is "training_program":
+    training_program = 2
 
-if training_program == 1:
-    #3 epochs = 1 minute
-    #PN=PolicyNet()
-    #PN.loadweightsfromfile('Saved_Weights','weights1712071159eta100001epochs60batchsize1Dan10')
-    epochs=60
-    print("I think I will need",np.round(epochs/3,2),"minutes for this task.")
-    errors_by_epoch1 = TrainingBasicDan10(PN,0.00009,epochs)
-    plt.plot(range(0,epochs),errors_by_epoch1)
+    if training_program == 1:
+        #3 epochs = 1 minute
+        #PN=PolicyNet()
+        #PN.loadweightsfromfile('Saved_Weights','weights1712071159eta100001epochs60batchsize1Dan10')
+        epochs=60
+        print("I think I will need",np.round(epochs/3,2),"minutes for this task.")
+        errors_by_epoch1 = TrainingBasicDan10(PN,0.00009,epochs)
+        plt.plot(range(0,epochs),errors_by_epoch1)
 
-if training_program == 2:
-    PN=PolicyNet()
-    w=PN.weights
-    epochs = 30
-    print("I think I will need",np.round(epochs/3*(1+0.2+0.7),2),"minutes for this task.")
-    errors_by_epoch1 = TrainingBasicDan10(PN,0.001,epochs)
-    PN.weights=w
-    errors_by_epoch2 = TrainingStochBasicDan10(PN,0.001,epochs,0.2)
-    PN.weights=w
-    errors_by_epoch3 = TrainingStochBasicDan10(PN,0.001,epochs,0.7)
-    plt.plot(range(0,epochs),errors_by_epoch1)
-    plt.plot(range(0,epochs),errors_by_epoch2)
-    plt.plot(range(0,epochs),errors_by_epoch3)
+    if training_program == 2:
+        PN=PolicyNet()
+        w=PN.weights
+        epochs = 30
+        print("I think I will need",np.round(epochs/3*(1+0.2+0.7),2),"minutes for this task.")
+        errors_by_epoch1 = TrainingBasicDan10(PN,0.001,epochs)
+        PN.weights=w
+        errors_by_epoch2 = TrainingStochBasicDan10(PN,0.001,epochs,0.2)
+        PN.weights=w
+        errors_by_epoch3 = TrainingStochBasicDan10(PN,0.001,epochs,0.7)
+        plt.plot(range(0,epochs),errors_by_epoch1)
+        plt.plot(range(0,epochs),errors_by_epoch2)
+        plt.plot(range(0,epochs),errors_by_epoch3)
         
 
 
