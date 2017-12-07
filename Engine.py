@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 from Board import *
-from PolicyNet import *
+from PolicyNetForExecutable import *
 import random
-from TrainingDataFromSgf import TrainingData
 
 
 class BaseEngine(object):
@@ -25,8 +24,8 @@ class BaseEngine(object):
         pass
 
     def stone_played(self, x, y, stone):
-        if self.board.play_is_legal(x, y, stone):
-            self.board.play_stone(x, y, stone)
+         if self.board.play_is_legal(x, y, stone):
+             self.board.play_stone(x, y, stone)
 
     def play_legal_move(self, board, stone):
         assert False
@@ -54,25 +53,39 @@ class IntelligentEngine(BaseEngine):
     def __init__(self,n):
         super(IntelligentEngine, self).__init__(n)
         self.PolicyNet = PolicyNet() #untrained
-        self.PolicyNet.loadweightsfromfile('savedweights.npz')
+        self.PolicyNet.loadweightsfromfile("Saved_Weights",'weights1712071559eta1000010epochs20batchsize1Dan10.npz')
 
     def version(self):
         return "2.0"
 
     # need to get move from Neural Network here (forward propagate the current board)
     def play_legal_move(self, board, stone):
-        out=self.PolicyNet.Propagate(board)
-        while len(out)>0:
+        if(stone == Stone.Black):
+            out=self.PolicyNet.Propagate(board)
+        else:
+            boardVector = board.vertices.flatten()
+            invBoard = np.zeros(9 * 9, dtype=np.int32)
+            for count in range(len(boardVector)):
+                if boardVector[count] != 0:
+                    invBoard[count] = -1 * boardVector[count]
+                else:
+                    invBoard[count] = 0
+            tempVertices = np.copy(board.vertices)
+            board.vertices = invBoard.reshape((9,9))
+            out=self.PolicyNet.Propagate(board)
+            board.vertices = tempVertices
+        while sum(out) > 0:
             move=np.argmax(out) # Problem: What happens if this is not unique?
             x=int(move%9)
             y=int(np.floor(move/9))
             coords=(x,y) #check if this is right, i dont think so. The counting is wrong
             if board.play_is_legal(coords[0],coords[1], stone):
                 board.play_stone(coords[0],coords[1], stone)
-                print("The Policy Network considers",coords,"as the best move with a distribution value of",str(round(out[move]*100))+"%",".")
+                print("The Policy Network considers",coords,
+                      "as the best move with a distribution value of",str(round(out[move]*100))+"%",".")
                 return coords
             else:
-                out.remove(move)
+                out[move]=0
         print("The Policy Network considers passing as the best move with a relative confidence of THIS IS NO OUTPUT YET.")
         return "pass"
         
@@ -113,4 +126,4 @@ def test3():
     engine.play_legal_move(engine.board, Stone.White)
     engine.board.show()
 
-test3()
+#test3()

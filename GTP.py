@@ -1,5 +1,5 @@
 import sys
-from Engine import Engine
+from Engine import Engine, IntelligentEngine
 from Board import *
 
 
@@ -152,11 +152,11 @@ class GTP:
             else:
                 self.error_client("command unknown: " + line)
 
-def test():
-    engine = Engine(5)
+def run():
+    engine = IntelligentEngine(9)
     logfile = "log_2.txt"
     gtp = GTP(engine, logfile)
     # gtp.list_commands()
     gtp.loop()
 
-test()
+run()
