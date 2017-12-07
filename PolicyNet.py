@@ -21,13 +21,13 @@ def softmax(x):
         return e_x / e_x.sum()
 
 class PolicyNet:
-    def __init__(self):
+    def __init__(self,layers=[9*9,100,200,300,200,100,9*9]):
         ### Specifications of the game
         self.n=9 # 9x9 board
         
         ### Parameters of the NN
         self.eta = 0.001 # learning rate
-        self.layers = [self.n*self.n,100,200,300,200,100,self.n*self.n] #please leave the first and last equal zu n^2 for now
+        self.layers = layers #please leave the first and last equal zu n^2 for now
         
         ### Initialize the weights
         # here by a normal distribution N(mu,sigma)
