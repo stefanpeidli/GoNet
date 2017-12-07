@@ -71,6 +71,17 @@ class PolicyNet:
         Error = - np.inner(t*np.log(diff),np.ones(len(t)))
         return Error
     
+    def convert_input(self, boardvector):#rescaling help function
+        boardvector=boardvector.astype(float)
+        for i in range(0,len(boardvector)):
+            if boardvector[i]==0:
+                boardvector[i] = 0.45
+            if boardvector[i]==-1:
+                boardvector[i] = -1.35
+            if boardvector[i]==1:
+                boardvector[i] = 1.05
+        return boardvector
+    
     ### The actual functions
     
     def Learnsplit(self, eta, trainingdata, trainingrate, tolerance, maxepochs, stoch_coeff):
@@ -106,10 +117,10 @@ class PolicyNet:
 
     
     def Learnpropagate(self, eta, trainingdata, stoch_coeff):
-        counter, error= 0, 0
+        counter, error_in_selection= 0, 0
         random_selection = random.sample(list(trainingdata.dic.keys()),int(np.round(len(trainingdata.dic)*stoch_coeff)))
         for entry in random_selection:
-            testdata=Hashable.unwrap(entry)-0.25
+            testdata=self.convert_input(Hashable.unwrap(entry))
             targ=trainingdata.dic[entry].reshape(9*9)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
@@ -191,19 +202,16 @@ class PolicyNet:
                 self.errorsbyepoch.append(self.compute_ms_error (y[:-1], targ))
                 self.abserrorbyepoch.append(self.compute_error (y[:-1], targ))
                 self.KLdbyepoch.append(self.compute_KL_divergence(y[:-1], targ))
-                
-                counter += 1
-                error += self.compute_KL_divergence(y[:-1], targ)
-                #error = self.compute_KL_divergence(y[:-1], targ)
-        error=error/counter #average error over training set
+        
+        error = self.PropagateSet(trainingdata) #real error
+        
         return [firstout,out,error]
     
     def Learnpropagatebatch(self, eta, batch, stoch_coeff): #takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
         deltaweights_batch=[0]*self.layercount
-        counter, error= 0, 0 #for this batch
         random_selection = random.sample(list(batch.dic.keys()),int(np.round(len(batch.dic)*stoch_coeff)))
         for entry in random_selection:
-            testdata=Hashable.unwrap(entry)-0.25
+            testdata=self.convert_input(Hashable.unwrap(entry))
             targ=batch.dic[entry].reshape(9*9)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
@@ -287,19 +295,12 @@ class PolicyNet:
                 self.errorsbyepoch.append(self.compute_ms_error (y[:-1], targ))
                 self.abserrorbyepoch.append(self.compute_error (y[:-1], targ))
                 self.KLdbyepoch.append(self.compute_KL_divergence(y[:-1], targ))
-                counter += 1
-                error += self.compute_KL_divergence(y[:-1], targ)
-        if counter==0:
-            print("empty counter in batch")
-            firstout = 0 #write that better...
-            out = 0
-            error = 0 
-        else:
-            error=error/counter #average error in that batch
+
         #now adjust weights
         for i in range(0,self.layercount):
             if type(deltaweights_batch[i]) is not int: #in this case we had no target for any board in this batch
                 self.weights[i][:,:-1]= self.weights[i][:,:-1]+ deltaweights_batch[i].T #Problem: atm we only adjust non-bias weights. Change that!
+        error = self.PropagateSet(batch)
         return [firstout,out,error]
     
     def Propagate(self,board):
@@ -307,7 +308,14 @@ class PolicyNet:
         board=board.vertices
         if len(board)!=81:
             board=board.flatten()
-        board=board-0.25
+        for i in range(0,len(board)):
+            if board[i]==0:
+                board[i] = 0.45
+            if board[i]==-1:
+                board[i] = -1.35
+            if board[i]==1:
+                board[i] = 1.05
+
         
         y = np.append(board,[1]) #offset
         ys = [0]*self.layercount
@@ -321,20 +329,13 @@ class PolicyNet:
                 y = np.append(np.tanh(s),[1]) #We append 1 for the bias
             ys[i]=y #save the y values for backprop (?)
         out=y[:-1]
-        """
-        move=np.argmax(out)
-        x=int(move%9)
-        y=int(np.floor(move/9))
-        move2=[x,y] #check if this is right, i dont think so. The counting is wrong
-        return move2
-        """
         return out
     
     def PropagateSet(self,testset):
         error = 0
         checked = 0
         for entry in testset.dic:
-            testdata=Hashable.unwrap(entry)-0.25
+            testdata=self.convert_input(Hashable.unwrap(entry))
             targ=testset.dic[entry].reshape(9*9)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
@@ -349,7 +350,6 @@ class PolicyNet:
                     else: #in all other hidden layers we use tanh as activation fct
                         y = np.append(np.tanh(s),[1]) #We append 1 for the bias
                     ys[i]=y #save the y values for backprop (?)
-                out=y[:-1]
                 error += self.compute_KL_divergence(y[:-1], targ)
                 checked += 1
         error = error/checked #average over training set
@@ -469,7 +469,12 @@ def test2():#bug in error display?
     [f,o,error3] = PN.Learnpropagatebatch(0.001,testset,0.8)
     print(error3)
     
-test2()
+#test2()
 
+def test3():
+    PN = PolicyNet()
+    testset = TrainingDataSgf("dgs",range(0,5)) #one game
+    for entry in testset.dic:
+            testdata=PN.convert_input(Hashable.unwrap(entry))
 
-
+test3()
