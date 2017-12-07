@@ -591,8 +591,8 @@ def test3():
             
 def test4():
     PN = PolicyNet()
-    testset = TrainingDataSgf("dgs",range(0,5)) #one game
-    epochs=1000
+    testset = TrainingDataSgf("dgs",'dan_data_10') #one game
+    epochs=2
     error_by_epoch = []
     for i in range(0,epochs):
         [f,o,e] = PN.LearnpropagateTest(0.01,testset,0.8)

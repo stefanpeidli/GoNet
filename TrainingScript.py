@@ -100,6 +100,23 @@ def TrainingBasicDan10(PolicyNetwork,learningrate,epochs,stoch_coeff):
     #print("weights have been saved to",name)
     return errors_by_epoch
 
+def TrainingHellingerDan10(PolicyNetwork,learningrate,epochs,stoch_coeff):
+    testset = TrainingDataSgf("dgs","dan_data_10")
+    eta = learningrate
+    errors_by_epoch=[]
+    totaltime=time.time()
+    for i in range(epochs):
+        t=time.time()
+        [firstout,out,err]=PolicyNetwork.LearnpropagateTest(eta, testset, stoch_coeff)
+        print("epoch number",i,"took",np.round(time.time()-t,3),"seconds with error",np.round(err,6))
+        errors_by_epoch.append(err)
+    print("total time needed:",time.time()-totaltime)
+    #save results:
+    #name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(eta*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"Dan10"
+    #PolicyNetwork.saveweights('Saved_Weights',name)
+    #print("weights have been saved to",name)
+    return errors_by_epoch
+
    
 def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
     w=PolicyNetwork.weights
@@ -212,15 +229,15 @@ if your_name is "Stefan":
     #hier schreibe ich mein training rein
     print("halo I bims")
     
-    training_program = 3
+    training_program = 1
 
     if training_program == 1:
         #3 epochs = 1 minute
-        #PN=PolicyNet()
+        PN=PolicyNet()
         #PN.loadweightsfromfile('Saved_Weights','weights1712071159eta100001epochs60batchsize1Dan10')
         epochs=60
         print("I think I will need",np.round(epochs/3,2),"minutes for this task.")
-        errors_by_epoch1 = TrainingBasicDan10(PN,0.00009,epochs)
+        errors_by_epoch1 = TrainingHellingerDan10(PN,0.001,epochs,0.9)
         plt.plot(range(0,epochs),errors_by_epoch1)
 
     if training_program == 2:
