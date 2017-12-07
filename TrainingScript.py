@@ -123,7 +123,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name="Example"
+your_name="Faruk"
 
 # example for training:
 if your_name is "Example":
@@ -139,3 +139,31 @@ if your_name is "Example":
 if your_name is "Stefan":
     #hier schreibe ich mein training rein
     print("halo I bims")
+    
+
+# Faruk
+if your_name is "Faruk":
+    MyNetwork = PolicyNet()  
+    #w=MyNetwork.weights
+    learningrate = 0.01
+    epochs = 5
+    batchsize = 10
+    ComparisonTraining1(MyNetwork,learningrate,epochs,batchsize)
+    
+""" 
+    MyNetwork = PolicyNet()
+    w=MyNetwork.weights
+    learningrate = 0.01
+    epochs = 5 #one epoch ~ 25 seconds
+    TrainingBasicDan10(MyNetwork , learningrate, epochs)
+    print("Faruk hats drauf")
+    
+    MyNetwork.weights = w
+    learningrate = 0.05
+    TrainingBasicDan10(MyNetwork,learningrate,epochs)
+    print("Faruk geht ab")
+    
+"""
+
+    
+    
