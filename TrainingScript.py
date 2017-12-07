@@ -15,7 +15,7 @@ import datetime
 This Script should be used to train Policy Networks.
 
 Parameters: 
-    I gave an advice for choosing reasonable values. Exceed those limits on your own risk. [minimum, recommendation, maximum]
+    I gave an advice for choosing reasonable values. Exceed those limits at your own risk. [minimum, recommendation, maximum]
     
     learningrate (aka eta) : The "speed" of learning. Denotes how far we go into the direction of the gradient. [0, 0.01, 0.5]
     epochs : Number of epochs of learning. An epoch is finished, when all boards are forward and backward propagated once. [1, 3-10-30-100, 1000] On my PC with Dan_10 games (~4200 distinct board entries) 1 epoch took around 25 seconds, keep that in mind.
