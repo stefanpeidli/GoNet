@@ -46,7 +46,7 @@ def TrainingBasic(PolicyNetwork,learningrate,epochs,sgfrange):
     for i in range(0,epochs):
         [f,o,error] = PolicyNetwork.Learnpropagate(eta ,testdata)
         errors_by_epoch.append(error)
-    #return errors_by_epoch
+    return errors_by_epoch
 
     
 def TrainingSplit(PolicyNetwork, learningrate, maxepochs, sgfrange, trainingrate, tolerance):
@@ -63,22 +63,47 @@ def TrainingBasicDan10(PolicyNetwork,learningrate,epochs):
     t=time.time()
     initerror = PolicyNetwork.PropagateSet(testset)
     print("Propagation took",np.round(time.time()-t,3),"seconds.")
-    print("Learning was done with batch size 1, vanilla Gradient Descent and Learning rate",eta)
-    er=[]
+    print("Learning is done with batch size 1, vanilla Gradient Descent and Learning rate",eta)
+    errors_by_epoch=[]
     totaltime=time.time()
     for i in range(epochs):
         t=time.time()
         [firstout,out,err]=PolicyNetwork.Learnpropagate(eta, testset)
-        #print("epoch number",i,"took",np.round(time.time()-t,3),"seconds.")
-        er.append(err)
+        print("epoch number",i,"took",np.round(time.time()-t,3),"seconds with error",np.round(err,6))
+        errors_by_epoch.append(err)
     error = PolicyNetwork.PropagateSet(testset)
     print(error,'Final Error:')
     print(initerror,'Initial Error:')
     print("total time needed:",time.time()-totaltime)
-    
     #save results:
     name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(eta*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"Dan10"
     PolicyNetwork.saveweights('Saved_Weights',name)
+    print("weights have been saved to",name)
+    return errors_by_epoch
+
+def TrainingStochBasicDan10(PolicyNetwork,learningrate,epochs,stoch_coeff):
+    testset = TrainingDataSgf("dgs","dan_data_10")
+    eta = learningrate
+    t=time.time()
+    initerror = PolicyNetwork.PropagateSet(testset)
+    print("Propagation took",np.round(time.time()-t,3),"seconds.")
+    print("Learning is done with batch size 1, vanilla Gradient Descent and Learning rate",eta)
+    errors_by_epoch=[]
+    totaltime=time.time()
+    for i in range(epochs):
+        t=time.time()
+        [firstout,out,err]=PolicyNetwork.LearnpropagateStochastic(eta, testset,stoch_coeff)
+        print("epoch number",i,"took",np.round(time.time()-t,3),"seconds with error",np.round(err,6))
+        errors_by_epoch.append(err)
+    error = PolicyNetwork.PropagateSet(testset)
+    print(error,'Final Error:')
+    print(initerror,'Initial Error:')
+    print("total time needed:",time.time()-totaltime)
+    #save results:
+    name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(eta*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"Dan10"
+    PolicyNetwork.saveweights('Saved_Weights',name)
+    print("weights have been saved to",name)
+    return errors_by_epoch
 
    
 def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
@@ -123,7 +148,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name="Example"
+your_name="Stefan"
 
 # example for training:
 if your_name is "Example":
@@ -139,3 +164,31 @@ if your_name is "Example":
 if your_name is "Stefan":
     #hier schreibe ich mein training rein
     print("halo I bims")
+    
+    training_program = 2
+    
+    if training_program == 1:
+        #3 epochs = 1 minute
+        #PN=PolicyNet()
+        #PN.loadweightsfromfile('Saved_Weights','weights1712071159eta100001epochs60batchsize1Dan10')
+        epochs=60
+        print("I think I will need",np.round(epochs/3,2),"minutes for this task.")
+        errors_by_epoch1 = TrainingBasicDan10(PN,0.00009,epochs)
+        plt.plot(range(0,epochs),errors_by_epoch1)
+    
+    if training_program == 2:
+        PN=PolicyNet()
+        w=PN.weights
+        epochs = 30
+        print("I think I will need",np.round(epochs/3*(1+0.2+0.7),2),"minutes for this task.")
+        errors_by_epoch1 = TrainingBasicDan10(PN,0.001,epochs)
+        PN.weights=w
+        errors_by_epoch2 = TrainingStochBasicDan10(PN,0.001,epochs,0.2)
+        PN.weights=w
+        errors_by_epoch3 = TrainingStochBasicDan10(PN,0.001,epochs,0.7)
+        plt.plot(range(0,epochs),errors_by_epoch1)
+        plt.plot(range(0,epochs),errors_by_epoch2)
+        plt.plot(range(0,epochs),errors_by_epoch3)
+        
+        
+    

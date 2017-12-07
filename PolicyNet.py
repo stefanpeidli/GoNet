@@ -13,6 +13,7 @@ from TrainingDataFromSgf import TrainingDataSgfPass #82 not 81
 import os
 import time
 import datetime
+import random
 
 def softmax(x):
         """Compute softmax values for each sets of scores in x."""
@@ -72,7 +73,7 @@ class PolicyNet:
     
     ### The actual functions
     
-    def Learnsplit(self, eta, trainingdata, trainingrate, tolerance, maxepochs):
+    def Learnsplit(self, eta, trainingdata, trainingrate, tolerance, maxepochs, stoch_coeff):
         N = len(trainingdata.dic)
         splitindex = int(round(N*trainingrate))
         trainingset, testset = TrainingData(), TrainingData() #TODO: check if this is fine with TraingDataSgf method
@@ -83,7 +84,7 @@ class PolicyNet:
         epochs = 0
         while error[-1:][0] > tolerance and epochs < maxepochs:
             epochs += 1
-            self.Learnpropagate(eta, trainingset)
+            self.Learnpropagate(eta, trainingset, stoch_coeff)
             error.append(self.PropagateSet(testset))
         return [error,epochs]
     
@@ -104,9 +105,10 @@ class PolicyNet:
         return[k,Batch_sets]
 
     
-    def Learnpropagate(self, eta, trainingdata):
+    def Learnpropagate(self, eta, trainingdata, stoch_coeff):
         counter, error= 0, 0
-        for entry in trainingdata.dic:
+        random_selection = random.sample(list(trainingdata.dic.keys()),int(np.round(len(trainingdata.dic)*stoch_coeff)))
+        for entry in random_selection:
             testdata=Hashable.unwrap(entry)-0.25
             targ=trainingdata.dic[entry].reshape(9*9)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
@@ -195,11 +197,12 @@ class PolicyNet:
                 #error = self.compute_KL_divergence(y[:-1], targ)
         error=error/counter #average error over training set
         return [firstout,out,error]
-   
-    def Learnpropagatebatch(self, eta, batch): #takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
+    
+    def Learnpropagatebatch(self, eta, batch, stoch_coeff): #takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
         deltaweights_batch=[0]*self.layercount
         counter, error= 0, 0 #for this batch
-        for entry in batch.dic:
+        random_selection = random.sample(list(batch.dic.keys()),int(np.round(len(batch.dic)*stoch_coeff)))
+        for entry in random_selection:
             testdata=Hashable.unwrap(entry)-0.25
             targ=batch.dic[entry].reshape(9*9)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
@@ -460,10 +463,10 @@ def test2():#bug in error display?
     error1 = PN.PropagateSet(testset)
     print(error1)
     
-    [f,o,error2] = PN.Learnpropagate(0.001,testset)
+    [f,o,error2] = PN.Learnpropagate(0.001,testset,0.8)
     print(error2)
     
-    [f,o,error3] = PN.Learnpropagatebatch(0.001,testset)
+    [f,o,error3] = PN.Learnpropagatebatch(0.001,testset,0.8)
     print(error3)
     
 test2()
