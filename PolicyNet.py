@@ -477,4 +477,4 @@ def test3():
     for entry in testset.dic:
             testdata=PN.convert_input(Hashable.unwrap(entry))
 
-test3()
+#test3()
