@@ -8,7 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Hashable import Hashable
 from TrainingDataFromSgf import TrainingData #legacy
-from TrainingDataFromSgf import TrainingDataSgf
+from TrainingDataFromSgf import TrainingDataSgf #Better version
+from TrainingDataFromSgf import TrainingDataSgfPass #82 not 81
 import os
 import time
 import datetime
@@ -192,7 +193,7 @@ class PolicyNet:
                 counter += 1
                 error += self.compute_KL_divergence(y[:-1], targ)
                 #error = self.compute_KL_divergence(y[:-1], targ)
-            error=error/counter #average error over training set
+        error=error/counter #average error over training set
         return [firstout,out,error]
    
     def Learnpropagatebatch(self, eta, batch): #takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
@@ -440,105 +441,32 @@ class PolicyNet:
                 
 #Tests
 
-def test():
-    if 'NN' not in locals():
-        NN = PolicyNet()
-    eta = 0.01
-    testdata = TrainingDataSgf("dgs",range(0,1000))
-    for i in range(0,1):
-        NN.Learnpropagate(eta ,testdata)
-    NN.saveweights('Saved_Weights','testsavedweights')
-    
-    PP = PolicyNet()
-    PP.loadweightsfromfile('Saved_Weights','testsavedweights')
-
+def test(): #passing
+    testset1 = TrainingDataSgf("dgs",range(0,5))
+    testset2 = TrainingDataSgfPass("dgs",range(0,5))
+    for entry in testset1.dic:
+        data=Hashable.unwrap(entry)
+        targ=testset1.dic[entry].reshape(9*9)
+        print(len(targ))
+    for entry in testset2.dic:
+        data=Hashable.unwrap(entry)
+        targ=testset2.dic[entry].reshape(9*9+1)
+        print(len(targ))
 #test()
-    
-def test2():
-    NN = PolicyNet()
-    eta = 0.05
-    trainingdata = TrainingDataSgf("dgs",range(0,1000))
-    datasize = len(trainingdata.dic)
-    trainingrate = 0.9
-    tolerance = 0.8
-    maxepochs = 200
-    [error,epochs]=NN.Learnsplit(eta,trainingdata, trainingrate, tolerance, maxepochs)
-    print("Datasize was",datasize,",K-L-Error:",error[-1:][0],",Epochs:",epochs)
-    
-#test2()
-    
-def test3():
-    TestNet = PolicyNet()
-    testset = TrainingDataSgf("dgs","dan_data_10")
-    epochs=20
-    eta = 0.01
-    t=time.time()
-    initerror = TestNet.PropagateSet(testset)
-    print("Propagation took",np.round(time.time()-t,3),"seconds.")
-    print("Learning was done with batch size 1, vanilla Gradient Descent and Learning rate",eta)
-    er=[]
-    totaltime=time.time()
-    for i in range(epochs):
-        t=time.time()
-        [firstout,out,err]=TestNet.Learnpropagate(eta, testset)
-        print("epoch number",i,"took",np.round(time.time()-t,3),"seconds.")
-        er.append(err)
-    error = TestNet.PropagateSet(testset)
-    print(error,'Final Error:')
-    print(initerror,'Initial Error:')
-    print("total time needed:",time.time()-totaltime)
-    
-    #save results:
-    name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(eta*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"Dan10"
-    TestNet.saveweights('Saved_Weights',name)
-    #TestNet.visualize_error(er)
-
-#test3()
-   
-def test5():
-    TestNet = PolicyNet() 
-    w=TestNet.weights
-    testset = TrainingDataSgf("dgs","dan_data_10")
-    t1=time.time()
-    errorinit = TestNet.PropagateSet(testset)
-    tinit=time.time()-t1
-    print('Initial Error:',errorinit,'Time:',tinit)
-    epochs=2
-    eta=0.001
-    
-    #Batch learning
-    er=[] #errors in all the batches
-    batcherror=[] #average batch error in each epoch
-    batchsize=700
-    t1=time.time()
-    [k,batches]=TestNet.splitintobatches(testset,batchsize)
-    t2=time.time()
-    for epoch in range(epochs):
-        for i in range(k): #Learn all batches
-            [firstout,out,err]=TestNet.Learnpropagatebatch(eta,batches[i])
-            er.append(err)
-        batcherror.append(np.sum(er)/len(er))
-    t3=time.time()
-    
-    error = TestNet.PropagateSet(testset)
-    print('Final Error:',error,"Time:",t3-t2,"where the splitting took additionally",t2-t1)
-    #TestNet.visualize_error(er)
-    
-    #Now without batchs
-    TestNet.weights=w #reset weights
-    errors2=[]
-    t1=time.time()
-    for epoch in range(epochs):
-        [firstout,out,err]=TestNet.Learnpropagate(eta,testset)
-        errors2.append(err)
-    t2=time.time()
-    error = TestNet.PropagateSet(testset)
-    print('Final Error:',error,"Time:",t2-t1)
         
-    #plot results
-    #plt.plot(range(epochs),batcherror,'b')
-    #plt.plot(range(epochs),errors2,'r')
+def test2():#bug in error display?
+    PN = PolicyNet()
+    testset = TrainingDataSgf("dgs",range(0,5)) #one game
+    error1 = PN.PropagateSet(testset)
+    print(error1)
     
-#test5()
+    [f,o,error2] = PN.Learnpropagate(0.001,testset)
+    print(error2)
+    
+    [f,o,error3] = PN.Learnpropagatebatch(0.001,testset)
+    print(error3)
+    
+test2()
+
 
 
