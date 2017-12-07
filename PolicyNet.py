@@ -41,9 +41,10 @@ class PolicyNet:
         ### Alloc memory for the error statistics
         #Hint:b=a[:-1,:] this is a handy formulation to delete the last column, Thus ~W=W[:-1,1]
         
-        self.errorsbyepoch=[] #mean squared error
-        self.abserrorbyepoch=[] #absolute error
-        self.KLdbyepoch=[] #Kullback-Leibler divergence
+        #self.errorsbyepoch=[] #mean squared error
+        #self.abserrorbyepoch=[] #absolute error
+        #self.KLdbyepoch=[] #Kullback-Leibler divergence
+        
         
     ### Function Definition yard
       
@@ -54,7 +55,7 @@ class PolicyNet:
         e_x = np.exp(x - np.max(x))
         return e_x / e_x.sum()
     """
-    def compute_error(self, suggested, target): #compare the prediction with the answer/target, absolute error
+    def compute_abs_error(self, suggested, target): #compare the prediction with the answer/target, absolute error
         diff = np.absolute(suggested - target)
         Error = np.inner(diff,np.ones(len(target)))
         return Error
@@ -70,6 +71,9 @@ class PolicyNet:
         diff=s/t #this is stable
         Error = - np.inner(t*np.log(diff),np.ones(len(t)))
         return Error
+    
+    def compute_Hellinger_dist (self, suggested, target):
+        return np.linalg.norm(np.sqrt(suggested)-np.sqrt(target), ord=2) /np.sqrt(2)
     
     def convert_input(self, boardvector):#rescaling help function
         boardvector=boardvector.astype(float)
@@ -199,12 +203,118 @@ class PolicyNet:
                     self.weights[i][:,:-1]= self.weights[i][:,:-1]+ deltaweights[i].T #Problem: atm we only adjust non-bias weights. Change that!
                 
                 #For Error statistics
-                self.errorsbyepoch.append(self.compute_ms_error (y[:-1], targ))
-                self.abserrorbyepoch.append(self.compute_error (y[:-1], targ))
-                self.KLdbyepoch.append(self.compute_KL_divergence(y[:-1], targ))
+                #self.errorsbyepoch.append(self.compute_ms_error (y[:-1], targ))
+                #self.abserrorbyepoch.append(self.compute_error (y[:-1], targ))
+                #self.KLdbyepoch.append(self.compute_KL_divergence(y[:-1], targ))
         
         error = self.PropagateSet(trainingdata) #real error
         
+        return [firstout,out,error]
+    
+    def LearnpropagateTest(self, eta, trainingdata, stoch_coeff):
+        counter, error_in_selection= 0, 0
+        random_selection = random.sample(list(trainingdata.dic.keys()),int(np.round(len(trainingdata.dic)*stoch_coeff)))
+        for entry in random_selection:
+            testdata=self.convert_input(Hashable.unwrap(entry))
+            targ=trainingdata.dic[entry].reshape(9*9)
+            if(np.sum(targ)>0): #We can only learn if there are actual target vectors
+                targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
+                y = np.append(testdata,[1])
+                ys = [0]*self.layercount
+                #Forward-propagate
+                for i in range(0,self.layercount): 
+                    W = self.weights[i] #anders machen?
+                    s = W.dot(y)
+                    if i==self.layercount-1: #softmax as activationfct only in last layer    
+                        y = np.append(softmax(s),[1]) #We append 1 for the bias
+                    else: #in all other hidden layers we use tanh as activation fct
+                        y = np.append(np.tanh(s),[1]) #We append 1 for the bias
+                    ys[i]=y #save the y values for backprop (?)
+                out=y
+                if 'firstout' not in locals():
+                    firstout=y[:-1] #save first epoch output for comparison and visualization
+                
+                #Backpropagation
+                
+                #Calc derivatives/Jacobian of the softmax activationfct in every layer (i dont have a good feeling about this): Update: I tested this section, it actually works correctly for sure. ToDo: We need not compute this for all layers, only the last one (only layer that uses softmax...)
+                DF=[0]*self.layercount
+                for i in range(self.layercount-1,self.layercount): #please note that I think this is pure witchcraft happening here
+                    yt=ys[i] #load y from ys and lets call it yt
+                    yt=yt[:-1] #the last entry is from the offset, we don't need this
+                    le=len(yt)
+                    DFt=np.ones((le,le)) #alloc storage temporarily
+                    for j in range(0,le):
+                        DFt[j,:]*=yt[j]
+                    DFt=np.identity(le) - DFt
+                    for j in range(0,le):
+                        DFt[:,j]*=yt[j]
+                    DF[i]=DFt
+                #DF is a Jacobian, thus it is quadratic and symmetric
+            
+                #Calc Jacobian of tanh
+                DFtan=[0]*self.layercount
+                for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
+                    yt=ys[i] #load y from ys and lets call it yt
+                    yt=yt[:-1] #the last entry is from the offset, we don't need this
+                    le=len(yt)
+                    u=1-yt*yt
+                    DFtan[i]=np.diag(u)
+                
+                #Use (L2) and (L3) to get the error signals of the layers
+                errorsignals=[0]*self.layercount
+                errorsignals[self.layercount-1]=DF[self.layercount-1] # (L2), the error signal of the output layer can be computed directly, here we actually use softmax
+                for i in range(2,self.layercount+1):
+                    w=self.weights[self.layercount-i+1]
+                    DFt=DFtan[self.layercount-i] #tanh
+                    errdet=np.matmul(w[:,:-1],DFt) #temporary
+                    errorsignals[self.layercount-i]=np.dot(errorsignals[self.layercount-i+1],errdet) # (L3), does python fucking get that?
+                
+                #Use (D3) to compute err_errorsignals as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
+                err_errorsignals=[0]*self.layercount
+                #errorbyyzero = out[:-1]-targ #Mean-squared-error
+                errorbyyzero = 1/4*(1-np.sqrt(targ)/np.sqrt(out[:-1])) #Hellinger-distance
+                for i in range(0,self.layercount):
+                    err_errorsignals[i]=np.dot(errorbyyzero,errorsignals[i]) #this is the matrix variant of D3
+                
+                #Use (2.2) to get the sought derivatives. Observe that this is an outer product, though not mentioned in the source (Fuck you Heining, you bastard)
+                errorbyweights=[0]*self.layercount #dE/dW
+                errorbyweights[0] = np.outer(err_errorsignals[0],testdata).T #Why do I need to transpose here???
+                for i in range(1,self.layercount): 
+                    errorbyweights[i]=np.outer(err_errorsignals[i-1],ys[i][:-1]) # (L1)
+                
+                #Compute the change of weights, that means, then apply actualization step of Gradient Descent to weight matrices
+                deltaweights=[0]*self.layercount
+                for i in range(0,self.layercount):
+                    deltaweights[i]=-eta*errorbyweights[i]
+                    self.weights[i][:,:-1]= self.weights[i][:,:-1]+ deltaweights[i].T #Problem: atm we only adjust non-bias weights. Change that!
+                
+                #For Error statistics
+                #self.errorsbyepoch.append(self.compute_ms_error (y[:-1], targ))
+                #self.abserrorbyepoch.append(self.compute_error (y[:-1], targ))
+                #self.KLdbyepoch.append(self.compute_KL_divergence(y[:-1], targ))
+        
+        #check error
+        error = 0
+        checked = 0
+        for entry in trainingdata.dic:
+            testdata=self.convert_input(Hashable.unwrap(entry))
+            targ=trainingdata.dic[entry].reshape(9*9)
+            if(np.sum(targ)>0): #We can only learn if there are actual target vectors
+                targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
+                y = np.append(testdata,[1])
+                ys = [0]*self.layercount
+                #Forward-propagate
+                for i in range(0,self.layercount): 
+                    W = self.weights[i] #anders machen?
+                    s = W.dot(y)
+                    if i==self.layercount-1: #softmax as activationfct only in last layer    
+                        y = np.append(softmax(s),[1]) #We append 1 for the bias
+                    else: #in all other hidden layers we use tanh as activation fct
+                        y = np.append(np.tanh(s),[1]) #We append 1 for the bias
+                    ys[i]=y #save the y values for backprop (?)
+                error += self.compute_Hellinger_dist(y[:-1], targ)
+                checked += 1
+        error = error/checked #average over training set    
         return [firstout,out,error]
     
     def Learnpropagatebatch(self, eta, batch, stoch_coeff): #takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
@@ -292,9 +402,9 @@ class PolicyNet:
                     #self.weights[i][:,:-1]= self.weights[i][:,:-1]+ deltaweights[i].T #Problem: atm we only adjust non-bias weights. Change that!
                 
                 #For Error statistics
-                self.errorsbyepoch.append(self.compute_ms_error (y[:-1], targ))
-                self.abserrorbyepoch.append(self.compute_error (y[:-1], targ))
-                self.KLdbyepoch.append(self.compute_KL_divergence(y[:-1], targ))
+                #self.errorsbyepoch.append(self.compute_ms_error (y[:-1], targ))
+                #self.abserrorbyepoch.append(self.compute_error (y[:-1], targ))
+                #self.KLdbyepoch.append(self.compute_KL_divergence(y[:-1], targ))
 
         #now adjust weights
         for i in range(0,self.layercount):
@@ -478,3 +588,16 @@ def test3():
             testdata=PN.convert_input(Hashable.unwrap(entry))
 
 #test3()
+            
+def test4():
+    PN = PolicyNet()
+    testset = TrainingDataSgf("dgs",range(0,5)) #one game
+    epochs=1000
+    error_by_epoch = []
+    for i in range(0,epochs):
+        [f,o,e] = PN.LearnpropagateTest(0.01,testset,0.8)
+        error_by_epoch.append(e)
+    plt.plot(range(0,epochs),error_by_epoch)
+    
+test4()
+    

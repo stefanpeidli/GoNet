@@ -238,13 +238,13 @@ if your_name is "Stefan":
         plt.plot(range(0,epochs),errors_by_epoch3)
         
     if training_program == 3:
-        PN=PolicyNet()
+        PN=PolicyNet([9*9,100,200,300,400,300,200,100,9*9])
         epochs = 10
         
-        errors_by_epoch1 = TrainingBasicDan10(PN,0.1,epochs,0.3)
-        errors_by_epoch2 = TrainingBasicDan10(PN,0.01,epochs,0.7)
+        errors_by_epoch1 = TrainingBasicDan10(PN,0.01,epochs,0.2)
+        errors_by_epoch2 = TrainingBasicDan10(PN,0.001,epochs,0.5)
         errors_by_epoch3 = TrainingBasicDan10(PN,0.001,epochs,0.8)
-        errors_by_epoch4 = TrainingBasicDan10(PN,0.0005,epochs,0.9)
+        errors_by_epoch4 = TrainingBasicDan10(PN,0.0005,epochs,0.95)
         
         name="weightsdelight"
         PN.saveweights('Saved_Weights',name)
