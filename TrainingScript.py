@@ -16,6 +16,8 @@ This Script should be used to train Policy Networks.
 
 Parameters: 
     I gave an advice for choosing reasonable values. Exceed those limits at your own risk. [minimum, recommendation, maximum]
+    I gave an advice for choosing reasonable values. Exceed those limits at your own risk. 
+    Format: [minimum, recommendation, maximum]
     
     learningrate (aka eta) : The "speed" of learning. Denotes how far we go into the direction of the gradient. [0, 0.01, 0.5]
     epochs : Number of epochs of learning. An epoch is finished, when all boards are forward and backward propagated once. [1, 3-10-30-100, 1000] On my PC with Dan_10 games (~4200 distinct board entries) 1 epoch took around 25 seconds, keep that in mind.
@@ -24,9 +26,26 @@ Parameters:
     trainingrate : Data will be split into a training set and test set by rate [trainingrate : (1-trainingrate)]. Training will be done on the trainingset, then the performance (error) on the testset is checked. [0, 0.8, 1] should heuristically be above 0.6
     tolerance : Error tolerance. Training will stop if error falls below it. [up to now, the error of 4 will not be reached that fast..., take what you like here between 0 and 3]
     maxepochs : Maximal amount of epochs to iterate. Training will stop once this epoch is reached. [1, 30, inf] keep the computation time in mind! in case, better run many small Trainings so the results are not lost!
+    epochs : Number of epochs of learning. An epoch is finished, when all boards are forward and backward propagated once. 
+    [1, 3-10-30-100, 1000] On my PC with Dan_10 games (~4200 distinct board entries) 1 epoch took around 25 seconds, 
+    keep that in mind.
+    sgfrange : when using all games in dgs, sgfrange denotes the number of game indices that should be added to the training data. 
+    [1, 300, 1 000 000] importing with range 10000 took 23 seconds. Propagating this might even take hours. 
+    Please use around 300 for a reasonable computation time and around multiple thousands of boards.
+    batchsize : Data will be split into batchs of this size. Those will be propagatet as whole, then gradient descent is applied. 
+    If there is no option to choose batchsize, default is 1. [1, 100, size of board entries] requires further testing.
+    trainingrate : Data will be split into a training set and test set by rate [trainingrate : (1-trainingrate)]. 
+    Training will be done on the trainingset, then the performance (error) on the testset is checked. 
+    [0, 0.8, 1] should heuristically be above 0.6
+    tolerance : Error tolerance. Training will stop if error falls below it. 
+    [up to now, the error of 4 will not be reached that fast..., take what you like here between 0 and 3]
+    maxepochs : Maximal amount of epochs to iterate. Training will stop once this epoch is reached. 
+    [1, 30, inf] keep the computation time in mind! in case, better run many small Trainings so the results are not lost!
 
 On saving and loading weights:
     FYI, weights can be loaded and saved into a folder < Saved_Weights > which is already in git.ignore. Please create this folder if it does not exist yet.
+    FYI, weights can be loaded and saved into a folder < Saved_Weights > which is already in git.ignore. 
+    Please create this folder if it does not exist yet.
     Let's say your trained your PolicyNet called Martha, then:
         Saving weights: Martha.saveweights('Saved_Weights', name)
         Loading weights: Martha.loadweightsfromfile('Saved_Weights',name)
@@ -123,8 +142,6 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
     
 
 # Training Area = The Neural Network Gym : Do training here
-    
-your_name="Stefan"
 
 # example for training:
 if your_name is "Example":
@@ -140,17 +157,40 @@ if your_name is "Example":
 if your_name is "Stefan":
     #hier schreibe ich mein training rein
     print("halo I bims")
+
+# Paddy
+if your_name is "Paddy":
+    MyNetwork = PolicyNet()
+    learningrate = 0.01
+    epochs = 1  # one epoch ~ 25 seconds
+    sgfrange = 10
+    TrainingBasic(MyNetwork, learningrate, epochs, sgfrange)
+    name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
+        int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "sgfrange" + str(sgfrange)
+    MyNetwork.saveweights('Saved_Weights', name)
+
+
+# Faruk
+if your_name is "Faruk":
+    MyNetwork = PolicyNet()  
+    #w=MyNetwork.weights
+    learningrate = 0.01
+    epochs = 5
+    batchsize = 10
+    ComparisonTraining1(MyNetwork,learningrate,epochs,batchsize)
     
-    training_program = 2
+""" 
+    MyNetwork = PolicyNet()
+    w=MyNetwork.weights
+    learningrate = 0.01
+    epochs = 5 #one epoch ~ 25 seconds
+    TrainingBasicDan10(MyNetwork , learningrate, epochs)
+    print("Faruk hats drauf")
     
-    if training_program == 1:
-        #3 epochs = 1 minute
-        #PN=PolicyNet()
-        #PN.loadweightsfromfile('Saved_Weights','weights1712071159eta100001epochs60batchsize1Dan10')
-        epochs=60
-        print("I think I will need",np.round(epochs/3,2),"minutes for this task.")
-        errors_by_epoch1 = TrainingBasicDan10(PN,0.00009,epochs)
-        plt.plot(range(0,epochs),errors_by_epoch1)
+    MyNetwork.weights = w
+    learningrate = 0.05
+    TrainingBasicDan10(MyNetwork,learningrate,epochs)
+    print("Faruk geht ab")
     
     if training_program == 2:
         PN=PolicyNet()
@@ -166,5 +206,33 @@ if your_name is "Stefan":
         plt.plot(range(0,epochs),errors_by_epoch2,'g')
         plt.plot(range(0,epochs),errors_by_epoch3,'r')
         
+"""
+
+
+training_program = 2
+
+if training_program == 1:
+    #3 epochs = 1 minute
+    #PN=PolicyNet()
+    #PN.loadweightsfromfile('Saved_Weights','weights1712071159eta100001epochs60batchsize1Dan10')
+    epochs=60
+    print("I think I will need",np.round(epochs/3,2),"minutes for this task.")
+    errors_by_epoch1 = TrainingBasicDan10(PN,0.00009,epochs)
+    plt.plot(range(0,epochs),errors_by_epoch1)
+
+if training_program == 2:
+    PN=PolicyNet()
+    w=PN.weights
+    epochs = 30
+    print("I think I will need",np.round(epochs/3*(1+0.2+0.7),2),"minutes for this task.")
+    errors_by_epoch1 = TrainingBasicDan10(PN,0.001,epochs)
+    PN.weights=w
+    errors_by_epoch2 = TrainingStochBasicDan10(PN,0.001,epochs,0.2)
+    PN.weights=w
+    errors_by_epoch3 = TrainingStochBasicDan10(PN,0.001,epochs,0.7)
+    plt.plot(range(0,epochs),errors_by_epoch1)
+    plt.plot(range(0,epochs),errors_by_epoch2)
+    plt.plot(range(0,epochs),errors_by_epoch3)
         
-    
+
+
