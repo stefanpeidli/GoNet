@@ -142,6 +142,8 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
     
 
 # Training Area = The Neural Network Gym : Do training here
+    
+your_name = "Stefan"
 
 # example for training:
 if your_name is "Example":
@@ -152,11 +154,6 @@ if your_name is "Example":
     TrainingBasic(MyNetwork , learningrate, epochs, sgfrange)
     name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(learningrate*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"sgfrange"+str(sgfrange)
     MyNetwork.saveweights('Saved_Weights', name)
-
-# Stefan:
-if your_name is "Stefan":
-    #hier schreibe ich mein training rein
-    print("halo I bims")
 
 # Paddy
 if your_name is "Paddy":
@@ -210,7 +207,11 @@ if your_name is "Faruk":
 """
 
 
-if your_name is "training_program":
+# Stefan:
+if your_name is "Stefan":
+    #hier schreibe ich mein training rein
+    print("halo I bims")
+    
     training_program = 2
 
     if training_program == 1:
@@ -227,11 +228,11 @@ if your_name is "training_program":
         w=PN.weights
         epochs = 30
         print("I think I will need",np.round(epochs/3*(1+0.2+0.7),2),"minutes for this task.")
-        errors_by_epoch1 = TrainingBasicDan10(PN,0.001,epochs)
+        errors_by_epoch1 = TrainingBasicDan10(PN,0.001,epochs,1)
         PN.weights=w
-        errors_by_epoch2 = TrainingStochBasicDan10(PN,0.001,epochs,0.2)
+        errors_by_epoch2 = TrainingBasicDan10(PN,0.001,epochs,0.2)
         PN.weights=w
-        errors_by_epoch3 = TrainingStochBasicDan10(PN,0.001,epochs,0.7)
+        errors_by_epoch3 = TrainingBasicDan10(PN,0.001,epochs,0.7)
         plt.plot(range(0,epochs),errors_by_epoch1)
         plt.plot(range(0,epochs),errors_by_epoch2)
         plt.plot(range(0,epochs),errors_by_epoch3)
