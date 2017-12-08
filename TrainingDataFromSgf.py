@@ -291,14 +291,14 @@ class TrainingDataSgf:
             if len(move) > 0:
                 currBoardMatrix[ord(move[1]) - 97, ord(move[0]) - 97] = stone
 
-            self.addToDict(prevBoardMatrix, currBoardMatrix, stone)
+                self.addToDict(prevBoardMatrix, currBoardMatrix, stone)
 
-            # now we play the move on the board and see if we have to remove stones
-            coords = self.toCoords(np.absolute(currBoardMatrix - prevBoardMatrix))
-            if coords is not None:
-                self.board.play_stone(coords[1], coords[0], stone)
-                prevBoardMatrix = np.copy(self.board.vertices)
-                currBoardMatrix = np.copy(self.board.vertices)
+                # now we play the move on the board and see if we have to remove stones
+                coords = self.toCoords(np.absolute(currBoardMatrix - prevBoardMatrix))
+                if coords is not None:
+                    self.board.play_stone(coords[1], coords[0], stone)
+                    prevBoardMatrix = np.copy(self.board.vertices)
+                    currBoardMatrix = np.copy(self.board.vertices)
 
                 # help method: adds tuple (board,move) to dictionary for every possible rotation
 
