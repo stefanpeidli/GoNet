@@ -72,7 +72,7 @@ def TrainingSplit(PolicyNetwork, sgf_range = 1000, eta = 0.01, batch_size=1, sto
     print("Datasize was",datasize,",Final K-L-Error:",error[-1:][0],",Epochs:",epochs)
     
     
-def Training(PolicyNetwork, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=0, file = "dan_data_10")
+def Training(PolicyNetwork, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=0, file = "dan_data_10"):
     testset = TrainingDataSgfPass("dgs",file)
     t=time.time()
     init_error = PolicyNetwork.PropagateSet(testset,error_function)
@@ -205,37 +205,4 @@ if your_name is "Stefan":
     training_program = 1
 
     if training_program == 1:
-        #3 epochs = 1 minute
-        PN=PolicyNet()
-        #PN.loadweightsfromfile('Saved_Weights','weights1712071159eta100001epochs60batchsize1Dan10')
-        epochs=60
-        print("I think I will need",np.round(epochs/3,2),"minutes for this task.")
-        errors_by_epoch1 = TrainingHellingerDan10(PN,0.001,epochs,0.9)
-        plt.plot(range(0,epochs),errors_by_epoch1)
-
-    if training_program == 2:#TODO: check why saving the weights like this does not work
-        PN=PolicyNet()
-        w=PN.weights
-        epochs = 30
-        print("I think I will need",np.round(epochs/3*(1+0.2+0.7),2),"minutes for this task.")
-        errors_by_epoch1 = TrainingBasicDan10(PN,0.001,epochs,1)
-        PN.weights=w
-        errors_by_epoch2 = TrainingBasicDan10(PN,0.001,epochs,0.2)
-        PN.weights=w
-        errors_by_epoch3 = TrainingBasicDan10(PN,0.001,epochs,0.7)
-        plt.plot(range(0,epochs),errors_by_epoch1)
-        plt.plot(range(0,epochs),errors_by_epoch2)
-        plt.plot(range(0,epochs),errors_by_epoch3)
         
-    if training_program == 3:
-        PN=PolicyNet([9*9,100,200,300,400,300,200,100,9*9+1])
-        epochs = 10
-        
-        errors_by_epoch1 = TrainingBasicDan10(PN,0.01,epochs,0.2)
-        errors_by_epoch2 = TrainingBasicDan10(PN,0.001,epochs,0.5)
-        errors_by_epoch3 = TrainingBasicDan10(PN,0.001,epochs,0.8)
-        errors_by_epoch4 = TrainingBasicDan10(PN,0.0005,epochs,0.95)
-        
-        name="weightsdelight"
-        PN.saveweights(name)
-        plt.plot(range(0,epochs*4),[errors_by_epoch1,errors_by_epoch2,errors_by_epoch3,errors_by_epoch4])
