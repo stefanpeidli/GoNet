@@ -65,7 +65,7 @@ def TrainingBasic(PolicyNetwork, sgf_range = 1000, epochs=1, eta=0.01, batch_siz
     return errors_by_epoch
 
     
-def TrainingSplit(PolicyNetwork, sgf_range = 1000, eta = 0.01, batch_size=1, stoch_coeff=1, error_function=0, trainingrate, error_tolerance, maxepochs):
+def TrainingSplit(PolicyNetwork, trainingrate, error_tolerance, maxepochs, sgf_range = 1000, eta = 0.01, batch_size=1, stoch_coeff=1, error_function=0):
     trainingdata = TrainingDataSgfPass("dgs",range(0,sgf_range))
     datasize = len(trainingdata.dic)
     [error,epochs] = PolicyNetwork.Learnsplit(trainingdata, eta, batch_size, stoch_coeff, error_function, trainingrate, error_tolerance, maxepochs)
@@ -79,15 +79,13 @@ def Training(PolicyNetwork, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, err
     print("Propagation took",np.round(time.time()-t,3),"seconds.")
     print("Learning is done for",epochs,"epochs, with batch size",batch_size,",eta",eta,",stoch_coeff",stoch_coeff,",error_function number",error_function,"and with Games given by",file)
     t=time.time()
-    errors_by_epoch=PolicyNetwork.Learn(testdata, epochs, eta, batch_size, stoch_coeff, error_function)
-    finalerror = PolicyNetwork.PropagateSet(testset,error_function)
-    print(finalerror,'Final Error:')
-    print(initerror,'Initial Error:')
+    
+    errors_by_epoch=PolicyNetwork.Learn(testset, epochs, eta, batch_size, stoch_coeff, error_function)
+    
+    final_error = PolicyNetwork.PropagateSet(testset,error_function)
+    print(final_error,'Final Error:')
+    print(init_error,'Initial Error:')
     print("total time needed:",time.time()-t)
-    #save results:
-    #name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(eta*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"Dan10"
-    #PolicyNetwork.saveweights(name)
-    #print("weights have been saved to",name)
     return errors_by_epoch
 
 """
@@ -205,4 +203,47 @@ if your_name is "Stefan":
     training_program = 1
 
     if training_program == 1:
+        PN=PolicyNet()
+        PN.saveweights('testo')
+        testset = TrainingDataSgfPass("dgs","dan_data_10")
+        epochs = 10
+        
+        #KLdiv training
+        Training(PN, epochs, 0.01, 60, 0.8, 0) #Bug: Minibatch?
+        error_kl_kl=PN.PropagateSet("dan_data_10",0)
+        error_mse_kl=PN.PropagateSet("dan_data_10",1)
+        error_hel_kl=PN.PropagateSet("dan_data_10",2)
+        
+        #MSE training
+        PN.loadweightsfromfile('testo')
+        Training(PN, epochs, 0.01, 60, 0.8, 1)
+        error_kl_mse=PN.PropagateSet("dan_data_10",0)
+        error_mse_mse=PN.PropagateSet("dan_data_10",1)
+        error_hel_mse=PN.PropagateSet("dan_data_10",2)
+        
+        #Hellinger dist training
+        PN.loadweightsfromfile('testo')
+        Training(PN, epochs, 0.01, 60, 0.8, 2)
+        error_kl_hel=PN.PropagateSet("dan_data_10",0)
+        error_mse_hel=PN.PropagateSet("dan_data_10",1)
+        error_hel_hel=PN.PropagateSet("dan_data_10",2)
+        
+        #plot results
+        f, axarr = plt.subplots(3, sharex=True)
+        axarr[0].set_title("KL-div")
+        axarr[0].plot(range(0,epochs), error_kl_kl,'r')
+        axarr[0].plot(range(0,epochs), error_kl_mse,'g')
+        axarr[0].plot(range(0,epochs), error_kl_hel,'b')
+        
+        axarr[1].set_ylabel("MSE")
+        axarr[1].plot(range(0,epochs), error_mse_kl,'r')
+        axarr[1].plot(range(0,epochs), error_mse_mse,'g')
+        axarr[2].plot(range(0,epochs), error_mse_hel,'b')
+        
+        axarr[2].set_xlabel("Hellinger dist")
+        axarr[2].plot(range(0,epochs), error_hel_kl,'r')
+        axarr[2].plot(range(0,epochs), error_hel_mse,'g')
+        axarr[2].plot(range(0,epochs), error_hel_hel,'b')
+        
+        
         
