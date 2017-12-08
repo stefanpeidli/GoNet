@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Hashable import Hashable
 from TrainingDataFromSgf import TrainingDataSgf
+from TrainingDataFromSgf import TrainingDataSgfPass
 from PolicyNet import PolicyNet
 import time
 import datetime
@@ -47,8 +48,8 @@ On saving and loading weights:
     FYI, weights can be loaded and saved into a folder < Saved_Weights > which is already in git.ignore. 
     Please create this folder if it does not exist yet.
     Let's say your trained your PolicyNet called Martha, then:
-        Saving weights: Martha.saveweights('Saved_Weights', name)
-        Loading weights: Martha.loadweightsfromfile('Saved_Weights',name)
+        Saving weights: Martha.saveweights(name)
+        Loading weights: Martha.loadweightsfromfile(name)
     I also added a proposal for a weight naming format:
         name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(eta*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"Dan10"
     I think this format is rather self-explaining. E.g.
@@ -58,66 +59,38 @@ On saving and loading weights:
         
 """
 
-def TrainingBasic(PolicyNetwork,learningrate,epochs,sgfrange, stoch_coeff):
-    eta = learningrate
+def TrainingBasic(PolicyNetwork, sgf_range = 1000, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=0):
     testdata = TrainingDataSgfPass("dgs",range(0,sgfrange))
-    errors_by_epoch=[]
-    for i in range(0,epochs):
-        [f,o,error] = PolicyNetwork.Learnpropagate(eta ,testdata, stoch_coeff)
-        errors_by_epoch.append(error)
+    errors_by_epoch=PolicyNetwork.Learn(testdata, epochs, eta, batch_size, stoch_coeff, error_function)
     return errors_by_epoch
 
     
-def TrainingSplit(PolicyNetwork, learningrate, maxepochs, sgfrange, trainingrate, tolerance):
-    eta = learningrate
-    trainingdata = TrainingDataSgfPass("dgs",range(0,1000))
+def TrainingSplit(PolicyNetwork, sgf_range = 1000, eta = 0.01, batch_size=1, stoch_coeff=1, error_function=0, trainingrate, error_tolerance, maxepochs):
+    trainingdata = TrainingDataSgfPass("dgs",range(0,sgf_range))
     datasize = len(trainingdata.dic)
-    [error,epochs]=PolicyNetwork.Learnsplit(eta,trainingdata, trainingrate, tolerance, maxepochs)
-    print("Datasize was",datasize,",K-L-Error:",error[-1:][0],",Epochs:",epochs)
+    [error,epochs] = PolicyNetwork.Learnsplit(trainingdata, eta, batch_size, stoch_coeff, error_function, trainingrate, error_tolerance, maxepochs)
+    print("Datasize was",datasize,",Final K-L-Error:",error[-1:][0],",Epochs:",epochs)
     
     
-def TrainingBasicDan10(PolicyNetwork,learningrate,epochs,stoch_coeff):
-    testset = TrainingDataSgfPass("dgs","dan_data_10")
-    eta = learningrate
+def Training(PolicyNetwork, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=0, file = "dan_data_10")
+    testset = TrainingDataSgfPass("dgs",file)
     t=time.time()
-    initerror = PolicyNetwork.PropagateSet(testset)
+    init_error = PolicyNetwork.PropagateSet(testset,error_function)
     print("Propagation took",np.round(time.time()-t,3),"seconds.")
-    print("Learning is done with batch size 1, vanilla Gradient Descent and Learning rate",eta)
-    errors_by_epoch=[]
-    totaltime=time.time()
-    for i in range(epochs):
-        t=time.time()
-        [firstout,out,err]=PolicyNetwork.Learnpropagate(eta, testset, stoch_coeff)
-        print("epoch number",i,"took",np.round(time.time()-t,3),"seconds with error",np.round(err,6))
-        errors_by_epoch.append(err)
-    finalerror = PolicyNetwork.PropagateSet(testset)
+    print("Learning is done for",epochs,"epochs, with batch size",batch_size,",eta",eta,",stoch_coeff",stoch_coeff,",error_function number",error_function,"and with Games given by",file)
+    t=time.time()
+    errors_by_epoch=PolicyNetwork.Learn(testdata, epochs, eta, batch_size, stoch_coeff, error_function)
+    finalerror = PolicyNetwork.PropagateSet(testset,error_function)
     print(finalerror,'Final Error:')
     print(initerror,'Initial Error:')
-    print("total time needed:",time.time()-totaltime)
+    print("total time needed:",time.time()-t)
     #save results:
     #name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(eta*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"Dan10"
-    #PolicyNetwork.saveweights('Saved_Weights',name)
+    #PolicyNetwork.saveweights(name)
     #print("weights have been saved to",name)
     return errors_by_epoch
 
-def TrainingHellingerDan10(PolicyNetwork,learningrate,epochs,stoch_coeff):
-    testset = TrainingDataSgfPass("dgs","dan_data_10")
-    eta = learningrate
-    errors_by_epoch=[]
-    totaltime=time.time()
-    for i in range(epochs):
-        t=time.time()
-        [firstout,out,err]=PolicyNetwork.LearnpropagateTest(eta, testset, stoch_coeff)
-        print("epoch number",i,"took",np.round(time.time()-t,3),"seconds with error",np.round(err,6))
-        errors_by_epoch.append(err)
-    print("total time needed:",time.time()-totaltime)
-    #save results:
-    #name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(eta*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"Dan10"
-    #PolicyNetwork.saveweights('Saved_Weights',name)
-    #print("weights have been saved to",name)
-    return errors_by_epoch
-
-   
+"""
 def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
     w=PolicyNetwork.weights
     testset = TrainingDataSgfPass("dgs","dan_data_10")
@@ -144,7 +117,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
     print('Final Error:',error,"Time:",t3-t2,"where the splitting took additionally",t2-t1)
     
     #Now without batchs
-    PolicyNetwork.weights=w #reset weights
+    PolicyNetwork.weights=w #reset weights, does not work...(?)
     errors2=[]
     t1=time.time()
     for epoch in range(epochs):
@@ -156,7 +129,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
     #plot results
     #plt.plot(range(epochs),batcherror,'b')
     #plt.plot(range(epochs),errors2,'r')
-    
+"""
 
 # Training Area = The Neural Network Gym : Do training here
     
@@ -170,7 +143,7 @@ if your_name is "Example":
     sgfrange = 10
     TrainingBasic(MyNetwork , learningrate, epochs, sgfrange)
     name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(learningrate*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"sgfrange"+str(sgfrange)
-    MyNetwork.saveweights('Saved_Weights', name)
+    MyNetwork.saveweights(name)
 
 # Paddy
 if your_name is "Paddy":
@@ -182,7 +155,7 @@ if your_name is "Paddy":
     TrainingBasic(MyNetwork, learningrate, epochs, sgfrange, stoch_coeff)
     name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
         int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "sgfrange" + str(sgfrange)
-    MyNetwork.saveweights('Saved_Weights', name)
+    MyNetwork.saveweights(name)
 
 
 # Faruk
@@ -209,13 +182,13 @@ if your_name is "Faruk":
     
     if training_program == 2:
         PN=PolicyNet()
-        PN.saveweights('Saved_Weights','test')
+        PN.saveweights('test')
         epochs = 20
         print("I think I will need",np.round(epochs/3*(1+0.2+0.7),2),"minutes for this task.")
         errors_by_epoch1 = TrainingBasicDan10(PN,0.001,epochs,1)#vanilla grad descent
-        PN.loadweightsfromfile('Saved_Weights','test')
+        PN.loadweightsfromfile('test')
         errors_by_epoch2 = TrainingBasicDan10(PN,0.001,epochs,0.2)
-        PN.loadweightsfromfile('Saved_Weights','test')
+        PN.loadweightsfromfile('test')
         errors_by_epoch3 = TrainingBasicDan10(PN,0.001,epochs,0.7)
         plt.plot(range(0,epochs),errors_by_epoch1,'b')
         plt.plot(range(0,epochs),errors_by_epoch2,'g')
@@ -240,7 +213,7 @@ if your_name is "Stefan":
         errors_by_epoch1 = TrainingHellingerDan10(PN,0.001,epochs,0.9)
         plt.plot(range(0,epochs),errors_by_epoch1)
 
-    if training_program == 2:
+    if training_program == 2:#TODO: check why saving the weights like this does not work
         PN=PolicyNet()
         w=PN.weights
         epochs = 30
@@ -255,7 +228,7 @@ if your_name is "Stefan":
         plt.plot(range(0,epochs),errors_by_epoch3)
         
     if training_program == 3:
-        PN=PolicyNet([9*9,100,200,300,400,300,200,100,9*9])
+        PN=PolicyNet([9*9,100,200,300,400,300,200,100,9*9+1])
         epochs = 10
         
         errors_by_epoch1 = TrainingBasicDan10(PN,0.01,epochs,0.2)
@@ -264,5 +237,5 @@ if your_name is "Stefan":
         errors_by_epoch4 = TrainingBasicDan10(PN,0.0005,epochs,0.95)
         
         name="weightsdelight"
-        PN.saveweights('Saved_Weights',name)
+        PN.saveweights(name)
         plt.plot(range(0,epochs*4),[errors_by_epoch1,errors_by_epoch2,errors_by_epoch3,errors_by_epoch4])

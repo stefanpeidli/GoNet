@@ -75,8 +75,8 @@ class IntelligentEngine(BaseEngine):
             out=self.PolicyNet.Propagate(board)
             board.vertices = tempVertices
         while sum(out) > 0:
-            move=np.argmax(out) # Problem: What happens if this is not unique?
-            if move is 81: #passing is always legal 82er eintrag
+            move=np.argmax(out)
+            if move is 81: #passing is always legal. 82er eintrag (?)
                 print("The Policy Network considers passing as the best move with a relative confidence of",str(round(out[move]*100))+"%",".")
                 return "pass"
             x=int(move%9)
