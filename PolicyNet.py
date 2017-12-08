@@ -12,7 +12,6 @@ from TrainingDataFromSgf import TrainingDataSgf #Better version
 from TrainingDataFromSgf import TrainingDataSgfPass #82 not 81
 import os
 import time
-import datetime
 import random
 
 def softmax(x):
@@ -615,7 +614,7 @@ def test5(): #bug
     e2=np.sum(e2)/len(e2)
     print("Batch size 60: error",e2,"time",time.time()-t)
     
-#test5()
+test5()
 
 def test6(): #passen
     PN = PolicyNet()
@@ -623,5 +622,5 @@ def test6(): #passen
     [f,o,e1]=PN.Learnpropagate(0.01,testset,0.8)
     print("No batchs: error",e1)
    
-#test6()
+test6()
     
