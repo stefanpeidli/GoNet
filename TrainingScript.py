@@ -60,7 +60,7 @@ On saving and loading weights:
 
 def TrainingBasic(PolicyNetwork,learningrate,epochs,sgfrange, stoch_coeff):
     eta = learningrate
-    testdata = TrainingDataSgf("dgs",range(0,sgfrange))
+    testdata = TrainingDataSgfPass("dgs",range(0,sgfrange))
     errors_by_epoch=[]
     for i in range(0,epochs):
         [f,o,error] = PolicyNetwork.Learnpropagate(eta ,testdata, stoch_coeff)
@@ -70,14 +70,14 @@ def TrainingBasic(PolicyNetwork,learningrate,epochs,sgfrange, stoch_coeff):
     
 def TrainingSplit(PolicyNetwork, learningrate, maxepochs, sgfrange, trainingrate, tolerance):
     eta = learningrate
-    trainingdata = TrainingDataSgf("dgs",range(0,1000))
+    trainingdata = TrainingDataSgfPass("dgs",range(0,1000))
     datasize = len(trainingdata.dic)
     [error,epochs]=PolicyNetwork.Learnsplit(eta,trainingdata, trainingrate, tolerance, maxepochs)
     print("Datasize was",datasize,",K-L-Error:",error[-1:][0],",Epochs:",epochs)
     
     
 def TrainingBasicDan10(PolicyNetwork,learningrate,epochs,stoch_coeff):
-    testset = TrainingDataSgf("dgs","dan_data_10")
+    testset = TrainingDataSgfPass("dgs","dan_data_10")
     eta = learningrate
     t=time.time()
     initerror = PolicyNetwork.PropagateSet(testset)
@@ -101,7 +101,7 @@ def TrainingBasicDan10(PolicyNetwork,learningrate,epochs,stoch_coeff):
     return errors_by_epoch
 
 def TrainingHellingerDan10(PolicyNetwork,learningrate,epochs,stoch_coeff):
-    testset = TrainingDataSgf("dgs","dan_data_10")
+    testset = TrainingDataSgfPass("dgs","dan_data_10")
     eta = learningrate
     errors_by_epoch=[]
     totaltime=time.time()
@@ -120,7 +120,7 @@ def TrainingHellingerDan10(PolicyNetwork,learningrate,epochs,stoch_coeff):
    
 def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
     w=PolicyNetwork.weights
-    testset = TrainingDataSgf("dgs","dan_data_10")
+    testset = TrainingDataSgfPass("dgs","dan_data_10")
     t1=time.time()
     errorinit = PolicyNetwork.PropagateSet(testset)
     tinit=time.time()-t1

@@ -21,7 +21,7 @@ def softmax(x):
         return e_x / e_x.sum()
 
 class PolicyNet:
-    def __init__(self,layers=[9*9,100,200,300,200,100,9*9]):
+    def __init__(self,layers=[9*9,100,200,300,200,100,9*9+1]):
         ### Specifications of the game
         self.n=9 # 9x9 board
         
@@ -48,34 +48,29 @@ class PolicyNet:
         
     ### Function Definition yard
       
-    # activation function
-    """
-    def softmax(self,x):
-        #Compute softmax values for each sets of scores in x.
-        e_x = np.exp(x - np.max(x))
-        return e_x / e_x.sum()
-    """
+    # error functions
+
     def compute_abs_error(self, suggested, target): #compare the prediction with the answer/target, absolute error
-        diff = np.absolute(suggested - target)
-        Error = np.inner(diff,np.ones(len(target)))
+        difference = np.absolute(suggested - target)
+        Error = np.inner(difference,np.ones(len(target)))
         return Error
     
     def compute_ms_error (self, suggested, target): #Returns the total mean square error
-        diff = np.absolute(suggested - target)
-        Error = 0.5*np.inner(diff,diff)
+        difference = np.absolute(suggested - target)
+        Error = 0.5*np.inner(difference,difference)
         return Error
     
     def compute_KL_divergence (self, suggested,target): #Compute Kullback-Leibler divergence, now stable!
         t=target[target!=0] #->we'd divide by 0 else, does not have inpact on error anyway ->Problem: We don't punish the NN for predicting non-zero values on zero target!
         s=suggested[target!=0]
-        diff=s/t #this is stable
-        Error = - np.inner(t*np.log(diff),np.ones(len(t)))
+        difference=s/t #this is stable
+        Error = - np.inner(t*np.log(difference),np.ones(len(t)))
         return Error
     
     def compute_Hellinger_dist (self, suggested, target):
         return np.linalg.norm(np.sqrt(suggested)-np.sqrt(target), ord=2) /np.sqrt(2)
     
-    def convert_input(self, boardvector):#rescaling help function
+    def convert_input(self, boardvector):#rescaling help function [-1,0,1]->[-1.35,0.45,1.05]
         boardvector=boardvector.astype(float)
         for i in range(0,len(boardvector)):
             if boardvector[i]==0:
@@ -108,7 +103,7 @@ class PolicyNet:
         if batchsize > N:
             batchsize = N
         k = int(np.ceil(N/batchsize))
-        #splitindices=[]
+        
         Batch_sets=[0]*k
         Batch_sets[0]=TrainingData() #TODO: check if this is fine with TraingDataSgf method
         Batch_sets[0].dic = dict(list(trainingdata.dic.items())[:batchsize])
@@ -120,12 +115,12 @@ class PolicyNet:
         return[k,Batch_sets]
 
     
-    def Learnpropagate(self, eta, trainingdata, stoch_coeff):
+    def Learnpropagate(self, eta, trainingdata, stoch_coeff = 1 ):
         counter, error_in_selection= 0, 0
         random_selection = random.sample(list(trainingdata.dic.keys()),int(np.round(len(trainingdata.dic)*stoch_coeff)))
         for entry in random_selection:
             testdata=self.convert_input(Hashable.unwrap(entry))
-            targ=trainingdata.dic[entry].reshape(9*9)
+            targ=trainingdata.dic[entry].reshape(9*9+1)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
                 y = np.append(testdata,[1])
@@ -216,7 +211,7 @@ class PolicyNet:
         random_selection = random.sample(list(trainingdata.dic.keys()),int(np.round(len(trainingdata.dic)*stoch_coeff)))
         for entry in random_selection:
             testdata=self.convert_input(Hashable.unwrap(entry))
-            targ=trainingdata.dic[entry].reshape(9*9)
+            targ=trainingdata.dic[entry].reshape(9*9+1)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
                 y = np.append(testdata,[1])
@@ -298,7 +293,7 @@ class PolicyNet:
         checked = 0
         for entry in trainingdata.dic:
             testdata=self.convert_input(Hashable.unwrap(entry))
-            targ=trainingdata.dic[entry].reshape(9*9)
+            targ=trainingdata.dic[entry].reshape(9*9+1)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
                 y = np.append(testdata,[1])
@@ -319,10 +314,13 @@ class PolicyNet:
     
     def Learnpropagatebatch(self, eta, batch, stoch_coeff): #takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
         deltaweights_batch=[0]*self.layercount
-        random_selection = random.sample(list(batch.dic.keys()),int(np.round(len(batch.dic)*stoch_coeff)))
+        selection_size = int(np.round(len(batch.dic)*stoch_coeff))
+        if selection_size is 0: #prevent empty selection
+            selection_size = 1
+        random_selection = random.sample(list(batch.dic.keys()),selection_size)
         for entry in random_selection:
             testdata=self.convert_input(Hashable.unwrap(entry))
-            targ=batch.dic[entry].reshape(9*9)
+            targ=batch.dic[entry].reshape(9*9+1)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
                 y = np.append(testdata,[1])
@@ -414,7 +412,8 @@ class PolicyNet:
         return [firstout,out,error]
     
     def Propagate(self,board):
-        #convert board to NeuroNet format (81-dim vector. TODO: Check for color of NN-training and flip if needed! For now, for convenience, i just subtract 0.25. We should do it similar to Heining by setting: -1.35:w, 0.45:empty, 1.05:b)
+        #convert board to NeuroNet format (81-dim vector) 
+        #TODO: Check for color of NN-training and flip if needed! For now, for convenience, i just subtract 0.25. We should do it similar to Heining by setting: -1.35:w, 0.45:empty, 1.05:b)
         board=board.vertices
         if len(board)!=81:
             board=board.flatten()
@@ -446,11 +445,10 @@ class PolicyNet:
         checked = 0
         for entry in testset.dic:
             testdata=self.convert_input(Hashable.unwrap(entry))
-            targ=testset.dic[entry].reshape(9*9)
+            targ=testset.dic[entry].reshape(9*9+1)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
                 y = np.append(testdata,[1])
-                ys = [0]*self.layercount
                 #Forward-propagate
                 for i in range(0,self.layercount): 
                     W = self.weights[i] #anders machen?
@@ -459,7 +457,6 @@ class PolicyNet:
                         y = np.append(softmax(s),[1]) #We append 1 for the bias
                     else: #in all other hidden layers we use tanh as activation fct
                         y = np.append(np.tanh(s),[1]) #We append 1 for the bias
-                    ys[i]=y #save the y values for backprop (?)
                 error += self.compute_KL_divergence(y[:-1], targ)
                 checked += 1
         error = error/checked #average over training set
@@ -485,13 +482,13 @@ class PolicyNet:
         plt.figure(1)
         f, axarr = plt.subplots(3, sharex=True)
         axarr[0].set_title("Neuronal Net Output Plot: First epoch vs last epoch vs target")
-        axarr[0].bar(range(1,(self.n*self.n+1)), firstout) #output of first epoch
+        axarr[0].bar(range(1,(self.n*self.n+2)), firstout) #output of first epoch
         
         axarr[1].set_ylabel("quality in percentage")
-        axarr[1].bar(range(1,(self.n*self.n+1)), out[:-1]) #output of last epoch
+        axarr[1].bar(range(1,(self.n*self.n+2)), out[:-1]) #output of last epoch
         
         axarr[2].set_xlabel("Board field number")
-        axarr[2].bar(range(1,(self.n*self.n+1)), targ) #target distribution
+        axarr[2].bar(range(1,(self.n*self.n+2)), targ) #target distribution
     
     def visualize_error(self,errors):
         plt.plot(range(0,len(errors)),errors)
@@ -559,7 +556,7 @@ def test(): #passing
     testset2 = TrainingDataSgfPass("dgs",range(0,5))
     for entry in testset1.dic:
         data=Hashable.unwrap(entry)
-        targ=testset1.dic[entry].reshape(9*9)
+        targ=testset1.dic[entry].reshape(9*9+1)
         print(len(targ))
     for entry in testset2.dic:
         data=Hashable.unwrap(entry)
@@ -569,7 +566,7 @@ def test(): #passing
         
 def test2():#bug in error display?
     PN = PolicyNet()
-    testset = TrainingDataSgf("dgs",range(0,5)) #one game
+    testset = TrainingDataSgfPass("dgs",range(0,5)) #one game
     error1 = PN.PropagateSet(testset)
     print(error1)
     
@@ -583,7 +580,7 @@ def test2():#bug in error display?
 
 def test3():
     PN = PolicyNet()
-    testset = TrainingDataSgf("dgs",range(0,5)) #one game
+    testset = TrainingDataSgfPass("dgs",range(0,5)) #one game
     for entry in testset.dic:
             testdata=PN.convert_input(Hashable.unwrap(entry))
 
@@ -591,7 +588,7 @@ def test3():
             
 def test4():
     PN = PolicyNet()
-    testset = TrainingDataSgf("dgs",'dan_data_10') #one game
+    testset = TrainingDataSgfPass("dgs",'dan_data_10') 
     epochs=2
     error_by_epoch = []
     for i in range(0,epochs):
@@ -599,5 +596,32 @@ def test4():
         error_by_epoch.append(e)
     plt.plot(range(0,epochs),error_by_epoch)
     
-test4()
+#test4()
+    
+def test5(): #bug
+    PN = PolicyNet()
+    testset = TrainingDataSgfPass("dgs",'dan_data_10')
+    t=time.time()
+    [f,o,e1]=PN.Learnpropagate(0.01,testset,0.8)
+    print("No batchs: error",e1,"time",time.time()-t)
+    
+    [k,batch]=PN.splitintobatches(testset,60)
+
+    e2=[]
+    t=time.time()
+    for i in range (0,k):
+        [f,o,et2]=PN.Learnpropagatebatch(0.01,batch[i],0.8)
+        e2.append(et2)
+    e2=np.sum(e2)/len(e2)
+    print("Batch size 60: error",e2,"time",time.time()-t)
+    
+#test5()
+
+def test6(): #passen
+    PN = PolicyNet()
+    testset = TrainingDataSgfPass("dgs",'dan_data_10')
+    [f,o,e1]=PN.Learnpropagate(0.01,testset,0.8)
+    print("No batchs: error",e1)
+   
+#test6()
     
