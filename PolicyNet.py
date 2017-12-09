@@ -18,6 +18,10 @@ def softmax(x):
         """Compute softmax values for each sets of scores in x."""
         e_x = np.exp(x - np.max(x))
         return e_x / e_x.sum()
+    
+def relu(x):
+    x[x<0]=0
+    return x
 
 class PolicyNet:
     def __init__(self,layers=[9*9,100,200,300,200,100,9*9+1]):
@@ -67,11 +71,18 @@ class PolicyNet:
     def compute_Hellinger_dist (self, suggested, target):
         return np.linalg.norm(np.sqrt(suggested)-np.sqrt(target), ord=2) /np.sqrt(2)
     
+    #error fct Number 3
+    def compute_cross_entropy (self, suggested, target):
+        return self.compute_entropy(target) + self.compute_KL_divergence(target,suggested) #wie rum kldiv?  
+    
     #error fct Number x, actually not a good one. Only for statistics
     def compute_abs_error (self, suggested, target): #compare the prediction with the answer/target, absolute error
         difference = np.absolute(suggested - target)
         Error = np.inner(difference,np.ones(len(target)))
         return Error
+    
+    def compute_entropy (self, distribution):
+        return -np.inner(distribution,np.log(distribution))
     
     ### Auxilary and Utilary Functions
     
@@ -143,13 +154,13 @@ class PolicyNet:
             errors_by_epoch = []
             for epoch in range(0,epochs):
                 errors_by_epoch.append(0)
-                for batch in range(0,number_of_batchs):
-                    error_in_batch = self.LearnSingleBatch(batch, eta, stoch_coeff, error_function)
+                for i_batch in range(0,number_of_batchs):
+                    error_in_batch = self.LearnSingleBatch(batchs[i_batch], eta, stoch_coeff, error_function)
                     errors_by_epoch[epoch] += error_in_batch
                 errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
             return errors_by_epoch
         
-    def Learnsplit(self, trainingdata, eta, batch_size, stoch_coeff, error_function, trainingrate, error_tolerance, maxepochs):
+    def Learnsplit(self, trainingdata, eta, batch_size, stoch_coeff, error_function, activation_function, trainingrate, error_tolerance, maxepochs):
         N = len(trainingdata.dic)
         splitindex = int(round(N*trainingrate))
         trainingset, testset = TrainingData(), TrainingData() #TODO: check if this is fine with TraingDataSgf method
@@ -160,20 +171,19 @@ class PolicyNet:
         epochs = 0
         while error[-1:][0] > error_tolerance and epochs < maxepochs:
             epochs += 1
-            self.Learn(trainingdata, 1, batch_size, stoch_coeff, error_function)
+            self.Learn(trainingdata, 1, batch_size, stoch_coeff, error_function, activation_function)
             error.append(self.PropagateSet(testset,error_function))
         return [error,epochs]
 
     
     
-    def LearnwithMiniBatch(self, trainingdata, eta = 0.01, stoch_coeff = 1, error_function = 0):
-        counter, error_in_selection= 0, 0
+    def LearnwithMiniBatch(self, trainingdata, eta = 0.01, stoch_coeff = 1, error_function = 0, activation_function = 0):
         random_selection = random.sample(list(trainingdata.dic.keys()),int(np.round(len(trainingdata.dic)*stoch_coeff)))
         for entry in random_selection:
-            testdata=self.convert_input(Hashable.unwrap(entry))
-            targ=trainingdata.dic[entry].reshape(9*9+1)
+            testdata = self.convert_input(Hashable.unwrap(entry))
+            targ = trainingdata.dic[entry].reshape(9*9+1)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
-                targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
+                targ = targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
                 y = np.append(testdata,[1])
                 ys = [0]*self.layercount
                 #Forward-propagate
@@ -183,16 +193,18 @@ class PolicyNet:
                     if i==self.layercount-1: #softmax as activationfct only in last layer    
                         y = np.append(softmax(s),[1]) #We append 1 for the bias
                     else: #in all other hidden layers we use tanh as activation fct
-                        y = np.append(np.tanh(s),[1]) #We append 1 for the bias
+                        if activation_function is 0:
+                            y = np.append(np.tanh(s),[1]) #We append 1 for the bias
+                        else: 
+                            if activation_function is 1:
+                                y = np.append(relu(s),[1]) #We append 1 for the bias
                     ys[i]=y #save the y values for backprop (?)
                 out=y
-                if 'firstout' not in locals():
-                    firstout=y[:-1] #save first epoch output for comparison and visualization
                 
                 #Backpropagation
                 
-                #Calc derivatives/Jacobian of the softmax activationfct in every layer (i dont have a good feeling about this): Update: I tested this section, it actually works correctly for sure. ToDo: We need not compute this for all layers, only the last one (only layer that uses softmax...)
-                DF=[0]*self.layercount
+                #Calculate Jacobian of the softmax activationfct in last layer 
+                Jacobian_Softmax = [0]*self.layercount
                 for i in range(self.layercount-1,self.layercount): #please note that I think this is pure witchcraft happening here
                     yt=ys[i] #load y from ys and lets call it yt
                     yt=yt[:-1] #the last entry is from the offset, we don't need this
@@ -203,34 +215,39 @@ class PolicyNet:
                     DFt=np.identity(le) - DFt
                     for j in range(0,le):
                         DFt[:,j]*=yt[j]
-                    DF[i]=DFt
-                #DF is a Jacobian, thus it is quadratic and symmetric
+                    Jacobian_Softmax[i]=DFt
+                #A Jacobian is quadratic and symmetric
             
-                #Calc Jacobian of tanh
-                DFtan=[0]*self.layercount
-                for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
-                    yt=ys[i] #load y from ys and lets call it yt
-                    yt=yt[:-1] #the last entry is from the offset, we don't need this
-                    le=len(yt)
-                    u=1-yt*yt
-                    DFtan[i]=np.diag(u)
+                if activation_function is 0:
+                    #Calc Jacobian of tanh
+                    Jacobian_tanh = [0]*self.layercount
+                    for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
+                        yt=ys[i] #load y from ys and lets call it yt
+                        yt=yt[:-1] #the last entry is from the offset, we don't need this
+                        u=1-yt*yt
+                        Jacobian_tanh[i]=np.diag(u)
+                    Jacobian_hidden = Jacobian_tanh
+                if activation_function is 1:
+                    #Calc Jacobian of relu
+                    Jacobian_relu = [0]*self.layercount
+                    for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
+                        yt=ys[i] #load y from ys and lets call it yt
+                        yt=yt[:-1] #the last entry is from the offset, we don't need this
+                        yt[yt>0]=1#actually 0 values go to 1 also. this is not so easy, thus I leave it like that for now
+                        Jacobian_relu[i]=np.diag(yt)
+                    Jacobian_hidden = Jacobian_relu
                 
                 #Use (L2) and (L3) to get the error signals of the layers
-                errorsignals=[0]*self.layercount
-                errorsignals[self.layercount-1]=DF[self.layercount-1] # (L2), the error signal of the output layer can be computed directly, here we actually use softmax
+                errorsignals = [0]*self.layercount
+                errorsignals[self.layercount-1] = Jacobian_Softmax[self.layercount-1] # (L2), the error signal of the output layer can be computed directly, here we actually use softmax
                 for i in range(2,self.layercount+1):
-                    """if i==layercount+1:#softmax
-                        w=weights[layercount-i+1]
-                        errdet=np.matmul(w[:,:-1],DF[layercount-i]) #temporary
-                        errorsignals[layercount-i]=np.dot(errorsignals[layercount-i+1],errdet) # (L3), does python fucking get that?
-                    else:"""
-                    w=self.weights[self.layercount-i+1]
-                    DFt=DFtan[self.layercount-i] #tanh
-                    errdet=np.matmul(w[:,:-1],DFt) #temporary
-                    errorsignals[self.layercount-i]=np.dot(errorsignals[self.layercount-i+1],errdet) # (L3), does python fucking get that?
+                    w = self.weights[self.layercount-i+1]
+                    DFt = Jacobian_hidden[self.layercount-i] #tanh
+                    errdet = np.matmul(w[:,:-1],DFt) #temporary
+                    errorsignals[self.layercount-i] = np.dot(errorsignals[self.layercount-i+1],errdet) # (L3), does python fucking get that?
                 
                 #Use (D3) to compute err_errorsignals as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
-                err_errorsignals=[0]*self.layercount
+                err_errorsignals = [0]*self.layercount
                 if error_function is 0:
                     errorbyyzero = -targ/out[:-1] #Kullback-Leibler divergence derivative
                 else:
@@ -241,37 +258,38 @@ class PolicyNet:
                             errorbyyzero = 1/4*(1-np.sqrt(targ)/np.sqrt(out[:-1])) #Hellinger-distance derivative
                 #errorbyyzero = self.chosen_error_fct(targ,out)
                 for i in range(0,self.layercount):
-                    err_errorsignals[i]=np.dot(errorbyyzero,errorsignals[i]) #this is the matrix variant of D3
+                    err_errorsignals[i] = np.dot(errorbyyzero,errorsignals[i]) #this is the matrix variant of D3
                 
                 #Use (2.2) to get the sought derivatives. Observe that this is an outer product, though not mentioned in the source (Fuck you Heining, you bastard)
-                errorbyweights=[0]*self.layercount #dE/dW
+                errorbyweights = [0]*self.layercount #dE/dW
                 errorbyweights[0] = np.outer(err_errorsignals[0],testdata).T #Why do I need to transpose here???
                 for i in range(1,self.layercount): 
-                    errorbyweights[i]=np.outer(err_errorsignals[i-1],ys[i][:-1]) # (L1)
+                    errorbyweights[i] = np.outer(err_errorsignals[i-1],ys[i][:-1]) # (L1)
                 
                 #Compute the change of weights, that means, then apply actualization step of Gradient Descent to weight matrices
                 deltaweights=[0]*self.layercount
                 for i in range(0,self.layercount):
-                    deltaweights[i]=-eta*errorbyweights[i]
+                    deltaweights[i] =-eta*errorbyweights[i]
                     self.weights[i][:,:-1]= self.weights[i][:,:-1]+ deltaweights[i].T #TODO: Problem: atm we only adjust non-bias weights. Change that!
         
         error = self.PropagateSet(trainingdata, error_function)
         
         return error
     
-    def LearnSingleBatch(self, batch, eta=0.01, stoch_coeff=1, error_function=0): #takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
-        deltaweights_batch=[0]*self.layercount
+    def LearnSingleBatch(self, batch, eta=0.01, stoch_coeff=1, error_function=0, activation_function=0): #takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
+        deltaweights_batch = [0]*self.layercount
         selection_size = int(np.round(len(batch.dic)*stoch_coeff))
         if selection_size is 0: #prevent empty selection
             selection_size = 1
         random_selection = random.sample(list(batch.dic.keys()),selection_size)
         for entry in random_selection:
-            testdata=self.convert_input(Hashable.unwrap(entry))
-            targ=batch.dic[entry].reshape(9*9+1)
+            testdata = self.convert_input(Hashable.unwrap(entry)) #input
+            targ = batch.dic[entry].reshape(9*9+1) #target output, this is to be approximated
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
-                targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
-                y = np.append(testdata,[1])
-                ys = [0]*self.layercount
+                targ = targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
+                y = np.append(testdata,[1]) #We append 1 for the bias
+                ys = [0]*self.layercount #y_saved for backpropagation
+                
                 #Forward-propagate
                 for i in range(0,self.layercount): 
                     W = self.weights[i] #anders machen?
@@ -279,51 +297,58 @@ class PolicyNet:
                     if i==self.layercount-1: #softmax as activationfct only in last layer    
                         y = np.append(softmax(s),[1]) #We append 1 for the bias
                     else: #in all other hidden layers we use tanh as activation fct
-                        y = np.append(np.tanh(s),[1]) #We append 1 for the bias
-                    ys[i]=y #save the y values for backprop (?)
+                        if activation_function is 0:
+                            y = np.append(np.tanh(s),[1]) #We append 1 for the bias
+                        else: 
+                            if activation_function is 1:
+                                y = np.append(relu(s),[1]) #We append 1 for the bias
+                    ys[i]=y #save the y values for backpropagation
                 out=y
-                if 'firstout' not in locals():
-                    firstout=y[:-1] #save first epoch output for comparison and visualization
                 
                 #Backpropagation
                 
-                #Calc derivatives/Jacobian of the softmax activationfct in every layer (i dont have a good feeling about this): Update: I tested this section, it actually works correctly for sure. ToDo: We need not compute this for all layers, only the last one (only layer that uses softmax...)
-                DF=[0]*self.layercount
+                #Calculate Jacobian of the softmax activationfct in last layer only
+                Jacobian_Softmax = [0]*self.layercount
                 for i in range(self.layercount-1,self.layercount): #please note that I think this is pure witchcraft happening here
-                    yt=ys[i] #load y from ys and lets call it yt
+                    yt=ys[i] #load y from ys and lets call it yt y_temporary
                     yt=yt[:-1] #the last entry is from the offset, we don't need this
                     le=len(yt)
-                    DFt=np.ones((le,le)) #alloc storage temporarily
+                    Jacobian_Softmax_temporary = np.ones((le,le)) #alloc storage temporarily
                     for j in range(0,le):
-                        DFt[j,:]*=yt[j]
-                    DFt=np.identity(le) - DFt
+                        Jacobian_Softmax_temporary[j,:]*=yt[j]
+                    Jacobian_Softmax_temporary=np.identity(le) - Jacobian_Softmax_temporary
                     for j in range(0,le):
-                        DFt[:,j]*=yt[j]
-                    DF[i]=DFt
-                #DF is a Jacobian, thus it is quadratic and symmetric
+                        Jacobian_Softmax_temporary[:,j]*=yt[j]
+                    Jacobian_Softmax[i]=Jacobian_Softmax_temporary
+                #Jacobian_Softmax is quadratic and symmetric.
             
-                #Calc Jacobian of tanh
-                DFtan=[0]*self.layercount
-                for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
-                    yt=ys[i] #load y from ys and lets call it yt
-                    yt=yt[:-1] #the last entry is from the offset, we don't need this
-                    le=len(yt)
-                    u=1-yt*yt
-                    DFtan[i]=np.diag(u)
+                if activation_function is 0:
+                    #Calc Jacobian of tanh
+                    Jacobian_tanh = [0]*self.layercount
+                    for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
+                        yt=ys[i] #load y from ys and lets call it yt
+                        yt=yt[:-1] #the last entry is from the offset, we don't need this
+                        u=1-yt*yt
+                        Jacobian_tanh[i]=np.diag(u)
+                    Jacobian_hidden = Jacobian_tanh
+                if activation_function is 1:
+                    #Calc Jacobian of relu
+                    Jacobian_relu = [0]*self.layercount
+                    for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
+                        yt=ys[i] #load y from ys and lets call it yt
+                        yt=yt[:-1] #the last entry is from the offset, we don't need this
+                        yt[yt>0]=1#actually 0 values go to 1 also. this is not so easy, thus I leave it like that for now
+                        Jacobian_relu[i]=np.diag(yt)
+                    Jacobian_hidden = Jacobian_relu
                 
                 #Use (L2) and (L3) to get the error signals of the layers
-                errorsignals=[0]*self.layercount
-                errorsignals[self.layercount-1]=DF[self.layercount-1] # (L2), the error signal of the output layer can be computed directly, here we actually use softmax
+                errorsignals = [0]*self.layercount
+                errorsignals[self.layercount-1] = Jacobian_Softmax[self.layercount-1] # (L2), the error signal of the output layer can be computed directly, here we actually use softmax
                 for i in range(2,self.layercount+1):
-                    """if i==layercount+1:#softmax
-                        w=weights[layercount-i+1]
-                        errdet=np.matmul(w[:,:-1],DF[layercount-i]) #temporary
-                        errorsignals[layercount-i]=np.dot(errorsignals[layercount-i+1],errdet) # (L3), does python fucking get that?
-                    else:"""
-                    w=self.weights[self.layercount-i+1]
-                    DFt=DFtan[self.layercount-i] #tanh
-                    errdet=np.matmul(w[:,:-1],DFt) #temporary
-                    errorsignals[self.layercount-i]=np.dot(errorsignals[self.layercount-i+1],errdet) # (L3), does python fucking get that?
+                    w = self.weights[self.layercount-i+1]
+                    DFt = Jacobian_hidden[self.layercount-i] #tanh
+                    errdet = np.matmul(w[:,:-1],DFt) #temporary
+                    errorsignals[self.layercount-i] = np.dot(errorsignals[self.layercount-i+1],errdet) # (L3), does python fucking get that?
                 
                 #Use (D3) to compute err_errorsignals as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
                 err_errorsignals=[0]*self.layercount
@@ -340,10 +365,10 @@ class PolicyNet:
                     err_errorsignals[i]=np.dot(errorbyyzero,errorsignals[i]) #this is the matrix variant of D3
                 
                 #Use (2.2) to get the sought derivatives. Observe that this is an outer product, though not mentioned in the source (Fuck you Heining, you bastard)
-                errorbyweights=[0]*self.layercount #dE/dW
+                errorbyweights = [0]*self.layercount #dE/dW
                 errorbyweights[0] = np.outer(err_errorsignals[0],testdata).T #Why do I need to transpose here???
                 for i in range(1,self.layercount): 
-                    errorbyweights[i]=np.outer(err_errorsignals[i-1],ys[i][:-1]) # (L1)
+                    errorbyweights[i] = np.outer(err_errorsignals[i-1],ys[i][:-1]) # (L1)
                 
                 #Compute the change of weights, that means, then apply actualization step of Gradient Descent to weight matrices
                 for i in range(0,self.layercount):
@@ -365,12 +390,11 @@ class PolicyNet:
         error = self.PropagateSet(batch,error_function)
         return error
     
-    def Propagate(self, board):
-        #convert board to NeuroNet format (81-dim vector) 
-        #TODO: Check for color of NN-training and flip if needed! 
-        board=board.vertices
+    def Propagate(self, board, activation_function=0):
+        #convert board to NeuroNet format (82-dim vector) 
+        board = board.vertices
         if len(board) != 82:
-            board=board.flatten()
+            board = board.flatten()
         #Like Heining we are setting: (-1.35:w, 0.45:empty, 1.05:b)
         for i in range(0,len(board)):
             if board[i] == 0:
@@ -383,32 +407,40 @@ class PolicyNet:
         y = np.append(board,[1]) #apply offset
         #Forward-propagate
         for i in range(0,self.layercount): 
-            W = self.weights[i] #anders machen?
+            W = self.weights[i]
             s = W.dot(y)
             if i==self.layercount-1: #softmax as activationfct only in last layer    
                 y = np.append(softmax(s),[1]) #We append 1 for the bias
             else: #in all other hidden layers we use tanh as activation fct
-                y = np.append(np.tanh(s),[1]) #We append 1 for the bias
-        out=y[:-1]
+                if activation_function is 0:
+                    y = np.append(np.tanh(s),[1]) #We append 1 for the bias
+                else: 
+                    if activation_function is 1:
+                        y = np.append(relu(s),[1]) #We append 1 for the bias
+        out = y[:-1]
         return out
     
-    def PropagateSet(self, testset, error_function=0):
+    def PropagateSet(self, testset, error_function=0, activation_function=0):
         error = 0
         checked = 0
         for entry in testset.dic:
-            testdata=self.convert_input(Hashable.unwrap(entry))
-            targ=testset.dic[entry].reshape(9*9+1)
+            testdata = self.convert_input(Hashable.unwrap(entry))
+            targ = testset.dic[entry].reshape(9*9+1)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
-                targ=targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
-                y = np.append(testdata,[1])
+                targ = targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
+                y = np.append(testdata,[1]) #We append 1 for the bias
                 #Forward-propagate
                 for i in range(0,self.layercount): 
-                    W = self.weights[i] #anders machen?
+                    W = self.weights[i]
                     s = W.dot(y)
                     if i==self.layercount-1: #softmax as activationfct only in last layer    
                         y = np.append(softmax(s),[1]) #We append 1 for the bias
                     else: #in all other hidden layers we use tanh as activation fct
-                        y = np.append(np.tanh(s),[1]) #We append 1 for the bias
+                        if activation_function is 0:
+                            y = np.append(np.tanh(s),[1]) #We append 1 for the bias
+                        else: 
+                            if activation_function is 1:
+                                y = np.append(relu(s),[1]) #We append 1 for the bias
                 #sum up the error
                 if error_function is 0:
                     error += self.compute_KL_divergence(y[:-1], targ)
@@ -470,14 +502,14 @@ def test1():
         error_by_epoch = PN.Learn(testset, epochs)
     plt.plot(range(0,epochs),error_by_epoch)
     
-test1()
+#test1()
     
 
 
 def test2(): #passen
     PN = PolicyNet()
     testset = TrainingDataSgfPass("dgs",'dan_data_10')
-    error=PN.Learn(testset)
+    error=PN.Learn(testset,2)
     print("No batchs: error",error)
    
 #test2()

@@ -59,30 +59,30 @@ On saving and loading weights:
         
 """
 
-def TrainingBasic(PolicyNetwork, sgf_range = 1000, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=0):
+def TrainingBasic(PolicyNetwork, sgf_range = 1000, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=0, activation_function=0):
     testdata = TrainingDataSgfPass("dgs",range(0,sgfrange))
-    errors_by_epoch=PolicyNetwork.Learn(testdata, epochs, eta, batch_size, stoch_coeff, error_function)
+    errors_by_epoch=PolicyNetwork.Learn(testdata, epochs, eta, batch_size, stoch_coeff, error_function, activation_function)
     return errors_by_epoch
 
     
-def TrainingSplit(PolicyNetwork, trainingrate, error_tolerance, maxepochs, sgf_range = 1000, eta = 0.01, batch_size=1, stoch_coeff=1, error_function=0):
+def TrainingSplit(PolicyNetwork, trainingrate, error_tolerance, maxepochs, sgf_range = 1000, eta = 0.01, batch_size=1, stoch_coeff=1, error_function=0, activation_function=0):
     trainingdata = TrainingDataSgfPass("dgs",range(0,sgf_range))
     datasize = len(trainingdata.dic)
-    [error,epochs] = PolicyNetwork.Learnsplit(trainingdata, eta, batch_size, stoch_coeff, error_function, trainingrate, error_tolerance, maxepochs)
+    [error,epochs] = PolicyNetwork.Learnsplit(trainingdata, eta, batch_size, stoch_coeff, error_function, activation_function, trainingrate, error_tolerance, maxepochs)
     print("Datasize was",datasize,",Final K-L-Error:",error[-1:][0],",Epochs:",epochs)
     
     
-def Training(PolicyNetwork, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=0, file = "dan_data_10"):
+def Training(PolicyNetwork, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=0, activation_function=0, file = "dan_data_10"):
     testset = TrainingDataSgfPass("dgs",file)
     t=time.time()
-    init_error = PolicyNetwork.PropagateSet(testset,error_function)
+    init_error = PolicyNetwork.PropagateSet(testset,error_function, activation_function)
     print("Propagation took",np.round(time.time()-t,3),"seconds.")
     print("Learning is done for",epochs,"epochs, with batch size",batch_size,",eta",eta,",stoch_coeff",stoch_coeff,",error_function number",error_function,"and with Games given by",file)
     t=time.time()
     
-    errors_by_epoch=PolicyNetwork.Learn(testset, epochs, eta, batch_size, stoch_coeff, error_function)
+    errors_by_epoch=PolicyNetwork.Learn(testset, epochs, eta, batch_size, stoch_coeff, error_function, activation_function)
     
-    final_error = PolicyNetwork.PropagateSet(testset,error_function)
+    final_error = PolicyNetwork.PropagateSet(testset,error_function, activation_function)
     print(final_error,'Final Error:')
     print(init_error,'Initial Error:')
     print("total time needed:",time.time()-t)
@@ -200,50 +200,47 @@ if your_name is "Stefan":
     #hier schreibe ich mein training rein
     print("halo I bims")
     
-    training_program = 1
+    training_program = 2
 
     if training_program == 1:
         PN=PolicyNet()
-        PN.saveweights('testo')
         testset = TrainingDataSgfPass("dgs","dan_data_10")
-        epochs = 10
+        trainingset = TrainingDataSgfPass("dgs","dan_data_295")
+        start=time.time()
+        errors_by_training=[]
+        while time.time() - start < 0.5 * 60 * 60: #half hour
+            errors_by_epoch=PN.Learn(trainingset,5,0.01,200,0.8,0)
+            errors_by_training.append(errors_by_epoch)
         
-        #KLdiv training
-        Training(PN, epochs, 0.01, 60, 0.8, 0) #Bug: Minibatch?
-        error_kl_kl=PN.PropagateSet("dan_data_10",0)
-        error_mse_kl=PN.PropagateSet("dan_data_10",1)
-        error_hel_kl=PN.PropagateSet("dan_data_10",2)
+    if training_program == 2:
+        PN = PolicyNet([9*9,300,9*9+1])
+        trainingdata = TrainingDataSgfPass("dgs","dan_data_10")
+        batch_size = 50
+        eta = 0.1
+        stoch_coeff = 0.9
+        epochs = 60
+        error_function = 0
+        activation_function = 0
         
-        #MSE training
-        PN.loadweightsfromfile('testo')
-        Training(PN, epochs, 0.01, 60, 0.8, 1)
-        error_kl_mse=PN.PropagateSet("dan_data_10",0)
-        error_mse_mse=PN.PropagateSet("dan_data_10",1)
-        error_hel_mse=PN.PropagateSet("dan_data_10",2)
+        errors=[]
+        print(PN.PropagateSet(trainingdata,error_function, activation_function))
+        start=time.time()
         
-        #Hellinger dist training
-        PN.loadweightsfromfile('testo')
-        Training(PN, epochs, 0.01, 60, 0.8, 2)
-        error_kl_hel=PN.PropagateSet("dan_data_10",0)
-        error_mse_hel=PN.PropagateSet("dan_data_10",1)
-        error_hel_hel=PN.PropagateSet("dan_data_10",2)
-        
-        #plot results
-        f, axarr = plt.subplots(3, sharex=True)
-        axarr[0].set_title("KL-div")
-        axarr[0].plot(range(0,epochs), error_kl_kl,'r')
-        axarr[0].plot(range(0,epochs), error_kl_mse,'g')
-        axarr[0].plot(range(0,epochs), error_kl_hel,'b')
-        
-        axarr[1].set_ylabel("MSE")
-        axarr[1].plot(range(0,epochs), error_mse_kl,'r')
-        axarr[1].plot(range(0,epochs), error_mse_mse,'g')
-        axarr[2].plot(range(0,epochs), error_mse_hel,'b')
-        
-        axarr[2].set_xlabel("Hellinger dist")
-        axarr[2].plot(range(0,epochs), error_hel_kl,'r')
-        axarr[2].plot(range(0,epochs), error_hel_mse,'g')
-        axarr[2].plot(range(0,epochs), error_hel_hel,'b')
+        [number_of_batchs, batchs] = PN.splitintobatches(trainingdata,batch_size)
+        errors_by_epoch = []
+        for epoch in range(0,epochs):
+            errors_by_epoch.append(0)
+            for i_batch in range(0,number_of_batchs):
+                error_in_batch = PN.LearnSingleBatch(batchs[i_batch], eta, stoch_coeff, error_function, activation_function)
+                errors_by_epoch[epoch] += error_in_batch
+            errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
+            print (errors_by_epoch[epoch])
+        print(time.time()-start)
+        plt.plot(range(0,len(errors_by_epoch)),errors_by_epoch)
+        name="GOTEST_Number_"+str(num)
+        num+=1
+        PN.saveweights(name)
+            
         
         
         
