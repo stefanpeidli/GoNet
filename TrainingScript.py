@@ -213,17 +213,17 @@ if your_name is "Stefan":
             errors_by_training.append(errors_by_epoch)
         
     if training_program == 2:
-        PN = PolicyNet([9*9,500,9*9+1])
         trainingdata = TrainingDataSgfPass("dgs","dan_data_10")
         batch_size = 100
         eta = 0.01
-        stoch_coeff = 0.8
+        stoch_coeff = 1
         epochs = 20
-        error_function = 1
+        error_function = 0
         activation_function = 0
+        PN = PolicyNet([9*9,500,9*9+1],activation_function)
         
         errors=[]
-        print(PN.PropagateSet(trainingdata,error_function, activation_function))
+        print(PN.PropagateSet(trainingdata,error_function))
         start=time.time()
         
         [number_of_batchs, batchs] = PN.splitintobatches(trainingdata,batch_size)
@@ -231,7 +231,7 @@ if your_name is "Stefan":
         for epoch in range(0,epochs):
             errors_by_epoch.append(0)
             for i_batch in range(0,number_of_batchs):
-                error_in_batch = PN.LearnSingleBatch(batchs[i_batch], eta, stoch_coeff, error_function, activation_function)
+                error_in_batch = PN.LearnSingleBatch(batchs[i_batch], eta, stoch_coeff, error_function)
                 errors_by_epoch[epoch] += error_in_batch
             errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
             print (errors_by_epoch[epoch])

@@ -8,7 +8,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Hashable import Hashable
 from TrainingDataFromSgf import TrainingData #legacy
-from TrainingDataFromSgf import TrainingDataSgf #Better version
 from TrainingDataFromSgf import TrainingDataSgfPass #82 not 81
 import os
 import time
@@ -24,22 +23,34 @@ def relu(x):
     return x
 
 class PolicyNet:
-    def __init__(self,layers=[9*9,100,200,300,200,100,9*9+1]):
+    def __init__(self,layers=[9*9,1000,100,9*9+1],activation_function=0,error_function=0):
         ### Specifications of the game
         self.n=9 # 9x9 board
         
         ### Parameters of the NN
         self.eta = 0.001 # learning rate
         self.layers = layers #please leave the first and last equal zu n^2 for now
+        self.activation_function=activation_function
         
         ### Initialize the weights
         # here by a normal distribution N(mu,sigma)
         self.layercount = len(self.layers)-1
-        mu=0
-        self.weights=[0]*self.layercount #alloc memory
-        for i in range(0,self.layercount):
-            sigma = 1/np.sqrt(self.layers[i+1]) #vgl Heining #TODO:Check if inputs are well-behaved (approx. normalized)
-            self.weights[i]=np.random.normal(mu, sigma, (self.layers[i+1],self.layers[i]+1))#edit: the +1 in the input dimension is for the bias
+        if self.activation_function is 0:#TODO wie im last layer haben wir softmax! wie initialisieren???
+            mu=0
+            self.weights=[0]*self.layercount #alloc memory
+            for i in range(0,self.layercount):
+                sigma = 1/np.sqrt(self.layers[i+1]) #vgl Heining #TODO:Check if inputs are well-behaved (approx. normalized)
+                self.weights[i]=np.random.normal(mu, sigma, (self.layers[i+1],self.layers[i]+1))#edit: the +1 in the input dimension is for the bias
+            
+        elif self.activation_function is 1:
+            mu=0
+            self.layercount = len(self.layers)-1
+            self.weights=[0]*self.layercount #alloc memory
+            for i in range(0,self.layercount):
+                sigma = np.sqrt(2)/np.sqrt(self.layers[i+1]) #vgl Heining #TODO:Check if inputs are well-behaved (approx. normalized)
+                self.weights[i]=np.random.normal(mu, sigma, (self.layers[i+1],self.layers[i]+1))#edit: the +1 in the input dimension is for the bias
+            
+        
         
         ### Alloc memory for the error statistics
         #Hint:b=a[:-1,:] this is a handy formulation to delete the last column, Thus ~W=W[:-1,1]
@@ -173,7 +184,7 @@ class PolicyNet:
                 errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
             return errors_by_epoch
         
-    def Learnsplit(self, trainingdata, eta, batch_size, stoch_coeff, error_function, activation_function, trainingrate, error_tolerance, maxepochs):
+    def Learnsplit(self, trainingdata, eta, batch_size, stoch_coeff, error_function, trainingrate, error_tolerance, maxepochs):
         N = len(trainingdata.dic)
         splitindex = int(round(N*trainingrate))
         trainingset, testset = TrainingData(), TrainingData() #TODO: check if this is fine with TraingDataSgf method
@@ -184,13 +195,13 @@ class PolicyNet:
         epochs = 0
         while error[-1:][0] > error_tolerance and epochs < maxepochs:
             epochs += 1
-            self.Learn(trainingdata, 1, batch_size, stoch_coeff, error_function, activation_function)
+            self.Learn(trainingdata, 1, batch_size, stoch_coeff, error_function)
             error.append(self.PropagateSet(testset,error_function))
         return [error,epochs]
 
     
     
-    def LearnwithMiniBatch(self, trainingdata, eta = 0.01, stoch_coeff = 1, error_function = 1, activation_function = 0):
+    def LearnwithMiniBatch(self, trainingdata, eta = 0.01, stoch_coeff = 1, error_function = 1):
         random_selection = random.sample(list(trainingdata.dic.keys()),int(np.round(len(trainingdata.dic)*stoch_coeff)))
         for entry in random_selection:
             testdata = self.convert_input(Hashable.unwrap(entry))
@@ -206,10 +217,10 @@ class PolicyNet:
                     if i==self.layercount-1: #softmax as activationfct only in last layer    
                         y = np.append(softmax(s),[1]) #We append 1 for the bias
                     else: #in all other hidden layers we use tanh as activation fct
-                        if activation_function is 0:
+                        if self.activation_function is 0:
                             y = np.append(np.tanh(s),[1]) #We append 1 for the bias
                         else: 
-                            if activation_function is 1:
+                            if self.activation_function is 1:
                                 y = np.append(relu(s),[1]) #We append 1 for the bias
                     ys[i]=y #save the y values for backprop (?)
                 out=y
@@ -231,7 +242,7 @@ class PolicyNet:
                     Jacobian_Softmax[i]=DFt
                 #A Jacobian is quadratic and symmetric
             
-                if activation_function is 0:
+                if self.activation_function is 0:
                     #Calc Jacobian of tanh
                     Jacobian_tanh = [0]*self.layercount
                     for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
@@ -240,7 +251,7 @@ class PolicyNet:
                         u=1-yt*yt
                         Jacobian_tanh[i]=np.diag(u)
                     Jacobian_hidden = Jacobian_tanh
-                if activation_function is 1:
+                if self.activation_function is 1:
                     #Calc Jacobian of relu
                     Jacobian_relu = [0]*self.layercount
                     for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
@@ -256,7 +267,7 @@ class PolicyNet:
                 for i in range(2,self.layercount+1):
                     w = self.weights[self.layercount-i+1]
                     DFt = Jacobian_hidden[self.layercount-i] #tanh
-                    errdet = np.matmul(w[:,:-1],DFt) #temporary
+                    errdet = np.matmul(w[:,:-1],DFt) #temporary #TODO: Jacobi für tanh und relu ist vector, use that
                     errorsignals[self.layercount-i] = np.dot(errorsignals[self.layercount-i+1],errdet) # (L3), does python fucking get that?
                 
                 #Use (D3) to compute err_errorsignals as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
@@ -292,7 +303,7 @@ class PolicyNet:
         
         return error
     
-    def LearnSingleBatch(self, batch, eta=0.01, stoch_coeff=1, error_function=0, activation_function=0): #takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
+    def LearnSingleBatch(self, batch, eta=0.01, stoch_coeff=1, error_function=0): #takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
         deltaweights_batch = [0]*self.layercount
         selection_size = int(np.round(len(batch.dic)*stoch_coeff))
         if selection_size is 0: #prevent empty selection
@@ -313,10 +324,10 @@ class PolicyNet:
                     if i==self.layercount-1: #softmax as activationfct only in last layer    
                         y = np.append(softmax(s),[1]) #We append 1 for the bias
                     else: #in all other hidden layers we use tanh as activation fct
-                        if activation_function is 0:
+                        if self.activation_function is 0:
                             y = np.append(np.tanh(s),[1]) #We append 1 for the bias
                         else: 
-                            if activation_function is 1:
+                            if self.activation_function is 1:
                                 y = np.append(relu(s),[1]) #We append 1 for the bias
                     ys[i]=y #save the y values for backpropagation
                 out=y
@@ -338,7 +349,7 @@ class PolicyNet:
                     Jacobian_Softmax[i]=Jacobian_Softmax_temporary
                 #Jacobian_Softmax is quadratic and symmetric.
             
-                if activation_function is 0:
+                if self.activation_function is 0:
                     #Calc Jacobian of tanh
                     Jacobian_tanh = [0]*self.layercount
                     for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
@@ -347,7 +358,7 @@ class PolicyNet:
                         u=1-yt*yt
                         Jacobian_tanh[i]=np.diag(u)
                     Jacobian_hidden = Jacobian_tanh
-                if activation_function is 1:
+                if self.activation_function is 1:
                     #Calc Jacobian of relu
                     Jacobian_relu = [0]*self.layercount
                     for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
@@ -409,7 +420,7 @@ class PolicyNet:
         error = self.PropagateSet(batch,error_function)
         return error
     
-    def Propagate(self, board, activation_function=0):
+    def Propagate(self, board):
         #convert board to NeuroNet format (82-dim vector) 
         board = board.vertices
         if len(board) != 82:
@@ -430,16 +441,14 @@ class PolicyNet:
             s = W.dot(y)
             if i==self.layercount-1: #softmax as activationfct only in last layer    
                 y = np.append(softmax(s),[1]) #We append 1 for the bias
-            else: #in all other hidden layers we use tanh as activation fct
-                if activation_function is 0:
-                    y = np.append(np.tanh(s),[1]) #We append 1 for the bias
-                else: 
-                    if activation_function is 1:
-                        y = np.append(relu(s),[1]) #We append 1 for the bias
+            elif self.activation_function is 0:
+                y = np.append(np.tanh(s),[1]) #We append 1 for the bias
+            elif self.activation_function is 1:
+                y = np.append(relu(s),[1]) #We append 1 for the bias
         out = y[:-1]
         return out
     
-    def PropagateSet(self, testset, error_function=0, activation_function=0):
+    def PropagateSet(self, testset, error_function=0):
         error = 0
         checked = 0
         for entry in testset.dic:
@@ -455,10 +464,10 @@ class PolicyNet:
                     if i==self.layercount-1: #softmax as activationfct only in last layer    
                         y = np.append(softmax(s),[1]) #We append 1 for the bias
                     else: #in all other hidden layers we use tanh as activation fct
-                        if activation_function is 0:
+                        if self.activation_function is 0:
                             y = np.append(np.tanh(s),[1]) #We append 1 for the bias
                         else: 
-                            if activation_function is 1:
+                            if self.activation_function is 1:
                                 y = np.append(relu(s),[1]) #We append 1 for the bias
                 #sum up the error
                 if error_function is 0:
