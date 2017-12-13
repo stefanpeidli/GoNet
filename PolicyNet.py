@@ -75,6 +75,19 @@ class PolicyNet:
     def compute_cross_entropy (self, suggested, target):
         return self.compute_entropy(target) + self.compute_KL_divergence(target,suggested) #wie rum kldiv?  
     
+    #error fct Number 4
+    def compute_experimental (self, suggested, target, gamma):
+        alpha = 1/gamma
+        beta = np.log(gamma)
+        error = alpha*np.sum(np.exp((suggested - target)*beta))
+        return error
+    
+    def compute_experimental_gradient(self, suggested, target, gamma):
+        alpha = 1/gamma
+        beta = np.log(gamma)
+        gradient = alpha*beta*np.exp((suggested - target)*beta)
+        return gradient
+        
     #error fct Number x, actually not a good one. Only for statistics
     def compute_abs_error (self, suggested, target): #compare the prediction with the answer/target, absolute error
         difference = np.absolute(suggested - target)
@@ -141,7 +154,7 @@ class PolicyNet:
     
     ### The actual functions
 
-    def Learn(self, trainingdata, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=0):
+    def Learn(self, trainingdata, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=1):
         if batch_size is 1:
             print("Minibatch mode activated")
             errors_by_epoch = []
@@ -177,7 +190,7 @@ class PolicyNet:
 
     
     
-    def LearnwithMiniBatch(self, trainingdata, eta = 0.01, stoch_coeff = 1, error_function = 0, activation_function = 0):
+    def LearnwithMiniBatch(self, trainingdata, eta = 0.01, stoch_coeff = 1, error_function = 1, activation_function = 0):
         random_selection = random.sample(list(trainingdata.dic.keys()),int(np.round(len(trainingdata.dic)*stoch_coeff)))
         for entry in random_selection:
             testdata = self.convert_input(Hashable.unwrap(entry))
@@ -256,6 +269,9 @@ class PolicyNet:
                     else:
                         if error_function is 2:
                             errorbyyzero = 1/4*(1-np.sqrt(targ)/np.sqrt(out[:-1])) #Hellinger-distance derivative
+                        else:
+                            if error_function is 3:
+                                errorbyyzero=self.compute_experimental_gradient(out[:-1],targ,1000)
                 #errorbyyzero = self.chosen_error_fct(targ,out)
                 for i in range(0,self.layercount):
                     err_errorsignals[i] = np.dot(errorbyyzero,errorsignals[i]) #this is the matrix variant of D3
@@ -360,6 +376,9 @@ class PolicyNet:
                     else:
                         if error_function is 2:
                             errorbyyzero = 1/4*(1-np.sqrt(targ)/np.sqrt(out[:-1])) #Hellinger-distance derivative
+                        else:
+                            if error_function is 3:
+                                errorbyyzero=self.compute_experimental_gradient(out[:-1],targ,1000)
                 #errorbyyzero = self.chosen_error_fct(targ,out)
                 for i in range(0,self.layercount):
                     err_errorsignals[i]=np.dot(errorbyyzero,errorsignals[i]) #this is the matrix variant of D3
@@ -450,6 +469,9 @@ class PolicyNet:
                     else:
                         if error_function is 2:
                             error += self.compute_Hellinger_dist(y[:-1], targ)
+                        else:
+                            if error_function is 3:
+                                error += self.compute_experimental(y[:-1], targ, 1000)
                 checked += 1
         if checked is 0:
             print("The Set contained no feasible boards")
@@ -499,7 +521,7 @@ def test1():
     epochs=2
     error_by_epoch = []
     for i in range(0,epochs):
-        error_by_epoch = PN.Learn(testset, epochs)
+        error_by_epoch = PN.Learn(testset,epochs)
     plt.plot(range(0,epochs),error_by_epoch)
     
 #test1()

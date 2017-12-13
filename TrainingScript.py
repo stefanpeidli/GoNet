@@ -59,20 +59,20 @@ On saving and loading weights:
         
 """
 
-def TrainingBasic(PolicyNetwork, sgf_range = 1000, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=0, activation_function=0):
+def TrainingBasic(PolicyNetwork, sgf_range = 1000, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=1, activation_function=0):
     testdata = TrainingDataSgfPass("dgs",range(0,sgfrange))
     errors_by_epoch=PolicyNetwork.Learn(testdata, epochs, eta, batch_size, stoch_coeff, error_function, activation_function)
     return errors_by_epoch
 
     
-def TrainingSplit(PolicyNetwork, trainingrate, error_tolerance, maxepochs, sgf_range = 1000, eta = 0.01, batch_size=1, stoch_coeff=1, error_function=0, activation_function=0):
+def TrainingSplit(PolicyNetwork, trainingrate, error_tolerance, maxepochs, sgf_range = 1000, eta = 0.01, batch_size=1, stoch_coeff=1, error_function=1, activation_function=0):
     trainingdata = TrainingDataSgfPass("dgs",range(0,sgf_range))
     datasize = len(trainingdata.dic)
     [error,epochs] = PolicyNetwork.Learnsplit(trainingdata, eta, batch_size, stoch_coeff, error_function, activation_function, trainingrate, error_tolerance, maxepochs)
     print("Datasize was",datasize,",Final K-L-Error:",error[-1:][0],",Epochs:",epochs)
     
     
-def Training(PolicyNetwork, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=0, activation_function=0, file = "dan_data_10"):
+def Training(PolicyNetwork, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=1, activation_function=0, file = "dan_data_10"):
     testset = TrainingDataSgfPass("dgs",file)
     t=time.time()
     init_error = PolicyNetwork.PropagateSet(testset,error_function, activation_function)
@@ -213,13 +213,13 @@ if your_name is "Stefan":
             errors_by_training.append(errors_by_epoch)
         
     if training_program == 2:
-        PN = PolicyNet([9*9,300,9*9+1])
+        PN = PolicyNet([9*9,500,9*9+1])
         trainingdata = TrainingDataSgfPass("dgs","dan_data_10")
-        batch_size = 50
-        eta = 0.1
-        stoch_coeff = 0.9
-        epochs = 60
-        error_function = 0
+        batch_size = 100
+        eta = 0.01
+        stoch_coeff = 0.8
+        epochs = 20
+        error_function = 1
         activation_function = 0
         
         errors=[]
@@ -237,9 +237,9 @@ if your_name is "Stefan":
             print (errors_by_epoch[epoch])
         print(time.time()-start)
         plt.plot(range(0,len(errors_by_epoch)),errors_by_epoch)
-        name="GOTEST_Number_"+str(num)
-        num+=1
-        PN.saveweights(name)
+        #name="GOTEST_Number_"+str(num)
+        #num+=1
+        #PN.saveweights(name)
             
         
         
