@@ -420,6 +420,126 @@ class PolicyNet:
         error = self.PropagateSet(batch,error_function)
         return error
     
+    def LearnSingleBatchAdaptive(self, batch, eta_start=0.01, stoch_coeff=1, error_function=0): #takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
+        deltaweights_batch = [0]*self.layercount
+        selection_size = int(np.round(len(batch.dic)*stoch_coeff))
+        if selection_size is 0: #prevent empty selection
+            selection_size = 1
+        random_selection = random.sample(list(batch.dic.keys()),selection_size)
+        for entry in random_selection:
+            testdata = self.convert_input(Hashable.unwrap(entry)) #input
+            targ = batch.dic[entry].reshape(9*9+1) #target output, this is to be approximated
+            if(np.sum(targ)>0): #We can only learn if there are actual target vectors
+                targ_sum=np.sum(targ) #save this for the adaptive eta
+                targ = targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
+                y = np.append(testdata,[1]) #We append 1 for the bias
+                ys = [0]*self.layercount #y_saved for backpropagation
+                
+                #Forward-propagate
+                for i in range(0,self.layercount): 
+                    W = self.weights[i] #anders machen?
+                    s = W.dot(y)
+                    if i==self.layercount-1: #softmax as activationfct only in last layer    
+                        y = np.append(softmax(s),[1]) #We append 1 for the bias
+                    else: #in all other hidden layers we use tanh as activation fct
+                        if self.activation_function is 0:
+                            y = np.append(np.tanh(s),[1]) #We append 1 for the bias
+                        else: 
+                            if self.activation_function is 1:
+                                y = np.append(relu(s),[1]) #We append 1 for the bias
+                    ys[i]=y #save the y values for backpropagation
+                out=y
+                
+                #Backpropagation
+                
+                #Calculate Jacobian of the softmax activationfct in last layer only
+                Jacobian_Softmax = [0]*self.layercount
+                for i in range(self.layercount-1,self.layercount): #please note that I think this is pure witchcraft happening here
+                    yt=ys[i] #load y from ys and lets call it yt y_temporary
+                    yt=yt[:-1] #the last entry is from the offset, we don't need this
+                    le=len(yt)
+                    Jacobian_Softmax_temporary = np.ones((le,le)) #alloc storage temporarily
+                    for j in range(0,le):
+                        Jacobian_Softmax_temporary[j,:]*=yt[j]
+                    Jacobian_Softmax_temporary=np.identity(le) - Jacobian_Softmax_temporary
+                    for j in range(0,le):
+                        Jacobian_Softmax_temporary[:,j]*=yt[j]
+                    Jacobian_Softmax[i]=Jacobian_Softmax_temporary
+                #Jacobian_Softmax is quadratic and symmetric.
+            
+                if self.activation_function is 0:
+                    #Calc Jacobian of tanh
+                    Jacobian_tanh = [0]*self.layercount
+                    for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
+                        yt=ys[i] #load y from ys and lets call it yt
+                        yt=yt[:-1] #the last entry is from the offset, we don't need this
+                        u=1-yt*yt
+                        Jacobian_tanh[i]=np.diag(u)
+                    Jacobian_hidden = Jacobian_tanh
+                if self.activation_function is 1:
+                    #Calc Jacobian of relu
+                    Jacobian_relu = [0]*self.layercount
+                    for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
+                        yt=ys[i] #load y from ys and lets call it yt
+                        yt=yt[:-1] #the last entry is from the offset, we don't need this
+                        yt[yt>0]=1#actually 0 values go to 1 also. this is not so easy, thus I leave it like that for now
+                        Jacobian_relu[i]=np.diag(yt)
+                    Jacobian_hidden = Jacobian_relu
+                
+                #Use (L2) and (L3) to get the error signals of the layers
+                errorsignals = [0]*self.layercount
+                errorsignals[self.layercount-1] = Jacobian_Softmax[self.layercount-1] # (L2), the error signal of the output layer can be computed directly, here we actually use softmax
+                for i in range(2,self.layercount+1):
+                    w = self.weights[self.layercount-i+1]
+                    DFt = Jacobian_hidden[self.layercount-i] #tanh
+                    errdet = np.matmul(w[:,:-1],DFt) #temporary
+                    errorsignals[self.layercount-i] = np.dot(errorsignals[self.layercount-i+1],errdet) # (L3), does python fucking get that?
+                
+                #Use (D3) to compute err_errorsignals as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
+                err_errorsignals=[0]*self.layercount
+                if error_function is 0:
+                    errorbyyzero = -targ/out[:-1] #Kullback-Leibler divergence derivative
+                else:
+                    if error_function is 1:
+                        errorbyyzero = out[:-1]-targ #Mean-squared-error derivative
+                    else:
+                        if error_function is 2:
+                            errorbyyzero = 1/4*(1-np.sqrt(targ)/np.sqrt(out[:-1])) #Hellinger-distance derivative
+                        else:
+                            if error_function is 3:
+                                errorbyyzero=self.compute_experimental_gradient(out[:-1],targ,1000)
+                #errorbyyzero = self.chosen_error_fct(targ,out)
+                for i in range(0,self.layercount):
+                    err_errorsignals[i]=np.dot(errorbyyzero,errorsignals[i]) #this is the matrix variant of D3
+                
+                #Use (2.2) to get the sought derivatives. Observe that this is an outer product, though not mentioned in the source (Fuck you Heining, you bastard)
+                errorbyweights = [0]*self.layercount #dE/dW
+                errorbyweights[0] = np.outer(err_errorsignals[0],testdata).T #Why do I need to transpose here???
+                for i in range(1,self.layercount): 
+                    errorbyweights[i] = np.outer(err_errorsignals[i-1],ys[i][:-1]) # (L1)
+                
+                #Compute the change of weights, that means, then apply actualization step of Gradient Descent to weight matrices
+                eta = eta_start * targ_sum
+                for i in range(0,self.layercount):
+                    if type(deltaweights_batch[i]) is int: #initialize
+                        deltaweights_batch[i]= -eta*errorbyweights[i]
+                    else:
+                        deltaweights_batch[i]-=eta*errorbyweights[i]
+                    #self.weights[i][:,:-1]= self.weights[i][:,:-1]+ deltaweights[i].T #Problem: atm we only adjust non-bias weights. Change that!
+                
+                #For Error statistics
+                #self.errorsbyepoch.append(self.compute_ms_error (y[:-1], targ))
+                #self.abserrorbyepoch.append(self.compute_error (y[:-1], targ))
+                #self.KLdbyepoch.append(self.compute_KL_divergence(y[:-1], targ))
+
+        #now adjust weights
+        for i in range(0,self.layercount):
+            if type(deltaweights_batch[i]) is not int: #in this case we had no target for any board in this batch
+                self.weights[i][:,:-1]= self.weights[i][:,:-1]+ deltaweights_batch[i].T #Problem: atm we only adjust non-bias weights. Change that!
+        error = self.PropagateSet(batch,error_function)
+        return error
+    
+    
     def Propagate(self, board):
         #convert board to NeuroNet format (82-dim vector) 
         board = board.vertices
@@ -482,6 +602,49 @@ class PolicyNet:
                             if error_function is 3:
                                 error += self.compute_experimental(y[:-1], targ, 1000)
                 checked += 1
+        if checked is 0:
+            print("The Set contained no feasible boards")
+            return
+        else:
+            error = error/checked #average over training set
+            return error
+        
+    def PropagateSetAdaptive(self, testset, error_function=0):
+        error = 0
+        checked = 0
+        for entry in testset.dic:
+            testdata = self.convert_input(Hashable.unwrap(entry))
+            targ = testset.dic[entry].reshape(9*9+1)
+            if(np.sum(targ)>0): #We can only learn if there are actual target vectors
+                targ_sum = np.sum(targ)
+                rescale = targ_sum
+                targ = targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
+                y = np.append(testdata,[1]) #We append 1 for the bias
+                #Forward-propagate
+                for i in range(0,self.layercount): 
+                    W = self.weights[i]
+                    s = W.dot(y)
+                    if i==self.layercount-1: #softmax as activationfct only in last layer    
+                        y = np.append(softmax(s),[1]) #We append 1 for the bias
+                    else: #in all other hidden layers we use tanh as activation fct
+                        if self.activation_function is 0:
+                            y = np.append(np.tanh(s),[1]) #We append 1 for the bias
+                        else: 
+                            if self.activation_function is 1:
+                                y = np.append(relu(s),[1]) #We append 1 for the bias
+                #sum up the error
+                if error_function is 0:
+                    error += rescale * self.compute_KL_divergence(y[:-1], targ)
+                else:
+                    if error_function is 1:
+                        error += rescale * self.compute_ms_error(y[:-1], targ)
+                    else:
+                        if error_function is 2:
+                            error += rescale * self.compute_Hellinger_dist(y[:-1], targ)
+                        else:
+                            if error_function is 3:
+                                error += rescale * self.compute_experimental(y[:-1], targ, 1000)
+                checked += 1 * rescale
         if checked is 0:
             print("The Set contained no feasible boards")
             return

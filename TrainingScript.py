@@ -6,6 +6,7 @@ Created on Wed Dec  6 18:58:03 2017
 import numpy as np
 import matplotlib.pyplot as plt
 from Hashable import Hashable
+import Board
 from TrainingDataFromSgf import TrainingDataSgf
 from TrainingDataFromSgf import TrainingDataSgfPass
 from PolicyNet import PolicyNet
@@ -200,9 +201,9 @@ if your_name is "Stefan":
     #hier schreibe ich mein training rein
     print("halo I bims")
     
-    training_program = 4
-
-    if training_program == 1:
+    training_program = 5
+    
+    if training_program == 1: #Checking error on a testset, while training on a different set
         PN=PolicyNet()
         testset = TrainingDataSgfPass("dgs","dan_data_10")
         trainingset = TrainingDataSgfPass("dgs","dan_data_295")
@@ -212,7 +213,7 @@ if your_name is "Stefan":
             errors_by_epoch=PN.Learn(trainingset,5,0.01,200,0.8,0)
             errors_by_training.append(errors_by_epoch)
         
-    if training_program == 2:
+    if training_program == 2: #standard batch Dan 10
         trainingdata = TrainingDataSgfPass("dgs","dan_data_10")
         batch_size = 100
         eta = 0.01
@@ -241,7 +242,7 @@ if your_name is "Stefan":
         #num+=1
         #PN.saveweights(name)
             
-    if training_program == 3:
+    if training_program == 3: #standard batch Dan 295
         trainingdata = TrainingDataSgfPass("dgs","dan_data_295")
         batch_size = 1000
         eta = 0.01
@@ -274,7 +275,7 @@ if your_name is "Stefan":
         print("finished with KLD of",errors_by_epoch[-1],", a total of",len(errors_by_epoch),"epochs and a final eta of ",eta)
         print("Time needed:",time.time()-start)
         
-    if training_program == 4:
+    if training_program == 4: #ambitious
         trainingdata = TrainingDataSgfPass("dgs","dan_data_295")
         batch_size = 1000
         eta = 0.01
@@ -285,3 +286,46 @@ if your_name is "Stefan":
         PN.loadweightsfromfile("AmbitiousLearning")
         
         print(PN.PropagateSet(trainingdata,error_function))
+        
+    if training_program == 5:#adaptive eta
+        trainingdata = TrainingDataSgfPass("dgs","dan_data_10")
+        batch_size = 100
+        eta = 0.01
+        stoch_coeff = 1
+        epochs = 20
+        error_function = 0
+        activation_function = 0
+        PN = PolicyNet([9*9,500,9*9+1],activation_function)
+        
+        errors=[]
+        print(PN.PropagateSet(trainingdata,error_function))
+        start=time.time()
+        
+        [number_of_batchs, batchs] = PN.splitintobatches(trainingdata,batch_size)
+        errors_by_epoch = []
+        adaptive_errors=[]
+        for epoch in range(0,epochs):
+            errors_by_epoch.append(0)
+            for i_batch in range(0,number_of_batchs):
+                error_in_batch = PN.LearnSingleBatchAdaptive(batchs[i_batch], eta, stoch_coeff, error_function)
+                errors_by_epoch[epoch] += error_in_batch
+            errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
+            adaptive_errors.append(PN.PropagateSetAdaptive(trainingdata,error_function))
+            print ("Error ",np.round(errors_by_epoch[epoch],5),"in epoch",epoch)
+            print ("Adaptive error ",np.round(adaptive_errors[epoch],5),"in epoch",epoch)
+        print(time.time()-start)
+        plt.figure(0)
+        plt.plot(range(0,len(errors_by_epoch)),errors_by_epoch)
+        plt.plot(range(0,len(adaptive_errors)),adaptive_errors)
+        
+        #test for empty board
+        for entry in trainingdata.dic:
+            if all(PN.convert_input(Hashable.unwrap(entry))==0.45):
+                zerotarg1 = trainingdata.dic[entry].reshape(9*9+1)
+                zerotarg=zerotarg1/np.sum(zerotarg1)
+        b=Board.Board(9)
+        y=PN.Propagate(b)
+        plt.figure(1)
+        plt.plot(range(len(zerotarg)),zerotarg)
+        plt.plot(range(len(y)),y)
+        
