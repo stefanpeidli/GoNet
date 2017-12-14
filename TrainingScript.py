@@ -200,7 +200,7 @@ if your_name is "Stefan":
     #hier schreibe ich mein training rein
     print("halo I bims")
     
-    training_program = 2
+    training_program = 4
 
     if training_program == 1:
         PN=PolicyNet()
@@ -241,6 +241,47 @@ if your_name is "Stefan":
         #num+=1
         #PN.saveweights(name)
             
+    if training_program == 3:
+        trainingdata = TrainingDataSgfPass("dgs","dan_data_295")
+        batch_size = 1000
+        eta = 0.01
+        stoch_coeff = 1
+        error_function = 0 #0 => KLD
+        activation_function = 0 #0 => tanh sigmoid
+        PN = PolicyNet([9*9,1000,9*9+1],activation_function)
         
+        errors=[]
+        print(PN.PropagateSet(trainingdata,error_function))
+        start=time.time()
         
+        [number_of_batchs, batchs] = PN.splitintobatches(trainingdata,batch_size)
+        errors_by_epoch = []
+        while time.time()-start<8*60*60: #8 stunden
+            errors_by_epoch.append(0)
+            for i_batch in range(0,number_of_batchs):
+                error_in_batch = PN.LearnSingleBatch(batchs[i_batch], eta, stoch_coeff, error_function)
+                errors_by_epoch[-1] += error_in_batch
+            errors_by_epoch[-1] = errors_by_epoch[-1] / number_of_batchs
+            if len(errors_by_epoch)>10:
+                improvement_in_10_epochs = np.abs(errors_by_epoch[-1]-np.sum(errors_by_epoch[-10:])/10)
+                if improvement_in_10_epochs <0.00001:
+                    eta=eta*0.9 #refine step size if we do not improve
+                    print("Eta decreased to",eta)
+            print (len(errors_by_epoch),errors_by_epoch[-1])
         
+        plt.plot(range(0,len(errors_by_epoch)),errors_by_epoch)
+        #PN.saveweights("AmbitiousLearning")
+        print("finished with KLD of",errors_by_epoch[-1],", a total of",len(errors_by_epoch),"epochs and a final eta of ",eta)
+        print("Time needed:",time.time()-start)
+        
+    if training_program == 4:
+        trainingdata = TrainingDataSgfPass("dgs","dan_data_295")
+        batch_size = 1000
+        eta = 0.01
+        stoch_coeff = 1
+        error_function = 0 #0 => KLD
+        activation_function = 0 #0 => tanh sigmoid
+        PN = PolicyNet([9*9,1000,9*9+1],activation_function)
+        PN.loadweightsfromfile("AmbitiousLearning")
+        
+        print(PN.PropagateSet(trainingdata,error_function))
