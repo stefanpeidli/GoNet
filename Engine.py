@@ -53,7 +53,7 @@ class IntelligentEngine(BaseEngine):
     def __init__(self,n):
         super(IntelligentEngine, self).__init__(n)
         self.PolicyNet = PolicyNet() #untrained
-        self.PolicyNet.loadweightsfromfile("Saved_Weights",'weights1712071559eta1000010epochs20batchsize1Dan10.npz')
+        self.PolicyNet.loadweightsfromfile("Saved_Weights",'AmbitiousLearning.npz')
 
     def version(self):
         return "2.0"
@@ -74,9 +74,11 @@ class IntelligentEngine(BaseEngine):
             board.vertices = invBoard.reshape((9,9))
             out=self.PolicyNet.Propagate(board)
             board.vertices = tempVertices
+        print(np.round(out[:-1].reshape((9,9)),2))
         while sum(out) > 0:
             move=np.argmax(out)
-            if move is 81: #passing is always legal. 82er eintrag (?)
+            print(move)
+            if move == 81: #passing is always legal. 82er eintrag (?)
                 print("The Policy Network considers passing as the best move with a relative confidence of",str(round(out[move]*100))+"%",".")
                 return "pass"
             x=int(move%9)
@@ -129,4 +131,4 @@ def test3():
     engine.play_legal_move(engine.board, Stone.White)
     engine.board.show()
 
-#test3()
+test3()

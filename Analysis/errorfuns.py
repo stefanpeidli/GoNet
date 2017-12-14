@@ -4,6 +4,8 @@ Created on Sun Dec 10 23:06:54 2017
 
 @author: Stefan
 """
+import random
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -82,11 +84,9 @@ yunif=np.ones(le)/le
 
 w=1/5
 ali='center'
-"""
-plt.grid(True)
-plt.bar(np.arange(le)-w,y1,width=w,align=ali,color='b')
-bp = mpatches.Patch(color='blue', label='Target')
-"""
+
+
+
 
 
 for i in [y3,yunif]:
@@ -103,23 +103,32 @@ for i in [y3,yunif]:
     print(" ")
 
 y0=yunif
-eta=0.1
-"""
+eta=0.01
+
+y1=np.array([0,2,4,2,0])
+
+
+y1=y1/np.sum(y1)
+
+plt.grid(True)
+plt.bar(np.arange(le)-w,y1,width=w,align=ali,color='b')
+bp = mpatches.Patch(color='blue', label='Target')
 plt.bar(np.arange(le),y0,width=w,align=ali,color='r')
 rp = mpatches.Patch(color='red', label='Start')
 gp = mpatches.Patch(color='green', label='Stop')
 plt.legend(handles=[bp,rp,gp])
-"""
-for j in range(0,10):
-    #yn=EXPEGRAD(y0,y1)
-    #yn=EXPEGRAD(y0,y1) #2
+
+
+for j in range(0,800):
     yn=KLDGRAD(y0,y1)
     #yn=y0-y1
     y0=np.abs(y0-eta*yn)
     y0=y0/np.inner(y0,np.ones(le))
+    print(KLD(y0,y1))
 print(np.round(y1,2))
 print(np.round(y0,2))
-#plt.bar(np.arange(le)+w,y0,width=w,align=ali,color='g')
+plt.bar(np.arange(le)+2*w,y0,width=w,align=ali,color='y')
+#plt.show()
 
 for i in [y0]:
     print("KLD",KLD(i,y1))
@@ -132,3 +141,30 @@ for i in [y0]:
     print("MAE",MAE(i,y1))
     print(" ")
 
+#########
+y0=yunif
+y=[[0,1,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,1,0],[0,0,0,1,0]]
+
+for i in range(100):
+    random.shuffle(y)
+    for j in y:
+        y1=j
+        yn=KLDGRAD(y0,y1)
+        #yn=y0-y1
+        y0=np.abs(y0-eta*yn)
+        y0=y0/np.inner(y0,np.ones(le))
+print(np.round(y1,2))
+print(np.round(y0,2))
+plt.bar(np.arange(le)+w,y0,width=w,align=ali,color='g')
+plt.show()
+
+for i in [y0]:
+    print("KLD",KLD(i,y1))
+    print("KLD2",KLD2(i,y1))
+    print("MSE",MSE(i,y1))
+    print("HELDIST",HELDIST(i,y1))
+    print("CROSSENTRO",CROSSENTRO(i,y1))
+    print("EXPE",EXPE(i,y1,1000))
+    print("EXPE2",EXPE(y1,i,1000))
+    print("MAE",MAE(i,y1))
+    print(" ")
