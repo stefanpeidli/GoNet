@@ -33,8 +33,9 @@ class PolicyNet:
         self.activation_function=activation_function
         
         ### Initialize the weights
-        # here by a normal distribution N(mu,sigma)
         self.layercount = len(self.layers)-1
+        self.init_weights()
+        """
         if self.activation_function is 0:#TODO wie im last layer haben wir softmax! wie initialisieren???
             mu=0
             self.weights=[0]*self.layercount #alloc memory
@@ -49,15 +50,7 @@ class PolicyNet:
             for i in range(0,self.layercount):
                 sigma = np.sqrt(2)/np.sqrt(self.layers[i+1]) #vgl Heining #TODO:Check if inputs are well-behaved (approx. normalized)
                 self.weights[i]=np.random.normal(mu, sigma, (self.layers[i+1],self.layers[i]+1))#edit: the +1 in the input dimension is for the bias
-            
-        
-        
-        ### Alloc memory for the error statistics
-        #Hint:b=a[:-1,:] this is a handy formulation to delete the last column, Thus ~W=W[:-1,1]
-        
-        #self.errorsbyepoch=[] #mean squared error
-        #self.abserrorbyepoch=[] #absolute error
-        #self.KLdbyepoch=[] #Kullback-Leibler divergence
+        """
         
         
     ### Function Definition yard
@@ -109,6 +102,40 @@ class PolicyNet:
         return -np.inner(distribution,np.log(distribution))
     
     ### Auxilary and Utilary Functions
+
+    def init_weights(self):
+        # Xavier Initialization
+        if self.act_fct is 0:  # TODO wie im last layer haben wir softmax! wie initialisieren???
+            mu = 0
+            self.weights = [0] * self.layercount  # alloc memory
+            for i in range(0, self.layercount):
+                sigma = 1 / np.sqrt(self.layers[i + 1])
+                self.weights[i] = np.random.normal(mu, sigma, (self.layers[i + 1], self.layers[i] + 1))
+        # He Initialization
+        elif self.act_fct is 1:
+            mu = 0
+            self.weights = [0] * self.layercount  # alloc memory
+            for i in range(0, self.layercount):
+                sigma = np.sqrt(2) / np.sqrt(
+                    self.layers[i + 1])  # vgl Heining #TODO:Check if inputs are well-behaved (approx. normalized)
+                self.weights[i] = np.random.normal(mu, sigma, (
+                    self.layers[i + 1], self.layers[i] + 1))  # edit: the +1 in the input dimension is for the bias
+
+    def weight_ensemble(self, testset, instances = 1, details = False):
+        optimal_weights = self.weights
+        optimal_value = self.PropagateSet(testset)
+        first_value = optimal_value
+        for i in range(instances):
+            self.init_weights()
+            weights = self.weights
+            value = self.PropagateSet(testset)
+            if value < optimal_value:
+                optimal_value = value
+                optimal_weights = weights
+        improvement = first_value - optimal_value
+        self.weights = optimal_weights
+        if details:
+            return improvement
     
     def convert_input(self, boardvector):#rescaling help function [-1,0,1]->[-1.35,0.45,1.05]
         boardvector=boardvector.astype(float)
