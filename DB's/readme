@@ -1,0 +1,8 @@
+To create databases in here this needs to be done:
+1. Specify dbTest()
+    1.1 specify input arg "folder" in constructor of class (just as before)
+    1.2 specify input arg "id_list" in constructor of class (just as before)
+    1.3 specify input arg "dbName" in constructor of class to give db a name
+    1.4 specify dbName also in connect statement in line 2
+2. run dbTest(), database is created
+3. to query in the database afterwards use dbTest2()
