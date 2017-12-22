@@ -17,7 +17,6 @@ import datetime
 This Script should be used to train Policy Networks.
 
 Parameters: 
-    I gave an advice for choosing reasonable values. Exceed those limits at your own risk. [minimum, recommendation, maximum]
     I gave an advice for choosing reasonable values. Exceed those limits at your own risk. 
     Format: [minimum, recommendation, maximum]
     
@@ -155,7 +154,6 @@ if your_name is "Paddy":
     name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
         int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "sgfrange" + str(sgfrange)
     MyNetwork.saveweights(name)
-
 
 # Faruk
 if your_name is "Faruk":

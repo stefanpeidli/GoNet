@@ -295,7 +295,7 @@ def test3pass():
 
 def dbTest():
     t = TrainingDataSgfPass(folder="dgs", id_list = 'dan_data_295', dbName="test1")
-    con = sqlite3.connect(r"DB's/test1", detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(r"DB's/dan_data_295_db", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select * from test where id <= 100")
     data = cur.fetchall()
@@ -304,10 +304,10 @@ def dbTest():
 
 # test for when database is already created
 def dbTest2():
-    con = sqlite3.connect(r"DB's/test1", detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(r"DB's/dan_data_295_db", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select count(*) from test")
     data = cur.fetchall()
     print(data)
     con.close()
-dbTest2()
+#dbTest2()

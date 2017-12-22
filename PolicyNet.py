@@ -11,6 +11,7 @@ from TrainingDataFromSgf import TrainingDataSgfPass #82 not 81
 import os
 import time
 import random
+import sqlite3
 
 def softmax(x):
         """Compute softmax values for each sets of scores in x."""
@@ -226,8 +227,6 @@ class PolicyNet:
             self.Learn(trainingdata, 1, batch_size, stoch_coeff, error_function)
             error.append(self.PropagateSet(testset,error_function))
         return [error,epochs]
-
-    
     
     def LearnwithMiniBatch(self, trainingdata, eta = 0.01, stoch_coeff = 1, error_function = 1):
         random_selection = random.sample(list(trainingdata.dic.keys()),int(np.round(len(trainingdata.dic)*stoch_coeff)))
@@ -566,14 +565,25 @@ class PolicyNet:
                 self.weights[i][:,:-1]= self.weights[i][:,:-1]+ deltaweights_batch[i].T #Problem: atm we only adjust non-bias weights. Change that!
         error = self.PropagateSet(batch,error_function)
         return error
-"""
-    def LearnDB(self, trainingdatadb, sample_size, eta_start=0.01, stoch_coeff=1,
-                                 error_function=0):  # takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
-        deltaweights_batch = [0] * self.layercount
 
+    def LearnDB(self, dbName, sample_proportion=0.01, eta_start=0.01, stoch_coeff=1,
+                                 error_function=0):  # takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
+        con = sqlite3.connect(r"DB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
+        cur = con.cursor()
+        cur.execute("select count(*) from test")
+        data = cur.fetchall()
+        sample_size = str(int(np.ceil(data[0][0] * sample_proportion)))
+        cur.execute("select * from test order by Random() Limit "+sample_size)
+        selection = cur.fetchall()
+        con.close()
+        print("Sampled at size "+sample_size)
+        deltaweights_batch = [0] * self.layercount
+        b=0
         for entry in selection:
-            testdata =   # input
-            targ = batch.dic[entry].reshape(9 * 9 + 1)  # target output, this is to be approximated
+            b+=1
+            print(b)
+            testdata = self.convert_input(entry[1])  # input
+            targ = entry[2]  # target output, this is to be approximated
             if (np.sum(targ) > 0):  # We can only learn if there are actual target vectors
                 targ_sum = np.sum(targ)  # save this for the adaptive eta
                 targ = targ / np.linalg.norm(targ, ord=1)  # normalize (L1-norm)
@@ -689,9 +699,9 @@ class PolicyNet:
             if type(deltaweights_batch[i]) is not int:  # in this case we had no target for any board in this batch
                 self.weights[i][:, :-1] = self.weights[i][:, :-1] + deltaweights_batch[
                     i].T  # Problem: atm we only adjust non-bias weights. Change that!
-        error = self.PropagateSet(batch, error_function)
+        error = 0 #self.PropagateSet(batch, error_function)
         return error
-"""
+
     def Propagate(self, board):
         #convert board to NeuroNet format (82-dim vector) 
         board = board.vertices
@@ -849,8 +859,6 @@ def test1():
     plt.plot(range(0,epochs),error_by_epoch)
     
 #test1()
-    
-
 
 def test2(): #passen
     PN = PolicyNet()
@@ -858,5 +866,14 @@ def test2(): #passen
     error=PN.Learn(testset,2)
     print("No batchs: error",error)
    
-#test2()
-    
+test2()
+
+def test3():
+    PN = PolicyNet()
+    print("Hello there")
+    #PN.LearnDB(dbName='dan_data_295_db', sample_proportion=0.01, eta_start=0.01, stoch_coeff=1,error_function=0)
+    testset = TrainingDataSgfPass(folder="dgs", id_list='dan_data_295')
+    print(len(testset.dic))
+    error = PN.PropagateSetAdaptive(testset)
+    print("Error:", error)
+#test3()
