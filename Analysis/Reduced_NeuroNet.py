@@ -490,7 +490,7 @@ def test():
     #plt.show()
     print("Final Error:",error_by_epoch[-1])
 
-#test()
+test()
 
 def test2():
     layers = [1, 5, 5, 1]
@@ -541,6 +541,6 @@ def test2():
         survivours.append(g.identifier)
     print("survivours:",survivours)
 
-    #plt.show()
+    plt.show()
 
-test2()
+#test2()

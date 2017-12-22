@@ -37,14 +37,14 @@ sqlite3.register_converter("array", convert_array)
 
 class TrainingDataSgfPass:
     # standard initialize with boardsize 9
-    def __init__(self, folder=None, id_list=range(1000), dbName = None):
+    def __init__(self, folder=None, id_list=range(1000), dbName = False):
         self.n = 9
         self.board = Board(self.n)
         self.dic = defaultdict(np.ndarray)
         self.passVector = np.zeros(self.n*self.n + 1, dtype=np.int32)
         self.passVector[self.n*self.n]=1
         self.dbFlag = False
-        if type(dbName) is not None:
+        if dbName:
             self.dbFlag = True
             self.dbName = dbName
             con = sqlite3.connect(r"DB's/" + self.dbName, detect_types=sqlite3.PARSE_DECLTYPES)
@@ -80,8 +80,9 @@ class TrainingDataSgfPass:
                 gameIDs = np.append(gameIDs, i)
                 self.importSingleFile(currfile)
         # close db after last call of importSingleFile
-        con = sqlite3.connect(r"DB's/" + self.dbName, detect_types=sqlite3.PARSE_DECLTYPES)
-        con.close()
+        if self.dbFlag:
+            con = sqlite3.connect(r"DB's/" + self.dbName, detect_types=sqlite3.PARSE_DECLTYPES)
+            con.close()
 
     def importSingleFile(self, currfile):
         with open(currfile, encoding="Latin-1") as f:
@@ -293,7 +294,7 @@ def test3pass():
 #test3pass()
 
 def dbTest():
-    t = TrainingDataSgfPass(folder="dgs", id_list=range(1000), dbName="test1")
+    t = TrainingDataSgfPass(folder="dgs", id_list = 'dan_data_295', dbName="test1")
     con = sqlite3.connect(r"DB's/test1", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select * from test where id <= 100")
@@ -303,9 +304,10 @@ def dbTest():
 
 # test for when database is already created
 def dbTest2():
-    con = sqlite3.connect(r"DB's/test3", detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(r"DB's/test1", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("select * from test where id <= 100")
+    cur.execute("select count(*) from test")
     data = cur.fetchall()
     print(data)
-# dbTest2()
+    con.close()
+dbTest2()

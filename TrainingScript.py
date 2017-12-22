@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Hashable import Hashable
 import Board
-from TrainingDataFromSgf import TrainingDataSgf
+#from TrainingDataFromSgf import TrainingDataSgf
 from TrainingDataFromSgf import TrainingDataSgfPass
 from PolicyNet import PolicyNet
 import time
@@ -288,7 +288,7 @@ if your_name is "Stefan":
         print(PN.PropagateSet(trainingdata,error_function))
         
     if training_program == 5:#adaptive eta
-        trainingdata = TrainingDataSgfPass("dgs","dan_data_10")
+        trainingdata = TrainingDataSgfPass(folder="dgs",id_list="dan_data_10")
         batch_size = 100
         eta = 0.01
         stoch_coeff = 1
