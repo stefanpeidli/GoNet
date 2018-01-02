@@ -100,7 +100,7 @@ class Board:
                 Stone.Black: '\033[31m0\033[0m',
                 Stone.White: '\033[37m0\033[0m' }
         for x in range(self.N):
-            print("=", end="")
+            print("=")
         print("")
         for y in range(self.N):
             for x in range(self.N):
