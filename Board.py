@@ -107,7 +107,7 @@ class Board:
                 print(stone_strings[self.vertices[x,y]])
             print("")
         for x in range(self.N):
-            print("=", end="")
+            print("=")
         print("")
 
     
