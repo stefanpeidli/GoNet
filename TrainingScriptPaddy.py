@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from Hashable import Hashable
 from TrainingDataFromSgf import TrainingDataSgf
 from PolicyNet import PolicyNet
+import tensorflow as tf
 import time
 import datetime
 
@@ -79,7 +80,7 @@ def TrainingSplit(PolicyNetwork, learningrate, maxepochs, sgfrange, trainingrate
 
 
 def TrainingBasicDan10(PolicyNetwork, learningrate, epochs, stoch_coeff):
-    testset = TrainingDataSgf("dgs", "dan_data_10")
+    testset = TrainingDataSgf("dgs", "dan_data_24")
     eta = learningrate
     t = time.time()
     initerror = PolicyNetwork.PropagateSet(testset)
@@ -163,7 +164,7 @@ if your_name is "Example":
 if your_name is "Paddy":
     MyNetwork = PolicyNet()
     learningrate = 0.01
-    epochs = 1  # one epoch ~ 25 seconds
+    epochs = 2000  # one epoch ~ 25 seconds
     sgfrange = 10
     stoch_coeff = 0.2
     TrainingBasicDan10(MyNetwork, learningrate, epochs, stoch_coeff)
@@ -171,73 +172,25 @@ if your_name is "Paddy":
         int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "sgfrange" + str(sgfrange)
     MyNetwork.saveweights('Saved_Weights', name)
 
-# Faruk
-if your_name is "Faruk":
-    MyNetwork = PolicyNet()
-    # w=MyNetwork.weights
-    learningrate = 0.01
-    epochs = 5
-    batchsize = 10
-    ComparisonTraining1(MyNetwork, learningrate, epochs, batchsize)
 
-""" 
-    MyNetwork = PolicyNet()
-    w=MyNetwork.weights
-    learningrate = 0.01
-    epochs = 5 #one epoch ~ 25 seconds
-    TrainingBasicDan10(MyNetwork , learningrate, epochs)
-    print("Faruk hats drauf")
+if your_name is "Tensorflow":
+    x_data = np.float32(np.random.rand(2,100))
+    y_data = np.dot([0.100,0.200], x_data) + 0.300
 
-    MyNetwork.weights = w
-    learningrate = 0.05
-    TrainingBasicDan10(MyNetwork,learningrate,epochs)
-    print("Faruk geht ab")
+    # Construct linear model
+    b = tf.Variable(tf.zeros([1]))
+    W = tf.Variable(tf.random_uniform())
+    y = tf.matmul(W, x_data) + b
 
-    if training_program == 2:
-        PN=PolicyNet()
-        PN.saveweights('Saved_Weights','test')
-        epochs = 20
-        print("I think I will need",np.round(epochs/3*(1+0.2+0.7),2),"minutes for this task.")
-        errors_by_epoch1 = TrainingBasicDan10(PN,0.001,epochs,1)#vanilla grad descent
-        PN.loadweightsfromfile('Saved_Weights','test')
-        errors_by_epoch2 = TrainingBasicDan10(PN,0.001,epochs,0.2)
-        PN.loadweightsfromfile('Saved_Weights','test')
-        errors_by_epoch3 = TrainingBasicDan10(PN,0.001,epochs,0.7)
-        plt.plot(range(0,epochs),errors_by_epoch1,'b')
-        plt.plot(range(0,epochs),errors_by_epoch2,'g')
-        plt.plot(range(0,epochs),errors_by_epoch3,'r')
+    # Minimize Error
+    loss = tf.reduce_mean(tf.square(y - y_data))
+    optimizer = tf.train.GradientDescentOptimizer(0.5)
+    train = optimizer.minimize(loss)
 
-"""
+    # Initialization
+    init = tf.initialize_all_variables()
 
-# Stefan:
-if your_name is "Stefan":
-    # hier schreibe ich mein training rein
-    print("halo I bims")
-
-    training_program = 2
-
-    if training_program == 1:
-        # 3 epochs = 1 minute
-        # PN=PolicyNet()
-        # PN.loadweightsfromfile('Saved_Weights','weights1712071159eta100001epochs60batchsize1Dan10')
-        epochs = 60
-        print("I think I will need", np.round(epochs / 3, 2), "minutes for this task.")
-        errors_by_epoch1 = TrainingBasicDan10(PN, 0.00009, epochs)
-        plt.plot(range(0, epochs), errors_by_epoch1)
-
-    if training_program == 2:
-        PN = PolicyNet()
-        w = PN.weights
-        epochs = 30
-        print("I think I will need", np.round(epochs / 3 * (1 + 0.2 + 0.7), 2), "minutes for this task.")
-        errors_by_epoch1 = TrainingBasicDan10(PN, 0.001, epochs, 1)
-        PN.weights = w
-        errors_by_epoch2 = TrainingBasicDan10(PN, 0.001, epochs, 0.2)
-        PN.weights = w
-        errors_by_epoch3 = TrainingBasicDan10(PN, 0.001, epochs, 0.7)
-        plt.plot(range(0, epochs), errors_by_epoch1)
-        plt.plot(range(0, epochs), errors_by_epoch2)
-        plt.plot(range(0, epochs), errors_by_epoch3)
-
-
+    # Launch the graph (TF-Session)
+    sess = tf.Session()
+    sess.run(init)
 

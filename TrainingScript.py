@@ -12,6 +12,8 @@ from TrainingDataFromSgf import TrainingDataSgfPass
 from PolicyNet import PolicyNet
 import time
 import datetime
+import sqlite3
+
 
 """
 This Script should be used to train Policy Networks.
@@ -62,6 +64,21 @@ On saving and loading weights:
 def TrainingBasic(PolicyNetwork, sgf_range = 1000, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=1, activation_function=0):
     testdata = TrainingDataSgfPass("dgs",range(0,sgfrange))
     errors_by_epoch=PolicyNetwork.Learn(testdata, epochs, eta, batch_size, stoch_coeff, error_function, activation_function)
+    return errors_by_epoch
+
+def TrainingAdvanced(PolicyNetwork, epochs=1, sample_proportion=0.01, error_function=0):
+    con = sqlite3.connect(r"DB's/" + 'dan_data_295_db', detect_types=sqlite3.PARSE_DECLTYPES)
+    cur = con.cursor()
+    cur.execute("select count(*) from test")
+    data = cur.fetchall()
+    sample_size = str(int(np.ceil(data[0][0] * sample_proportion)))
+    cur.execute("select * from test order by Random() Limit " + sample_size)
+    selection = cur.fetchall()
+    con.close()
+    for i in range(epochs):
+        print("Epoch ",i)
+        errors_by_epoch=PolicyNetwork.LearnDB(selection,error_function)
+
     return errors_by_epoch
 
     
@@ -131,7 +148,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = "Stefan"
+your_name = "Paddy"
 
 # example for training:
 if your_name is "Example":
@@ -145,14 +162,14 @@ if your_name is "Example":
 
 # Paddy
 if your_name is "Paddy":
-    MyNetwork = PolicyNet()
-    learningrate = 0.01
-    epochs = 1  # one epoch ~ 25 seconds
-    sgfrange = 10
-    stoch_coeff = 0.2
-    TrainingBasic(MyNetwork, learningrate, epochs, sgfrange, stoch_coeff)
+    MyNetwork = PolicyNet([9*9,1000,9*9+1])
+    epochs=2000
+    sample_proportion=1
+    error_function=1
+    TrainingAdvanced(MyNetwork, epochs, sample_proportion, error_function)
+    learningrate=0.1
     name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
-        int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "sgfrange" + str(sgfrange)
+        int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1"
     MyNetwork.saveweights(name)
 
 # Faruk

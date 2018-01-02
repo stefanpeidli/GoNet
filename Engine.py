@@ -53,7 +53,8 @@ class IntelligentEngine(BaseEngine):
     def __init__(self,n):
         super(IntelligentEngine, self).__init__(n)
         self.PolicyNet = PolicyNet() #untrained
-        self.PolicyNet.loadweightsfromfile("Saved_Weights",'AmbitiousLearning.npz')
+        self.PolicyNet.loadweightsfromfile("Saved_Weights"
+                        ,'weights1801011848eta100001000epochs1000batchsize1.npz')
 
     def version(self):
         return "2.0"
@@ -131,4 +132,4 @@ def test3():
     engine.play_legal_move(engine.board, Stone.White)
     engine.board.show()
 
-test3()
+#test3()

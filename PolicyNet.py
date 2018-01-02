@@ -566,22 +566,24 @@ class PolicyNet:
         error = self.PropagateSet(batch,error_function)
         return error
 
-    def LearnDB(self, dbName, sample_proportion=0.01, eta_start=0.01, stoch_coeff=1,
-                                 error_function=0):  # takes a batch, propagates all boards in that batch while accumulating deltaweights. Then sums the deltaweights up and the adjustes the weights of the Network.
-        con = sqlite3.connect(r"DB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
-        cur = con.cursor()
-        cur.execute("select count(*) from test")
-        data = cur.fetchall()
-        sample_size = str(int(np.ceil(data[0][0] * sample_proportion)))
-        cur.execute("select * from test order by Random() Limit "+sample_size)
-        selection = cur.fetchall()
-        con.close()
-        print("Sampled at size "+sample_size)
+    # Takes a batch, propagates all boards in that batch while accumulating deltaweights.
+    # Then sums the deltaweights up and the adjustes the weights of the Network.
+    def LearnDB(self,  selection=False, error_function=0, dbName='dan_data_295_db', sample_proportion=0.01, eta_start=0.05):
+        if selection is False:
+            con = sqlite3.connect(r"DB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
+            cur = con.cursor()
+            cur.execute("select count(*) from test")
+            data = cur.fetchall()
+            sample_size = str(int(np.ceil(data[0][0] * sample_proportion)))
+            cur.execute("select * from test order by Random() Limit "+sample_size)
+            selection = cur.fetchall()
+            con.close()
+            print("Sampled at size "+sample_size)
         deltaweights_batch = [0] * self.layercount
         b=0
         for entry in selection:
-            b+=1
-            print(b)
+            #b+=1
+            #print(b)
             testdata = self.convert_input(entry[1])  # input
             targ = entry[2]  # target output, this is to be approximated
             if (np.sum(targ) > 0):  # We can only learn if there are actual target vectors
@@ -626,8 +628,7 @@ class PolicyNet:
                 if self.activation_function is 0:
                     # Calc Jacobian of tanh
                     Jacobian_tanh = [0] * self.layercount
-                    for i in range(0,
-                                   self.layercount):  # please note that I think this is pure witchcraft happening here
+                    for i in range(0, self.layercount):  # please note that I think this is pure witchcraft happening here
                         yt = ys[i]  # load y from ys and lets call it yt
                         yt = yt[:-1]  # the last entry is from the offset, we don't need this
                         u = 1 - yt * yt
@@ -640,8 +641,7 @@ class PolicyNet:
                                    self.layercount):  # please note that I think this is pure witchcraft happening here
                         yt = ys[i]  # load y from ys and lets call it yt
                         yt = yt[:-1]  # the last entry is from the offset, we don't need this
-                        yt[
-                            yt > 0] = 1  # actually 0 values go to 1 also. this is not so easy, thus I leave it like that for now
+                        yt[yt > 0] = 1  # actually 0 values go to 1 also. this is not so easy, thus I leave it like that for now
                         Jacobian_relu[i] = np.diag(yt)
                     Jacobian_hidden = Jacobian_relu
 
@@ -697,8 +697,7 @@ class PolicyNet:
         # now adjust weights
         for i in range(0, self.layercount):
             if type(deltaweights_batch[i]) is not int:  # in this case we had no target for any board in this batch
-                self.weights[i][:, :-1] = self.weights[i][:, :-1] + deltaweights_batch[
-                    i].T  # Problem: atm we only adjust non-bias weights. Change that!
+                self.weights[i][:, :-1] = self.weights[i][:, :-1] + deltaweights_batch[i].T  # Problem: atm we only adjust non-bias weights. Change that!
         error = 0 #self.PropagateSet(batch, error_function)
         return error
 
@@ -866,7 +865,7 @@ def test2(): #passen
     error=PN.Learn(testset,2)
     print("No batchs: error",error)
    
-test2()
+#test2()
 
 def test3():
     PN = PolicyNet()
