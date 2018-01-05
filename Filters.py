@@ -49,8 +49,8 @@ def give_group_at_position(board, start_x, start_y):
 ### Filters
 
 # Eyes
-# shows the eyes of player black (=1)
-def filter_eyes(board): #only gives black eyes
+# shows the eyes of player black (=-1)
+def filter_eyes(board): #only gives black eyes or white? TODO
     n = board.shape[0]
     eyes = np.zeros((n,n))
     for row in range(n):

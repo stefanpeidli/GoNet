@@ -100,19 +100,21 @@ class Board:
                 Stone.Empty: '.',
                 Stone.Black: '\033[31m0\033[0m',
                 Stone.White: '\033[37m0\033[0m' }
+        stone_strings_alt = {
+                Stone.Empty: '.',
+                Stone.Black: 'x',
+                Stone.White: 'o' }
         Board_repres=np.empty((self.N,self.N),str)
-        for x in range(self.N):
-            print("=")
-        print("")
+        print("="*self.N)
         for y in range(self.N):
             for x in range(self.N):
-                Board_repres[x,y] = stone_strings[self.vertices[x,y]]
-                print(stone_strings[self.vertices[x,y]])
-            print("")
-        for x in range(self.N):
-            print("=")
+                Board_repres[x,y] = stone_strings_alt[self.vertices[x,y]]
+                #print(stone_strings[self.vertices[x,y]])
         print("")
         print(Board_repres)
+        print("="*self.N)
+        print("")
+        
 
     
 def show_sequence(board, moves, first_color):

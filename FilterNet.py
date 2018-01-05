@@ -586,16 +586,17 @@ class FilterNet:
             board = board.vertices
         if len(board) != 82:
             board = board.flatten()
+        board=np.asarray(board,float)
         #Like Heining we are setting: (-1.35:w, 0.45:empty, 1.05:b)
         [t1,t2] = self.apply_filters( board.reshape((9,9)) )
         for i in range(0,len(board)):
-            if board[i] == 0:
+            if board[i] == np.int(0):
                 board[i] = 0.45
             if board[i] == -1:
                 board[i] = -1.35
             if board[i] == 1:
                 board[i] = 1.05
-        board = [*board,*t1,*t2]        
+        board = [*board,*t1,*t2] 
         y = np.append(board,[1]) #apply offset
         #Forward-propagate
         for i in range(0,self.layercount): 
@@ -820,10 +821,11 @@ def test2():
 #test2()
 
 def test3():
-    FN = FilterNet([9*9,1000,9*9+1])
+    FN = FilterNet([9*9,1000,200,9*9+1])
     FN.loadweightsfromfile("ambtestfilt")
     testset = TrainingDataSgfPass("dgs",range(30))
     b1=np.zeros((9,9))
+    err=FN.PropagateSetAdaptive(testset)
     s1=FN.Propagate(b1)
     b2=b1
     b2[0,1]=1
