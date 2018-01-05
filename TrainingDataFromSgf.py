@@ -11,6 +11,7 @@ them either in a dictionary or in a sqlite3 database.
 import os
 from collections import defaultdict
 from Board import *
+from Filters import *
 from Hashable import Hashable
 import pandas as pd
 import time

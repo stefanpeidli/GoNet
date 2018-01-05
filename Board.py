@@ -59,6 +59,7 @@ class Board:
                 self.vertices[x, y] = Stone.Empty
                 
         return False
+    
 
     # Stein wird gespielt. Dann wird geschaut ob andere Gruppe dadurch gefangen wird. Dann wird Ko gecheckt
     # Benutzt check_group_liberties(..) um zu checken ob der Zug legal ist und spielt den Stein falls ja
@@ -99,16 +100,19 @@ class Board:
                 Stone.Empty: '.',
                 Stone.Black: '\033[31m0\033[0m',
                 Stone.White: '\033[37m0\033[0m' }
+        Board_repres=np.empty((self.N,self.N),str)
         for x in range(self.N):
             print("=")
         print("")
         for y in range(self.N):
             for x in range(self.N):
+                Board_repres[x,y] = stone_strings[self.vertices[x,y]]
                 print(stone_strings[self.vertices[x,y]])
             print("")
         for x in range(self.N):
             print("=")
         print("")
+        print(Board_repres)
 
     
 def show_sequence(board, moves, first_color):

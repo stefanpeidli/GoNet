@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from Board import *
 from PolicyNetForExecutable import *
+from FilterNet import *
 import random
 
 
@@ -95,7 +96,50 @@ class IntelligentEngine(BaseEngine):
         print("The Policy Network considers passing as the best move with a relative confidence of THIS IS NO OUTPUT YET.")
         return "pass"
         
-        
+class FilterEngine(BaseEngine):
+    def __init__(self,n):
+        super(FilterEngine, self).__init__(n)
+        self.FilterNet = FilterNet() #untrained
+        self.FilterNet.loadweightsfromfile("ambtestfilt")
+
+    def version(self):
+        return "2.0"
+
+    # need to get move from Neural Network here (forward propagate the current board)
+    def play_legal_move(self, board, stone):
+        if(stone == Stone.Black):
+            out=self.FilterNet.Propagate(board)
+        else:
+            boardVector = board.vertices.flatten()
+            invBoard = np.zeros(9 * 9, dtype=np.int32)
+            for count in range(len(boardVector)):
+                if boardVector[count] != 0:
+                    invBoard[count] = -1 * boardVector[count]
+                else:
+                    invBoard[count] = 0
+            tempVertices = np.copy(board.vertices)
+            board.vertices = invBoard.reshape((9,9))
+            out=self.FilterNet.Propagate(board)
+            board.vertices = tempVertices
+        print(np.round(out[:-1].reshape((9,9)),2))
+        while sum(out) > 0:
+            move=np.argmax(out)
+            print(move)
+            if move == 81: #passing is always legal. 82er eintrag (?)
+                print("The Filter Network considers passing as the best move with a relative confidence of",str(round(out[move]*100))+"%",".")
+                return "pass"
+            x=int(move%9)
+            y=int(np.floor(move/9))
+            coords=(x,y) #check if this is right, i dont think so. The counting is wrong
+            if board.play_is_legal(coords[0],coords[1], stone):
+                board.play_stone(coords[0],coords[1], stone)
+                print("The Filter Network considers",coords,
+                      "as the best move with a distribution value of",str(round(out[move]*100))+"%",".")
+                return coords
+            else:
+                out[move]=0
+        print("The Filter Network considers passing as the best move with a relative confidence of THIS IS NO OUTPUT YET.")
+        return "pass"        
 
 def test():
     engine = Engine(5)
@@ -133,3 +177,13 @@ def test3():
     engine.board.show()
 
 #test3()
+    
+def test4():
+    engine = FilterEngine(9)
+    engine.board.play_stone(1,0,Stone.Black)
+    engine.board.play_stone(0,1,Stone.Black)
+    engine.board.show()
+    engine.play_legal_move(engine.board, Stone.White)
+    engine.board.show()
+
+test4()

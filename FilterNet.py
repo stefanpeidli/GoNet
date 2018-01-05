@@ -1,8 +1,8 @@
+# -*- coding: utf-8 -*-
 """
-Created on Wed Nov  8 11:00:05 2017
-@author: Stefan Peidli
-License: MIT
-Tags: Policy-net, Neural Network
+Created on Thu Jan  4 20:54:24 2018
+
+@author: Stefan
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,6 +12,9 @@ import os
 import time
 import random
 import sqlite3
+from Filters import filter_eyes
+from Filters import filter_captures
+
 
 def softmax(x):
         """Compute softmax values for each sets of scores in x."""
@@ -22,10 +25,12 @@ def relu(x):
     x[x<0]=0
     return x
 
-class PolicyNet:
+class FilterNet:
     def __init__(self,layers=[9*9,1000,100,9*9+1],activation_function=0,error_function=0):
         ### Specifications of the game
         self.n=9 # 9x9 board
+        self.filtercount = 2
+        layers[0]+= self.filtercount*self.n*self.n
         
         ### Parameters of the NN
         self.eta = 0.001 # learning rate
@@ -51,7 +56,10 @@ class PolicyNet:
                 sigma = np.sqrt(2)/np.sqrt(self.layers[i+1]) #vgl Heining #TODO:Check if inputs are well-behaved (approx. normalized)
                 self.weights[i]=np.random.normal(mu, sigma, (self.layers[i+1],self.layers[i]+1))#edit: the +1 in the input dimension is for the bias
 
-        
+    def apply_filters(self, board):
+        filtered_1 = filter_eyes(board)
+        filtered_2 = filter_captures(board,1)
+        return [filtered_1.flatten(),filtered_2.flatten()]
         
     ### Function Definition yard
       
@@ -337,7 +345,9 @@ class PolicyNet:
             selection_size = 1
         random_selection = random.sample(list(batch.dic.keys()),selection_size)
         for entry in random_selection:
-            testdata = self.convert_input(Hashable.unwrap(entry)) #input
+            t0 = Hashable.unwrap(entry)
+            [t1,t2] = self.apply_filters( t0.reshape((9,9)) )
+            testdata = [*self.convert_input(t0),*t1,*t2]
             targ = batch.dic[entry].reshape(9*9+1) #target output, this is to be approximated
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 targ = targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
@@ -454,7 +464,9 @@ class PolicyNet:
             selection_size = 1
         random_selection = random.sample(list(batch.dic.keys()),selection_size)
         for entry in random_selection:
-            testdata = self.convert_input(Hashable.unwrap(entry)) #input
+            t0 = Hashable.unwrap(entry)
+            [t1,t2] = self.apply_filters( t0.reshape((9,9)) )
+            testdata = [*self.convert_input(t0),*t1,*t2]
             targ = batch.dic[entry].reshape(9*9+1) #target output, this is to be approximated
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 targ_sum=np.sum(targ) #save this for the adaptive eta
@@ -566,147 +578,16 @@ class PolicyNet:
         error = self.PropagateSet(batch,error_function)
         return error
 
-    # Takes a batch, propagates all boards in that batch while accumulating deltaweights.
-    # Then sums the deltaweights up and the adjustes the weights of the Network.
-    def LearnDB(self,  selection=False, error_function=0, dbName='dan_data_295_db', sample_proportion=0.01, eta_start=0.05):
-        if selection is False:
-            con = sqlite3.connect(r"DB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
-            cur = con.cursor()
-            cur.execute("select count(*) from test")
-            data = cur.fetchall()
-            sample_size = str(int(np.ceil(data[0][0] * sample_proportion)))
-            cur.execute("select * from test order by Random() Limit "+sample_size)
-            selection = cur.fetchall()
-            con.close()
-            print("Sampled at size "+sample_size)
-        deltaweights_batch = [0] * self.layercount
-        b=0
-        for entry in selection:
-            #b+=1
-            #print(b)
-            testdata = self.convert_input(entry[1])  # input
-            targ = entry[2]  # target output, this is to be approximated
-            if (np.sum(targ) > 0):  # We can only learn if there are actual target vectors
-                targ_sum = np.sum(targ)  # save this for the adaptive eta
-                targ = targ / np.linalg.norm(targ, ord=1)  # normalize (L1-norm)
-                y = np.append(testdata, [1])  # We append 1 for the bias
-                ys = [0] * self.layercount  # y_saved for backpropagation
 
-                # Forward-propagate
-                for i in range(0, self.layercount):
-                    W = self.weights[i]  # anders machen?
-                    s = W.dot(y)
-                    if i == self.layercount - 1:  # softmax as activationfct only in last layer
-                        y = np.append(softmax(s), [1])  # We append 1 for the bias
-                    else:  # in all other hidden layers we use tanh as activation fct
-                        if self.activation_function is 0:
-                            y = np.append(np.tanh(s), [1])  # We append 1 for the bias
-                        else:
-                            if self.activation_function is 1:
-                                y = np.append(relu(s), [1])  # We append 1 for the bias
-                    ys[i] = y  # save the y values for backpropagation
-                out = y
-
-                # Backpropagation
-
-                # Calculate Jacobian of the softmax activationfct in last layer only
-                Jacobian_Softmax = [0] * self.layercount
-                for i in range(self.layercount - 1,
-                               self.layercount):  # please note that I think this is pure witchcraft happening here
-                    yt = ys[i]  # load y from ys and lets call it yt y_temporary
-                    yt = yt[:-1]  # the last entry is from the offset, we don't need this
-                    le = len(yt)
-                    Jacobian_Softmax_temporary = np.ones((le, le))  # alloc storage temporarily
-                    for j in range(0, le):
-                        Jacobian_Softmax_temporary[j, :] *= yt[j]
-                    Jacobian_Softmax_temporary = np.identity(le) - Jacobian_Softmax_temporary
-                    for j in range(0, le):
-                        Jacobian_Softmax_temporary[:, j] *= yt[j]
-                    Jacobian_Softmax[i] = Jacobian_Softmax_temporary
-                # Jacobian_Softmax is quadratic and symmetric.
-
-                if self.activation_function is 0:
-                    # Calc Jacobian of tanh
-                    Jacobian_tanh = [0] * self.layercount
-                    for i in range(0, self.layercount):  # please note that I think this is pure witchcraft happening here
-                        yt = ys[i]  # load y from ys and lets call it yt
-                        yt = yt[:-1]  # the last entry is from the offset, we don't need this
-                        u = 1 - yt * yt
-                        Jacobian_tanh[i] = np.diag(u)
-                    Jacobian_hidden = Jacobian_tanh
-                if self.activation_function is 1:
-                    # Calc Jacobian of relu
-                    Jacobian_relu = [0] * self.layercount
-                    for i in range(0,
-                                   self.layercount):  # please note that I think this is pure witchcraft happening here
-                        yt = ys[i]  # load y from ys and lets call it yt
-                        yt = yt[:-1]  # the last entry is from the offset, we don't need this
-                        yt[yt > 0] = 1  # actually 0 values go to 1 also. this is not so easy, thus I leave it like that for now
-                        Jacobian_relu[i] = np.diag(yt)
-                    Jacobian_hidden = Jacobian_relu
-
-                # Use (L2) and (L3) to get the error signals of the layers
-                errorsignals = [0] * self.layercount
-                errorsignals[self.layercount - 1] = Jacobian_Softmax[
-                    self.layercount - 1]  # (L2), the error signal of the output layer can be computed directly, here we actually use softmax
-                for i in range(2, self.layercount + 1):
-                    w = self.weights[self.layercount - i + 1]
-                    DFt = Jacobian_hidden[self.layercount - i]  # tanh
-                    errdet = np.matmul(w[:, :-1], DFt)  # temporary
-                    errorsignals[self.layercount - i] = np.dot(errorsignals[self.layercount - i + 1],
-                                                               errdet)  # (L3), does python fucking get that?
-
-                # Use (D3) to compute err_errorsignals as sum over the rows/columns? of the errorsignals weighted by the deriv of the error fct by the output layer. We don't use Lemma 3 dircetly here, we just apply the definition of delta_error
-                err_errorsignals = [0] * self.layercount
-                if error_function is 0:
-                    errorbyyzero = -targ / out[:-1]  # Kullback-Leibler divergence derivative
-                else:
-                    if error_function is 1:
-                        errorbyyzero = out[:-1] - targ  # Mean-squared-error derivative
-                    else:
-                        if error_function is 2:
-                            errorbyyzero = 1 / 4 * (
-                                    1 - np.sqrt(targ) / np.sqrt(out[:-1]))  # Hellinger-distance derivative
-                        else:
-                            if error_function is 3:
-                                errorbyyzero = self.compute_experimental_gradient(out[:-1], targ, 1000)
-                # errorbyyzero = self.chosen_error_fct(targ,out)
-                for i in range(0, self.layercount):
-                    err_errorsignals[i] = np.dot(errorbyyzero, errorsignals[i])  # this is the matrix variant of D3
-
-                # Use (2.2) to get the sought derivatives. Observe that this is an outer product, though not mentioned in the source (Fuck you Heining, you bastard)
-                errorbyweights = [0] * self.layercount  # dE/dW
-                errorbyweights[0] = np.outer(err_errorsignals[0], testdata).T  # Why do I need to transpose here???
-                for i in range(1, self.layercount):
-                    errorbyweights[i] = np.outer(err_errorsignals[i - 1], ys[i][:-1])  # (L1)
-
-                # Compute the change of weights, that means, then apply actualization step of Gradient Descent to weight matrices
-                eta = eta_start
-                for i in range(0, self.layercount):
-                    if type(deltaweights_batch[i]) is int:  # initialize
-                        deltaweights_batch[i] = -eta * errorbyweights[i]
-                    else:
-                        deltaweights_batch[i] -= eta * errorbyweights[i]
-                    # self.weights[i][:,:-1]= self.weights[i][:,:-1]+ deltaweights[i].T #Problem: atm we only adjust non-bias weights. Change that!
-
-                # For Error statistics
-                # self.errorsbyepoch.append(self.compute_ms_error (y[:-1], targ))
-                # self.abserrorbyepoch.append(self.compute_error (y[:-1], targ))
-                # self.KLdbyepoch.append(self.compute_KL_divergence(y[:-1], targ))
-
-        # now adjust weights
-        for i in range(0, self.layercount):
-            if type(deltaweights_batch[i]) is not int:  # in this case we had no target for any board in this batch
-                self.weights[i][:, :-1] = self.weights[i][:, :-1] + deltaweights_batch[i].T  # Problem: atm we only adjust non-bias weights. Change that!
-        error = 0 #self.PropagateSet(batch, error_function)
-        return error
 
     def Propagate(self, board):
         #convert board to NeuroNet format (82-dim vector) 
-        board = board.vertices
+        if type(board) != list and type(board) != np.ndarray:
+            board = board.vertices
         if len(board) != 82:
             board = board.flatten()
         #Like Heining we are setting: (-1.35:w, 0.45:empty, 1.05:b)
+        [t1,t2] = self.apply_filters( board.reshape((9,9)) )
         for i in range(0,len(board)):
             if board[i] == 0:
                 board[i] = 0.45
@@ -714,7 +595,7 @@ class PolicyNet:
                 board[i] = -1.35
             if board[i] == 1:
                 board[i] = 1.05
-                
+        board = [*board,*t1,*t2]        
         y = np.append(board,[1]) #apply offset
         #Forward-propagate
         for i in range(0,self.layercount): 
@@ -733,7 +614,9 @@ class PolicyNet:
         error = 0
         checked = 0
         for entry in testset.dic:
-            testdata = self.convert_input(Hashable.unwrap(entry))
+            t0 = Hashable.unwrap(entry)
+            [t1,t2] = self.apply_filters( t0.reshape((9,9)) )
+            testdata = [*self.convert_input(t0),*t1,*t2]
             targ = testset.dic[entry].reshape(9*9+1)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 targ = targ/np.linalg.norm(targ, ord=1) #normalize (L1-norm)
@@ -774,7 +657,9 @@ class PolicyNet:
         error = 0
         checked = 0
         for entry in testset.dic:
-            testdata = self.convert_input(Hashable.unwrap(entry))
+            t0 = Hashable.unwrap(entry)
+            [t1,t2] = self.apply_filters( t0.reshape((9,9)) )
+            testdata = [*self.convert_input(t0),*t1,*t2]
             targ = testset.dic[entry].reshape(9*9+1)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 targ_sum = np.sum(targ)
@@ -843,51 +728,112 @@ class PolicyNet:
     
     def visualize_error(self,errors):
         plt.plot(range(0,len(errors)),errors)
-    
-                
-#Tests
-
-            
-def test1():
-    PN = PolicyNet()
-    testset = TrainingDataSgfPass("dgs",'dan_data_10') 
-    epochs=2
-    error_by_epoch = PN.Learn(testset,epochs)
-    plt.plot(range(0,epochs),error_by_epoch)
-    
-#test1()
-
-def test2(): #passen
-    PN = PolicyNet()
+        
+        
+        
+#tests
+def test():
+    FN = FilterNet([9*9,100,9*9+1])
     testset = TrainingDataSgfPass("dgs",'dan_data_10')
-    error=PN.Learn(testset,2)
-    print("No batchs: error",error)
-   
-#test2()
-
-def test3():
-    PN = PolicyNet()
-    print("Hello there")
-    #PN.LearnDB(dbName='dan_data_295_db', sample_proportion=0.01, eta_start=0.01, stoch_coeff=1,error_function=0)
-    testset = TrainingDataSgfPass(folder="dgs", id_list='dan_data_295')
-    print(len(testset.dic))
-    error = PN.PropagateSetAdaptive(testset)
-    print("Error:", error)
-#test3()
+    #FN.weight_ensemble(testset,5)
+    err = FN.PropagateSet(testset)
+    print(err)
     
-def test4():
-    PN = PolicyNet()
-    PNA = PolicyNet()
+    err_by_epoch = FN.Learn(testset,epochs=2,eta=0.01,batch_size=20,error_function=0)
+    plt.figure(0)
+    plt.plot(range(0,len(err_by_epoch)),err_by_epoch)
+    
+    b=np.zeros((9,9))
+    b[1,0]=1
+    b[0,0]=-1
+    sug=FN.Propagate(b)
+    plt.figure(1)
+    plt.bar(range(len(sug)),sug)
+#test()
+
+
+def test1():
+    FN = FilterNet([9*9,100,9*9+1])
+    FNA = FilterNet([9*9,100,9*9+1])
     testset = TrainingDataSgfPass("dgs",range(10))
-    err=PN.PropagateSet(testset)
-    errA=PNA.PropagateSetAdaptive(testset)
+    err=FN.PropagateSet(testset)
+    errA=FNA.PropagateSetAdaptive(testset)
     print(err,errA)
     
     epochs=3
-    e1=PN.Learn(testset,epochs,0.01,10,1,0)
+    e1=FN.Learn(testset,epochs,0.01,10,1,0)
     print("first done")
-    e2=PNA.Learn(testset,epochs,0.01,10,1,0)
+    
+    batch_size=10    
+    [number_of_batchs, batchs] = FNA.splitintobatches(testset,batch_size)
+    errors_by_epoch = []
+    for epoch in range(0,epochs):
+        errors_by_epoch.append(0)
+        for i_batch in range(0,number_of_batchs):
+            error_in_batch = FNA.LearnSingleBatchAdaptive(batchs[i_batch], 0.01, 1, 0)
+            errors_by_epoch[epoch] += error_in_batch
+        errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
+    e2=errors_by_epoch
+    
+    b=np.zeros((9,9))
+    s1=FN.Propagate(b)
+    s2=FNA.Propagate(b)
+    
+    plt.figure(0)
+    plt.bar(range(len(s1)),s1)
+    plt.figure(1)
+    plt.bar(range(len(s2)),s2)
+    
     print(e1,e2)
     
+#test1()
+
+def test2():
+    FN = FilterNet([9*9,1000,200,9*9+1])
+    testset = TrainingDataSgfPass("dgs","dan_data_10")
+    print("games imported")
+    batch_size = 20
+    eta = 0.001
+    err_fct = 0
+    [number_of_batchs, batchs] = FN.splitintobatches(testset,batch_size)
+    print("split up into",number_of_batchs,"with size",batch_size)
+    errors_by_epoch = []
+    start=time.time()
+    epoch=0
+    while time.time()-start < 8*60*60:
+    #for epoch in range(0,epochs):
+        t=time.time()
+        errors_by_epoch.append(0)
+        for i_batch in range(0,number_of_batchs):
+            error_in_batch = FN.LearnSingleBatchAdaptive(batchs[i_batch], eta, 1, err_fct)
+            errors_by_epoch[epoch] += error_in_batch
+        errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
+        print("epoch",epoch,"error",errors_by_epoch[epoch])
+        print(np.round(time.time()-t))
+        epoch=epoch+1
+    FN.saveweights("ambitestfilt1")
+    print("total time:",time.time()-start,"and epochs",epoch)
+    print("final error:",errors_by_epoch)
+    plt.plot(range(0,len(errors_by_epoch)),errors_by_epoch)
     
-test4()
+
+#test2()
+
+def test3():
+    FN = FilterNet([9*9,1000,9*9+1])
+    FN.loadweightsfromfile("ambtestfilt")
+    testset = TrainingDataSgfPass("dgs",range(30))
+    b1=np.zeros((9,9))
+    s1=FN.Propagate(b1)
+    b2=b1
+    b2[0,1]=1
+    b2[0,0]=-1
+    s2=FN.Propagate(b2)
+    plt.figure(0)
+    plt.bar(range(len(s1)),s1)
+    plt.figure(1)
+    plt.bar(range(len(s2)),s2)
+#test3()
+
+
+    
