@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from Board import *
 from PolicyNetForExecutable import *
-from FilterNet import FilterNet
+from FilterNet import *
 import random
 
 
@@ -167,7 +167,7 @@ class FilterEngine(BaseEngine):
             save = engine.board.vertices
             turn +=1
             time.sleep(speed)
-            
+        #TODO: netz spielt gespiegelt? output/Vorhersage stimmt nicht mit zug überein (ist nicht legal arg max)
 
 def test():
     engine = Engine(5)
@@ -218,6 +218,6 @@ def test4():
     
 def test5():
     engine = FilterEngine(9)
-    engine.play_against_self(1,100)
+    engine.play_against_self(0.1,100)
     
 test5()
