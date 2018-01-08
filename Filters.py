@@ -143,7 +143,7 @@ def filter_captures(board,color):
 
 #rewards connecting groups and adding liberties to groups. But e.g. punishes
 #playing a move into an own eye.
-def filter_liberization(board,color):
+def filter_add_liberties(board,color):
     board.reshape((9,9))
     n = board.shape[0]
     libmat = np.zeros((n,n))
@@ -166,7 +166,7 @@ def filter_liberization(board,color):
                     if color == board[row+1,col]:
                         [group,libs] = give_group_at_position(board,row+1,col)
                         if group in checked:
-                            libs = li
+                            libs = 0
                         else:
                             neighbours += 1
                             checked.extend(group)
@@ -175,7 +175,7 @@ def filter_liberization(board,color):
                     if color == board[row,col-1]:
                         [group,libs] = give_group_at_position(board,row,col-1)
                         if group in checked:
-                            libs = li
+                            libs = 0
                         else:
                             neighbours += 1
                             checked.extend(group)
@@ -184,11 +184,62 @@ def filter_liberization(board,color):
                     if color == board[row,col+1]:
                         [group,libs] = give_group_at_position(board,row,col+1)
                         if group in checked:
-                            libs = li
+                            libs = 0
                         else:
                             neighbours += 1
                             checked.extend(group)
                         val += li - libs
+            libmat[row,col] = val
+    return libmat
+
+#measures total liberties added if move is played
+def filter_liberization(board,color):
+    board.reshape((9,9))
+    n = board.shape[0]
+    libmat = np.zeros((n,n))
+    for row in range(n):
+        for col in range(n):
+            val = 0
+            if board[row,col]==0:#only free fields can be set
+                temp = board * 1 #strangely this is necessary
+                temp[row,col]=color
+                [g,li] = give_group_at_position(temp,row,col)
+                val = li
+                checked = []
+                neighbours = 0
+                if not(row == 0):
+                    if color == board[row-1,col]:
+                        [group,libs] = give_group_at_position(board,row-1,col)
+                        val += - libs
+                        neighbours += 1
+                        checked.extend(group)
+                if not(row == n-1):
+                    if color == board[row+1,col]:
+                        [group,libs] = give_group_at_position(board,row+1,col)
+                        if group in checked:
+                            libs = 0
+                        else:
+                            neighbours += 1
+                            checked.extend(group)
+                        val += - libs
+                if not(col == 0):
+                    if color == board[row,col-1]:
+                        [group,libs] = give_group_at_position(board,row,col-1)
+                        if group in checked:
+                            libs = 0
+                        else:
+                            neighbours += 1
+                            checked.extend(group)
+                        val += - libs
+                if not(col == n-1):
+                    if color == board[row,col+1]:
+                        [group,libs] = give_group_at_position(board,row,col+1)
+                        if group in checked:
+                            libs = 0
+                        else:
+                            neighbours += 1
+                            checked.extend(group)
+                        val += - libs
             libmat[row,col] = val
     return libmat
 
@@ -228,6 +279,14 @@ def test():
     cap_b = filter_captures(b,-1)
     print("Captures black")
     print(cap_b)
+    
+    add_lib_w = filter_add_liberties(b,1)
+    print("Liberties added to groups of white")
+    print(add_lib_w)
+    
+    add_lib_b = filter_add_liberties(b,-1)
+    print("Liberties added to groups of black")
+    print(add_lib_b)
     
     liber_w = filter_liberization(b,1)
     print("Liberization of white")
