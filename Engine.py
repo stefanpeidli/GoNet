@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from Board import *
 from PolicyNetForExecutable import *
+from FilterNetExecutable import *
 from FilterNet import *
 import random
 
