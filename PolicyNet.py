@@ -568,9 +568,9 @@ class PolicyNet:
 
     # Takes a batch, propagates all boards in that batch while accumulating deltaweights.
     # Then sums the deltaweights up and the adjustes the weights of the Network.
-    def LearnDB(self,  selection=False, error_function=0, dbName='dan_data_295_db', sample_proportion=0.01, eta_start=0.05):
+    def LearnDB(self,  selection=False, error_function=0, dbName='dan_data_295', sample_proportion=0.01, eta_start=0.05):
         if selection is False:
-            con = sqlite3.connect(r"DB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB's/MoveDB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             cur.execute("select count(*) from test")
             data = cur.fetchall()

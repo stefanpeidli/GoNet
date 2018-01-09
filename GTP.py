@@ -154,7 +154,7 @@ class GTP:
 
 def run():
     engine = IntelligentEngine(9)
-    logfile = "log_2.txt"
+    logfile = "log_3.txt"
     gtp = GTP(engine, logfile)
     # gtp.list_commands()
     gtp.loop()

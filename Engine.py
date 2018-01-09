@@ -55,7 +55,7 @@ class IntelligentEngine(BaseEngine):
         super(IntelligentEngine, self).__init__(n)
         self.PolicyNet = PolicyNet() #untrained
         self.PolicyNet.loadweightsfromfile("Saved_Weights"
-                        ,'weights1801011848eta100001000epochs1000batchsize1.npz')
+                        ,'weights1801091321eta10000100epochs300batchsize1.npz')
 
     def version(self):
         return "2.0"
@@ -220,4 +220,4 @@ def test5():
     engine = FilterEngine(9)
     engine.play_against_self(0.1,100)
     
-test5()
+#test5()

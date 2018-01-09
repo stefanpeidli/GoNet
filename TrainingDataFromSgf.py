@@ -214,17 +214,26 @@ class TrainingDataSgfPass:
             con = sqlite3.connect(r"DB's/DistributionDB's/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             if passing == False:
-                cur.execute("select count(*) from test where board = prevBoardVector")
+                cur.execute("select count(*) from test where board = ?", (prevBoardVector,))
                 data = cur.fetchall()
-                if data == 0:
+                if data[0][0] == 0:
                     cur.execute("insert into test values (?, ?, ?)",
-                                (None, prevBoardVector, np.append(np.absolute(currBoardVector - prevBoardVector), 0)))
+                                (None, entryBoardVector, np.append(np.absolute(currBoardVector - prevBoardVector), 0)))
                 else:
-                    cur.execute("select count(*) from test where board = prevBoardVector")
-                    data = cur.fetchall()
-                    cur.execute("UPDATE test SET distribution = np.append(np.absolute(currBoardVector - prevBoardVector), 0) WHERE board = prevBoardVector")
+                    cur.execute("select distribution from test where board = ?", (prevBoardVector,))
+                    old_dist = cur.fetchall()
+                    cur.execute("UPDATE test SET distribution = ? WHERE board = prevBoardVector",  old_dist + np.append(np.absolute(currBoardVector - prevBoardVector), 0))
             else:
-                cur.execute("insert into test values (?, ?, ?)", (None, prevBoardVector, np.copy(self.passVector)))
+                cur.execute("select count(*) from test where board = ?", (prevBoardVector,))
+                data = cur.fetchall()
+                if data[0][0] == 0:
+                    cur.execute("insert into test values (?, ?, ?)",
+                                (None, entryBoardVector, np.copy(self.passVector)))
+                else:
+                    cur.execute("select distribution from test where board = ?", (prevBoardVector,))
+                    old_dist = cur.fetchall()
+                    cur.execute("UPDATE test SET distribution = ? WHERE board = prevBoardVector",
+                                old_dist + np.copy(self.passVector))
             con.commit()
 
         else:
@@ -249,11 +258,12 @@ def dbTest2():
 #    cur.execute("select * from test")
 #    data = cur.fetchall()
 #    print(data)
-    cur.execute("select count(*) from test")
+    bam = 20
+    cur.execute("select * from test where id = ?", (bam,))
     data = cur.fetchall()
     print(data)
     con.close()
-#dbTest2()
+dbTest2()
 
 def test():
     t = TrainingData("dgs", range(10000))
