@@ -296,4 +296,4 @@ def test():
     print("Liberization of black")
     print(liber_b)
     
-test()
+#test()

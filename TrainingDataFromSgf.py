@@ -38,20 +38,29 @@ sqlite3.register_converter("array", convert_array)
 
 class TrainingDataSgfPass:
     # standard initialize with boardsize 9
-    def __init__(self, folder=None, id_list=range(1000), dbName = False):
+    def __init__(self, folder=None, id_list=range(1000), dbNameMoves = False, dbNameDist = False):
         self.n = 9
         self.board = Board(self.n)
         self.dic = defaultdict(np.ndarray)
         self.passVector = np.zeros(self.n*self.n + 1, dtype=np.int32)
         self.passVector[self.n*self.n]=1
-        self.dbFlag = False
-        if dbName:
-            self.dbFlag = True
-            self.dbName = dbName
-            con = sqlite3.connect(r"DB's/" + self.dbName, detect_types=sqlite3.PARSE_DECLTYPES)
+        self.dbFlagMoves = False
+        self.dbFlagDist = False
+        if dbNameMoves:
+            self.dbFlagMoves = True
+            self.dbNameMoves = dbNameMoves
+            con = sqlite3.connect(r"DB's/MoveDB's/" + self.dbNameMoves, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             cur.execute("create table test (id INTEGER PRIMARY KEY, board array, move array)")
             con.close()
+        if dbNameDist:
+            self.dbFlagDist = True
+            self.dbNameDist = dbNameDist
+            con = sqlite3.connect(r"DB's/DistributionDB's/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
+            cur = con.cursor()
+            cur.execute("create table test (id INTEGER PRIMARY KEY, board array, distribution array)")
+            con.close()
+
         if folder is not None:
             self.importTrainingData(folder, id_list)
 
@@ -67,7 +76,6 @@ class TrainingDataSgfPass:
 
     def importTrainingData(self, folder, id_list=range(1000)):
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        #  print(dir_path + "\ + 'Training_Sets' + '\' + id_list + '.xsl')
         if type(id_list) is str:
             id_list_prepped = pd.read_excel(dir_path + '/' + 'Training_Sets' + '/' + id_list + '.xlsx')[
                 "game_id"].values.tolist()
@@ -81,9 +89,13 @@ class TrainingDataSgfPass:
                 gameIDs = np.append(gameIDs, i)
                 self.importSingleFile(currfile)
         # close db after last call of importSingleFile
-        if self.dbFlag:
-            con = sqlite3.connect(r"DB's/" + self.dbName, detect_types=sqlite3.PARSE_DECLTYPES)
+        if self.dbFlagMoves:
+            con = sqlite3.connect(r"DB's/MoveDB's/" + self.dbNameMoves, detect_types=sqlite3.PARSE_DECLTYPES)
             con.close()
+        if self.dbFlagDist:
+            con = sqlite3.connect(r"DB's/DistributionDB's/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
+            con.close()
+
 
     def importSingleFile(self, currfile):
         with open(currfile, encoding="Latin-1") as f:
@@ -189,12 +201,28 @@ class TrainingDataSgfPass:
 
     def addEntryToDic(self, entryBoardVector, prevBoardVector, currBoardVector, passing):
         move = np.absolute(currBoardVector - prevBoardVector)
-        if self.dbFlag == True:
-            con = sqlite3.connect(r"DB's/" + self.dbName, detect_types=sqlite3.PARSE_DECLTYPES)
+        if self.dbFlagMoves == True:
+            con = sqlite3.connect(r"DB's/MoveDB's/" + self.dbNameMoves, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             if passing == False:
                 cur.execute("insert into test values (?, ?, ?)",
-                            (None, prevBoardVector, np.append(np.absolute(currBoardVector - prevBoardVector), 0)))
+                            (None, entryBoardVector, np.append(np.absolute(currBoardVector - prevBoardVector), 0)))
+            else:
+                cur.execute("insert into test values (?, ?, ?)", (None, entryBoardVector, np.copy(self.passVector)))
+            con.commit()
+        if self.dbFlagDist == True:
+            con = sqlite3.connect(r"DB's/DistributionDB's/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
+            cur = con.cursor()
+            if passing == False:
+                cur.execute("select count(*) from test where board = prevBoardVector")
+                data = cur.fetchall()
+                if data == 0:
+                    cur.execute("insert into test values (?, ?, ?)",
+                                (None, prevBoardVector, np.append(np.absolute(currBoardVector - prevBoardVector), 0)))
+                else:
+                    cur.execute("select count(*) from test where board = prevBoardVector")
+                    data = cur.fetchall()
+                    cur.execute("UPDATE test SET distribution = np.append(np.absolute(currBoardVector - prevBoardVector), 0) WHERE board = prevBoardVector")
             else:
                 cur.execute("insert into test values (?, ?, ?)", (None, prevBoardVector, np.copy(self.passVector)))
             con.commit()
@@ -213,6 +241,19 @@ class TrainingDataSgfPass:
                     self.dic[Hashable(entryBoardVector)] = np.copy(self.passVector)
 
 # end class TrainingDataSgfPass
+def dbTest2():
+    con = sqlite3.connect(r"DB's/MoveDB's/dan_data_295", detect_types=sqlite3.PARSE_DECLTYPES)
+    cur = con.cursor()
+#    zeroVector= np.zeros(81, dtype=np.int32)
+#    cur.execute("select * from test WHERE board = 'zeroVector'")
+#    cur.execute("select * from test")
+#    data = cur.fetchall()
+#    print(data)
+    cur.execute("select count(*) from test")
+    data = cur.fetchall()
+    print(data)
+    con.close()
+#dbTest2()
 
 def test():
     t = TrainingData("dgs", range(10000))
@@ -295,7 +336,7 @@ def test3pass():
 #test3pass()
 
 def dbTest():
-    t = TrainingDataSgfPass(folder="dgs", id_list = 'dan_data_295', dbName="test1")
+    TrainingDataSgfPass(folder="dgs", id_list = 'dan_data_295', dbNameMoves="dan_data_295")
     con = sqlite3.connect(r"DB's/dan_data_295_db", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select * from test where id <= 100")
@@ -304,11 +345,3 @@ def dbTest():
 #dbTest()
 
 # test for when database is already created
-def dbTest2():
-    con = sqlite3.connect(r"DB's/dan_data_295_db", detect_types=sqlite3.PARSE_DECLTYPES)
-    cur = con.cursor()
-    cur.execute("select count(*) from test")
-    data = cur.fetchall()
-    print(data)
-    con.close()
-#dbTest2()

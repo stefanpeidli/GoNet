@@ -67,7 +67,7 @@ def TrainingBasic(PolicyNetwork, sgf_range = 1000, epochs=1, eta=0.01, batch_siz
     return errors_by_epoch
 
 def TrainingAdvanced(PolicyNetwork, epochs=1, sample_proportion=0.01, error_function=0):
-    con = sqlite3.connect(r"DB's/" + 'dan_data_295_db', detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(r"DB's/MoveDB's/" + 'test1', detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select count(*) from test")
     data = cur.fetchall()
@@ -148,7 +148,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = "Paddy"
+your_name = "Beno"
 
 # example for training:
 if your_name is "Example":
@@ -163,11 +163,24 @@ if your_name is "Example":
 # Paddy
 if your_name is "Paddy":
     MyNetwork = PolicyNet([9*9,1000,9*9+1])
-    epochs=2000
+    epochs=10
     sample_proportion=1
-    error_function=1
+    error_function=0
     TrainingAdvanced(MyNetwork, epochs, sample_proportion, error_function)
-    learningrate=0.1
+    learningrate=0.01
+    name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
+        int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1"
+    MyNetwork.saveweights(name)
+
+#Beno
+# DB_size: 2MB, 1 Epoch, 1 Layer á 1000 neurons ~~ Time: 50
+if your_name is "Beno":
+    MyNetwork = PolicyNet([9*9,50,50,9*9+1])
+    epochs=10
+    sample_proportion=1
+    error_function=0
+    TrainingAdvanced(MyNetwork, epochs, sample_proportion, error_function)
+    learningrate=0.01
     name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
         int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1"
     MyNetwork.saveweights(name)
