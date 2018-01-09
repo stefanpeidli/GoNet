@@ -222,7 +222,7 @@ class TrainingDataSgfPass:
                 else:
                     cur.execute("select distribution from test where board = ?", (prevBoardVector,))
                     old_dist = cur.fetchall()
-                    cur.execute("UPDATE test SET distribution = ? WHERE board = prevBoardVector",  old_dist + np.append(np.absolute(currBoardVector - prevBoardVector), 0))
+                    cur.execute("UPDATE test SET distribution = ? WHERE board = ?",  (old_dist[0][0] + np.append(np.absolute(currBoardVector - prevBoardVector), 0), entryBoardVector))
             else:
                 cur.execute("select count(*) from test where board = ?", (prevBoardVector,))
                 data = cur.fetchall()
@@ -232,8 +232,8 @@ class TrainingDataSgfPass:
                 else:
                     cur.execute("select distribution from test where board = ?", (prevBoardVector,))
                     old_dist = cur.fetchall()
-                    cur.execute("UPDATE test SET distribution = ? WHERE board = prevBoardVector",
-                                old_dist + np.copy(self.passVector))
+                    cur.execute("UPDATE test SET distribution = ? WHERE board = ?",
+                                (old_dist[0][0] + np.copy(self.passVector), prevBoardVector))
             con.commit()
 
         else:
@@ -251,15 +251,10 @@ class TrainingDataSgfPass:
 
 # end class TrainingDataSgfPass
 def dbTest2():
-    con = sqlite3.connect(r"DB's/MoveDB's/dan_data_295", detect_types=sqlite3.PARSE_DECLTYPES)
+    dbName = 'dan_data_10'
+    con = sqlite3.connect(r"DB's/DistributionDB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-#    zeroVector= np.zeros(81, dtype=np.int32)
-#    cur.execute("select * from test WHERE board = 'zeroVector'")
-#    cur.execute("select * from test")
-#    data = cur.fetchall()
-#    print(data)
-    bam = 20
-    cur.execute("select * from test where id = ?", (bam,))
+    cur.execute("Select * from test where id = 1")
     data = cur.fetchall()
     print(data)
     con.close()
@@ -345,13 +340,23 @@ def test3pass():
     print("\nTime " + str(time.clock() - start))
 #test3pass()
 
-def dbTest():
-    TrainingDataSgfPass(folder="dgs", id_list = 'dan_data_295', dbNameMoves="dan_data_295")
-    con = sqlite3.connect(r"DB's/dan_data_295_db", detect_types=sqlite3.PARSE_DECLTYPES)
+def dbCreate():
+    TrainingDataSgfPass(folder="dgs", id_list = 'dan_data_10', dbNameMoves="dan_data_10")
+    con = sqlite3.connect(r"DB's/MoveDB's/dan_data_10", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select * from test where id <= 100")
     data = cur.fetchall()
+    con.close
     print(data)
-#dbTest()
+#dbCreate()
 
-# test for when database is already created
+def distDbCreate():
+    TrainingDataSgfPass(folder="dgs", id_list='dan_data_10', dbNameDist="dan_data_10")
+    con = sqlite3.connect(r"DB's/DistributionDB's/dan_data_10", detect_types=sqlite3.PARSE_DECLTYPES)
+    cur = con.cursor()
+    cur.execute("select * from test where id <= 100")
+    data = cur.fetchall()
+    con.close()
+    print(data)
+#distDbCreate()
+
