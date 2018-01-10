@@ -67,12 +67,12 @@ def TrainingBasic(PolicyNetwork, sgf_range = 1000, epochs=1, eta=0.01, batch_siz
     return errors_by_epoch
 
 def TrainingAdvanced(PolicyNetwork, epochs=1, sample_proportion=0.01, error_function=0):
-    con = sqlite3.connect(r"DB's/MoveDB's/" + 'dan_data_10', detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(r"DB's/DistributionDB's/" + 'dan_data_10_topped_up', detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select count(*) from test")
     data = cur.fetchall()
     sample_size = str(int(np.ceil(data[0][0] * sample_proportion)))
-    cur.execute("select * from test order by Random() Limit " + sample_size)
+    cur.execute("select * from test order by Random() Limit ?", (sample_size,))
     selectionVar = cur.fetchall()
     con.close()
     for i in range(epochs):
@@ -175,14 +175,14 @@ if your_name is "Paddy":
 #Beno
 # DB_size: 2MB, 1 Epoch, 1 Layer á 1000 neurons ~~ Time: 50
 if your_name is "Beno":
-    MyNetwork = PolicyNet([9*9,120,120,9*9+1])
+    MyNetwork = PolicyNet([9*9,200,200,9*9+1])
     epochs=1000
-    sample_proportion=0.1
+    sample_proportion=1
     error_function=1
     TrainingAdvanced(MyNetwork, epochs, sample_proportion, error_function)
-    learningrate=0.4
+    learningrate=0.1
     name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
-        int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1"
+        int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "errorfct" + error_function
     MyNetwork.saveweights(name)
 
 # Faruk

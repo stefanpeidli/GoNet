@@ -254,11 +254,11 @@ def dbTest2():
     dbName = 'dan_data_10'
     con = sqlite3.connect(r"DB's/DistributionDB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("Select * from test where id = 1")
+    cur.execute("Select * from test where id > 5730")
     data = cur.fetchall()
     print(data)
     con.close()
-dbTest2()
+#dbTest2()
 
 def test():
     t = TrainingData("dgs", range(10000))
@@ -351,12 +351,12 @@ def dbCreate():
 #dbCreate()
 
 def distDbCreate():
-    TrainingDataSgfPass(folder="dgs", id_list='dan_data_10', dbNameDist="dan_data_10")
-    con = sqlite3.connect(r"DB's/DistributionDB's/dan_data_10", detect_types=sqlite3.PARSE_DECLTYPES)
+    TrainingDataSgfPass(folder="dgs", id_list='dan_data_10', dbNameDist="dan_data_10_test")
+    con = sqlite3.connect(r"DB's/DistributionDB's/dan_data_10_test", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("select * from test where id <= 100")
+    cur.execute("select count(*) from test where id <= 100")
     data = cur.fetchall()
     con.close()
-    print(data)
+    print(data[0][0])
 #distDbCreate()
 

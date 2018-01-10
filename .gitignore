@@ -9,6 +9,9 @@ dgs/
 #Training_Sets: top secret
 Training_Sets/
 
+#Beno:
+log_3.txt
+
 #paddy:
 Flush.py
 log_1.txt
