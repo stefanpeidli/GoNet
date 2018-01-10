@@ -32,6 +32,7 @@ def is_on_board(n, x, y):
 #da ist irgendwo ein fehler. libs stimmen manchmal nicht
 def give_group_at_position(board, start_x, start_y):
         group = [(start_x, start_y)]
+        checked = []
         i = 0
         liberts = 0
         while i < len(group):
@@ -40,14 +41,17 @@ def give_group_at_position(board, start_x, start_y):
             for dx, dy in dxdys:
                 adj_x, adj_y = x + dx, y + dy
                 if is_on_board(board.shape[0],adj_x, adj_y) and not (adj_x, adj_y) in group:
-                    if board[adj_x, adj_y] == 0:
+                    if board[adj_x, adj_y] == 0 and not (adj_x, adj_y) in checked:
                         liberts += 1
+                        checked.append((adj_x, adj_y))
                     elif board[adj_x, adj_y] == board[start_x, start_y]:
                         group.append((adj_x, adj_y))
         if board[start_x,start_y]==0:
             liberts=0
         return [group, liberts]
-    
+
+
+
 def give_liberties(board,color):
     libs=np.zeros((n,n))
     for row in range(n):
@@ -58,6 +62,8 @@ def give_liberties(board,color):
     return libs
 
 ### Filters
+    
+# Filters that are self-mappings
 
 # Eyes
 # shows the eyes of player black (=-1)
@@ -243,6 +249,83 @@ def filter_liberization(board,color):
             libmat[row,col] = val
     return libmat
 
+#Gives all groups with their sizes as field values at the member positions of
+    # a color.
+def filter_groups(board,color):
+    board.reshape((9,9))
+    n = board.shape[0]
+    gps = np.zeros((n,n))
+    for row in range(n):
+        for col in range(n):
+            if board[row,col]==color and gps[row,col]==0:
+                [g,li] = give_group_at_position(board,row,col)
+                size = len(g)
+                for member in g:
+                    gps[member] = size
+    return gps
+
+#Gives all groups of size k of color. with_values=False unifies the output to 1
+def filter_groups_of_size_k(board,k,color,with_values=False):
+    board.reshape((9,9))
+    n = board.shape[0]
+    gps = np.zeros((n,n))
+    for row in range(n):
+        for col in range(n):
+            if board[row,col]==color and gps[row,col]==0:
+                [g,li] = give_group_at_position(board,row,col)
+                size = len(g)
+                if size == k:
+                    for member in g:
+                        if with_values:
+                            gps[member] = size
+                        else:
+                            gps[member] = 1
+    return gps
+
+#Gives all groups of color with exactly k UNSECURED eyes (i.e. only stones that 
+#form the eye are contained within the same group, not the diagonal stones)
+def filter_groups_eyes_unsec(board,k,color):
+    board.reshape((9,9))
+    n = board.shape[0]
+    res = np.zeros((n,n))
+    eyes = filter_eyes(board,color)
+    print(eyes)
+    for row in range(n):
+        for col in range(n):
+            if eyes[row,col]==1:
+                temp = board * 1
+                temp[row,col]=color
+                [g,li] = give_group_at_position(temp,row,col)
+                is_contained = True
+                if not(row == 0) and (row-1,col) not in g:
+                        is_contained = False
+                if not(row == n-1) and (row+1,col) not in g:
+                        is_contained = False
+                if not(col == 0) and (row,col-1) not in g:
+                        is_contained = False
+                if not(col == n-1) and (row,col+1) not in g:
+                        is_contained = False
+                if is_contained:
+                    for [x,y] in g:
+                        res[x,y]+=1
+                res[row,col]=0
+    res[res!=k]=0
+    res[res==k]=1
+    return res
+
+# Filters that are not self-mappings
+
+# gives the board with only the stones of one color
+def filter_color_separation(board,color):
+    temp=board*1 
+    #Very interesting. by *1 we make sure temp is only a copy of 
+    # board and not board itself. Else this function changes the board!
+    temp[temp!=color]=0 
+    return temp 
+
+
+
+    
 ### Tests
 def test():
     print("Board")
