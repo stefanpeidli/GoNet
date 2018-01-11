@@ -9,7 +9,7 @@ from Hashable import Hashable
 import os
 from Filters import filter_eyes
 from Filters import filter_captures
-
+import time
 
 def softmax(x):
     """Compute softmax values for each sets of scores in x."""
@@ -23,7 +23,7 @@ def relu(x):
 
 
 class FilterNet:
-    def __init__(self, layers=[9 * 9, 1000, 100, 9 * 9 + 1], activation_function=0, error_function=0):
+    def __init__(self, layers=[9 * 9, 1000, 200, 9 * 9 + 1], activation_function=0, error_function=0):
         ### Specifications of the game
         self.n = 9  # 9x9 board
         self.filtercount = 2
@@ -158,22 +158,6 @@ class FilterNet:
                 boardvector[i] = 1.05
         return boardvector
 
-    def splitintobatches(self, trainingdata, batchsize):  # splits trainingdata into batches of size batchsize
-        N = len(trainingdata.dic)
-        if batchsize > N:
-            batchsize = N
-        k = int(np.ceil(N / batchsize))
-
-        Batch_sets = [0] * k
-        Batch_sets[0] = TrainingDataSgfPass()
-        Batch_sets[0].dic = dict(list(trainingdata.dic.items())[:batchsize])
-        for i in range(k - 1):
-            Batch_sets[i] = TrainingDataSgfPass()
-            Batch_sets[i].dic = dict(list(trainingdata.dic.items())[i * batchsize:(i + 1) * batchsize])
-        Batch_sets[k - 1] = TrainingDataSgfPass()
-        Batch_sets[k - 1].dic = dict(list(trainingdata.dic.items())[(k - 1) * batchsize:N])
-        number_of_batchs = k
-        return [number_of_batchs, Batch_sets]
 
     def saveweights(self, filename, folder='Saved_Weights'):
         dir_path = os.path.dirname(os.path.realpath(__file__))

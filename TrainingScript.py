@@ -177,14 +177,14 @@ if your_name is "Paddy":
 #Beno
 # DB_size: 2MB, 1 Epoch, 1 Layer á 1000 neurons ~~ Time: 50
 if your_name is "Beno":
-    MyNetwork = PolicyNet([9*9,200,200,9*9+1])
-    epochs=1000
+    MyNetwork = PolicyNet([9*9,120,200,120,9*9+1])
+    epochs=1200
     sample_proportion=1
-    error_function=1
+    error_function=0
     TrainingAdvanced(MyNetwork, epochs, sample_proportion, error_function)
-    learningrate=0.1
+    learningrate=0.01
     name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
-        int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "errorfct" + error_function
+        int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "errorfct" + str(error_function)
     MyNetwork.saveweights(name)
 
 # Faruk

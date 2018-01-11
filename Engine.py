@@ -2,7 +2,7 @@
 from Board import *
 from PolicyNetForExecutable import *
 from FilterNetExecutable import *
-from FilterNet import *
+
 import random
 
 
@@ -100,7 +100,7 @@ class FilterEngine(BaseEngine):
     def __init__(self,n):
         super(FilterEngine, self).__init__(n)
         self.FilterNet = FilterNet([9*9,1000,200,9*9+1]) #untrained
-        self.FilterNet.loadweightsfromfile("ambtestfilt")
+        self.FilterNet.loadweightsfromfile("ambtestfilt.npz")
 
     def version(self):
         return "2.0"
@@ -214,7 +214,7 @@ def test4():
     engine.play_legal_move(engine.board, Stone.White)
     engine.board.show()
 
-#test4()
+test4()
     
 def test5():
     engine = FilterEngine(9)
