@@ -1,6 +1,7 @@
 import sqlite3
 import numpy as np
 import io
+import TrainingDataFromSgf as td
 
 def adapt_array(arr):
     out = io.BytesIO()
@@ -39,10 +40,11 @@ def createTable(dbNameDist):
 
 
 def test():
-    dbNameDist = 'dan_data_10_test'
+    td.TrainingDataSgfPass(folder="dgs", id_list='dan_data_295', dbNameDist="dan_data_295")
+    dbNameDist = 'dan_data_295'
     createTable(dbNameDist)
     con= sqlite3.connect(r"DB's/DistributionDB's/" + dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select * from dist where id > 5700")
 
-#test()
+test()
