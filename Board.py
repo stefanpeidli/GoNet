@@ -114,6 +114,7 @@ class Board:
         print(Board_repres)
         print("="*self.N)
         print("")
+        return Board_repres
         
 
     

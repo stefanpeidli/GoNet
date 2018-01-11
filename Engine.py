@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from Board import *
 from PolicyNetForExecutable import *
-from FilterNetExecutable import *
+import time
 
 import random
 
@@ -52,10 +52,10 @@ class Engine(BaseEngine):
         return ch
 
 class IntelligentEngine(BaseEngine):
-    def __init__(self,n):
+    def __init__(self,n,weights_file="ambtestfilt.npz"):
         super(IntelligentEngine, self).__init__(n)
-        self.PolicyNet = PolicyNet() #untrained
-        self.PolicyNet.loadweightsfromfile('weights1801100325eta100001000epochs20batchsize1.npz')
+        self.PolicyNet = PolicyNet([9*9,1000,200,9*9+1]) #untrained
+        self.PolicyNet.loadweightsfromfile(weights_file)
 
     def version(self):
         return "2.0"
@@ -76,10 +76,11 @@ class IntelligentEngine(BaseEngine):
             board.vertices = invBoard.reshape((9,9))
             out=self.PolicyNet.Propagate(board)
             board.vertices = tempVertices
+        print("Network Output:")
         print(np.round(out[:-1].reshape((9,9)),2))
         while sum(out) > 0:
             move=np.argmax(out)
-            print(move)
+            #print(move)
             if move == 81: #passing is always legal. 82er eintrag (?)
                 print("The Policy Network considers passing as the best move with a relative confidence of",str(round(out[move]*100))+"%",".")
                 return "pass"
@@ -89,7 +90,7 @@ class IntelligentEngine(BaseEngine):
             if board.play_is_legal(coords[0],coords[1], stone):
                 board.play_stone(coords[0],coords[1], stone)
                 print("The Policy Network considers",coords,
-                      "as the best move with a distribution value of",str(round(out[move]*100))+"%",".")
+                      "as the best move with a relative confidence of",str(round(out[move]*100))+"%",".")
                 return coords
             else:
                 out[move]=0
@@ -99,7 +100,7 @@ class IntelligentEngine(BaseEngine):
 class FilterEngine(BaseEngine):
     def __init__(self,n):
         super(FilterEngine, self).__init__(n)
-        self.FilterNet = FilterNet([9*9,1000,200,9*9+1]) #untrained
+        self.FilterNet = PolicyNet([9*9,1000,200,9*9+1]) #untrained
         self.FilterNet.loadweightsfromfile("ambtestfilt.npz")
 
     def version(self):
@@ -214,7 +215,7 @@ def test4():
     engine.play_legal_move(engine.board, Stone.White)
     engine.board.show()
 
-test4()
+#test4()
     
 def test5():
     engine = FilterEngine(9)

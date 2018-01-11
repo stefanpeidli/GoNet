@@ -1,6 +1,7 @@
 import sys
-from Engine import Engine, IntelligentEngine, FilterEngine
+from Engine import Engine, IntelligentEngine
 from Board import *
+import os
 
 
 # Checkt ob Großbuchstabe übergeben wurde, berechnet int Wert der x-Koordinate, sonst mit kleinem Buchstaben
@@ -110,7 +111,8 @@ class GTP:
             self.tell_client("pass")
 
     def show_board(self):
-        self.engine.board.show()
+        board_repres = self.engine.board.show()
+        self.tell_client(str(board_repres))
 
     def quit(self):
         print("GTP: Quitting")
@@ -154,8 +156,7 @@ class GTP:
 
 #choose if Intelligent or Filter Engine first ;)
 def run():
-    engine = FilterEngine(9)
-    #engine = IntelligentEngine(9)
+    engine = IntelligentEngine(9,"ambtestfilt.npz")
     logfile = "log_3.txt"
     gtp = GTP(engine, logfile)
     # gtp.list_commands()
