@@ -14,7 +14,6 @@ import time
 import datetime
 import sqlite3
 
-
 """
 This Script should be used to train Policy Networks.
 
@@ -61,10 +60,12 @@ On saving and loading weights:
         
 """
 
+
 def TrainingBasic(PolicyNetwork, sgf_range = 1000, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=1, activation_function=0):
     testdata = TrainingDataSgfPass("dgs",range(0,sgfrange))
     errors_by_epoch=PolicyNetwork.Learn(testdata, epochs, eta, batch_size, stoch_coeff, error_function, activation_function)
     return errors_by_epoch
+
 
 def TrainingAdvanced(PolicyNetwork, epochs=1, sample_proportion=0.01, error_function=0):
     con = sqlite3.connect(r"DB's/DistributionDB's/" + 'dan_data_10_topped_up', detect_types=sqlite3.PARSE_DECLTYPES)
@@ -104,6 +105,7 @@ def Training(PolicyNetwork, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, err
     print(init_error,'Initial Error:')
     print("total time needed:",time.time()-t)
     return errors_by_epoch
+
 
 """
 def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):

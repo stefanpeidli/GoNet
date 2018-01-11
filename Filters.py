@@ -65,7 +65,7 @@ def give_liberties(board,color):
     
 # Filters that are self-mappings
 
-# Eyes
+# Eyes ID = 0
 # shows the eyes of player black (=-1)
 def filter_eyes(board,color): #only gives black eyes or white? TODO
     n = board.shape[0]
@@ -91,6 +91,7 @@ def filter_eyes(board,color): #only gives black eyes or white? TODO
     return eyes
 
 # Shows which move will result in an eye being created (1) or destroyed (-1)
+    # ID = 1
 # Problem: this is hard, because eyes can also be created by capturing
     # Note: Eyes by capture are created by capturing a single stone
 def filter_eyes_create(board,color=1):
@@ -112,7 +113,7 @@ def filter_eyes_create(board,color=1):
     return reyes
                 
 
-# captures
+# captures ID = 2
 # Shows how many stones player "color" (1=b,-1=w) would capture by playing a 
 # move on a field
 def filter_captures(board,color):
@@ -148,7 +149,7 @@ def filter_captures(board,color):
     return cap
 
 #rewards connecting groups and adding liberties to groups. But e.g. punishes
-#playing a move into an own eye.
+#playing a move into an own eye. ID = 3
 def filter_add_liberties(board,color):
     board.reshape((9,9))
     n = board.shape[0]
@@ -198,7 +199,7 @@ def filter_add_liberties(board,color):
             libmat[row,col] = val
     return libmat
 
-#measures total liberties added if move is played
+#measures total liberties added if move is played ID = 4
 def filter_liberization(board,color):
     board.reshape((9,9))
     n = board.shape[0]
@@ -250,7 +251,7 @@ def filter_liberization(board,color):
     return libmat
 
 #Gives all groups with their sizes as field values at the member positions of
-    # a color.
+    # a color. ID = 5
 def filter_groups(board,color):
     board.reshape((9,9))
     n = board.shape[0]
@@ -265,6 +266,7 @@ def filter_groups(board,color):
     return gps
 
 #Gives all groups of size k of color. with_values=False unifies the output to 1
+    # no ID yet
 def filter_groups_of_size_k(board,k,color,with_values=False):
     board.reshape((9,9))
     n = board.shape[0]
@@ -284,6 +286,7 @@ def filter_groups_of_size_k(board,k,color,with_values=False):
 
 #Gives all groups of color with exactly k UNSECURED eyes (i.e. only stones that 
 #form the eye are contained within the same group, not the diagonal stones)
+    # no ID yet
 def filter_groups_eyes_unsec(board,k,color):
     board.reshape((9,9))
     n = board.shape[0]
@@ -315,7 +318,7 @@ def filter_groups_eyes_unsec(board,k,color):
 
 # Filters that are not self-mappings
 
-# gives the board with only the stones of one color
+# gives the board with only the stones of one color. ID = 6
 def filter_color_separation(board,color):
     temp=board*1 
     #Very interesting. by *1 we make sure temp is only a copy of 
@@ -323,8 +326,13 @@ def filter_color_separation(board,color):
     temp[temp!=color]=0 
     return temp 
 
-
-
+# The Summary Fiter Function
+    
+def apply_filters_by_id(board,filter_id):
+    #?
+    return True
+    
+    
     
 ### Tests
 def test():
