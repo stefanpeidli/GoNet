@@ -154,8 +154,8 @@ class GTP:
 
 #choose if Intelligent or Filter Engine first ;)
 def run():
-    # engine = FilterEngine(9)
-    engine = IntelligentEngine(9)
+    engine = FilterEngine(9)
+    #engine = IntelligentEngine(9)
     logfile = "log_3.txt"
     gtp = GTP(engine, logfile)
     # gtp.list_commands()
