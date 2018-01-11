@@ -200,8 +200,8 @@ class PolicyNet:
 
     # The actual functions
 
-    def learn(self, trainingdata, epochs=1, eta=0.01, batch_size=10, error_function=1, db=False, db_name="none", enrichment=False):
-        if not db:  # Dictionary Case
+    def learn(self, trainingdata, epochs=1, eta=0.01, batch_size=10, error_function=1, db_name=False, enrichment=False):
+        if not db_name:  # Dictionary Case
             [number_of_batchs, batches] = self.splitintobatches(trainingdata, batch_size)
         else:  # Database Case
             con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
@@ -218,10 +218,10 @@ class PolicyNet:
         for epoch in range(0, epochs):
             errors_by_epoch.append(0)
             for i_batch in range(0, number_of_batchs):
-                if db:  # Database Case
-                    batch = self.extract_batch_from_db(db_name, batch_size, enrichment)
-                else:  # Dictionary Case
+                if not db_name:  # Dictionary Case
                     batch = batches[i_batch]
+                else:  # Database Case
+                    batch = self.extract_batch_from_db(db_name, batch_size, enrichment)
                 error_in_batch = self.learn_batch(batch, eta, error_function)
                 errors_by_epoch[epoch] += error_in_batch
             errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
