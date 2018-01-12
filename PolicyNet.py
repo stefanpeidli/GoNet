@@ -200,8 +200,8 @@ class PolicyNet:
 
     # The actual functions
 
-    def learn(self, trainingdata, epochs=1, eta=0.01, batch_size=10, error_function=1, db_name=False, enrichment=False):
-        if not db_name:  # Dictionary Case
+    def learn(self, trainingdata, epochs=1, eta=0.01, batch_size=10, error_function=0, db=False, db_name='none', enrichment=False):
+        if not db:  # Dictionary Case
             [number_of_batchs, batches] = self.splitintobatches(trainingdata, batch_size)
         else:  # Database Case
             con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
@@ -218,7 +218,7 @@ class PolicyNet:
         for epoch in range(0, epochs):
             errors_by_epoch.append(0)
             for i_batch in range(0, number_of_batchs):
-                if not db_name:  # Dictionary Case
+                if not db:  # Dictionary Case
                     batch = batches[i_batch]
                 else:  # Database Case
                     batch = self.extract_batch_from_db(db_name, batch_size, enrichment)
@@ -250,11 +250,11 @@ class PolicyNet:
                     db=False, adaptive_rule="linear", error_feedback=True, db_name='dan_data_295_db'):
         deltaweights_batch = [0] * self.layercount
         if not db:  # Dictionary case
-            batch = random.sample(list(batch.dic.keys()), len(batch.dic))  # This is indeed random order.
+            selection = random.sample(list(batch.dic.keys()), len(batch.dic))  # This is indeed random order.
         else:  # TODO: Do we need to shuffle the db batch? What do we get? A db, batch or dict???
             pass
 
-        for entry in batch:
+        for entry in selection:
             if not db:  # Usual Dictionary case. Extract input and target.
                 t0 = Hashable.unwrap(entry)
                 [t1, t2] = self.apply_filters(t0.reshape((9, 9)))

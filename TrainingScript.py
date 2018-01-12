@@ -61,12 +61,14 @@ On saving and loading weights:
 """
 
 
-def TrainingBasic(PolicyNetwork, sgf_range = 1000, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=1, activation_function=0):
-    testdata = TrainingDataSgfPass("dgs",range(0,sgfrange))
-    errors_by_epoch=PolicyNetwork.Learn(testdata, epochs, eta, batch_size, stoch_coeff, error_function, activation_function)
+def training_basic(PolicyNetwork, sgf_range=100, epochs=10, eta=0.001, batch_size=5, error_function=0):
+    testdata = TrainingDataSgfPass("dgs", range(0, sgf_range))
+    errors_by_epoch = PolicyNetwork.learn(testdata, epochs, eta, batch_size, error_function)
     return errors_by_epoch
 
 
+# TODO delete this if it's fine for beno
+""" 
 def TrainingAdvanced(PolicyNetwork, dbName = "dan_data_10", epochs=1, sample_proportion=0.01, error_function=0):
     con = sqlite3.connect(r"DB's/DistributionDB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
@@ -80,29 +82,49 @@ def TrainingAdvanced(PolicyNetwork, dbName = "dan_data_10", epochs=1, sample_pro
         print("Epoch ", i)
         errors_by_epoch = PolicyNetwork.LearnDB(selectionVar, error_function)
     return errors_by_epoch
+"""
 
-    
-def TrainingSplit(PolicyNetwork, trainingrate, error_tolerance, maxepochs, sgf_range = 1000, eta = 0.01, batch_size=1, stoch_coeff=1, error_function=1, activation_function=0):
+
+"""    
+def training_split(PolicyNetwork, trainingrate, error_tolerance, maxepochs, sgf_range = 1000, eta = 0.01, batch_size=1, stoch_coeff=1, error_function=1, activation_function=0):
     trainingdata = TrainingDataSgfPass("dgs",range(0,sgf_range))
     datasize = len(trainingdata.dic)
     [error,epochs] = PolicyNetwork.Learnsplit(trainingdata, eta, batch_size, stoch_coeff, error_function, activation_function, trainingrate, error_tolerance, maxepochs)
     print("Datasize was",datasize,",Final K-L-Error:",error[-1:][0],",Epochs:",epochs)
+"""
+
     
+def training(PolicyNetwork, epochs=10, eta=0.001, batch_size=5, error_function=0, file="dan_data_10",
+             adaptive_rule='linear', db=False, db_name="none", enrichment=False, details=True):
+    testset = TrainingDataSgfPass("dgs", file)
+    t = time.time()
+    init_error = PolicyNetwork.propagate_set(testset, db, adaptive_rule, error_function)
+    if details:
+        print("Propagation of the set took", np.round(time.time()-t,3), "seconds.")
+        print("Learning is done for", epochs, "epochs, with batch size", batch_size, ",eta", eta,
+              ",error function number", error_function, "and with games given by the file ", file, ".")
+        t = time.time()
+        print("Learning in progress...")
     
-def Training(PolicyNetwork, epochs=1, eta=0.01, batch_size=1, stoch_coeff=1, error_function=1, activation_function=0, file = "dan_data_10"):
-    testset = TrainingDataSgfPass("dgs",file)
-    t=time.time()
-    init_error = PolicyNetwork.PropagateSet(testset,error_function, activation_function)
-    print("Propagation took",np.round(time.time()-t,3),"seconds.")
-    print("Learning is done for",epochs,"epochs, with batch size",batch_size,",eta",eta,",stoch_coeff",stoch_coeff,",error_function number",error_function,"and with Games given by",file)
-    t=time.time()
+    errors_by_epoch = PolicyNetwork.learn(testset, epochs, eta, batch_size, error_function, db, db_name, enrichment)
     
-    errors_by_epoch=PolicyNetwork.Learn(testset, epochs, eta, batch_size, stoch_coeff, error_function, activation_function)
-    
-    final_error = PolicyNetwork.PropagateSet(testset,error_function, activation_function)
-    print(final_error,'Final Error:')
-    print(init_error,'Initial Error:')
-    print("total time needed:",time.time()-t)
+    final_error = PolicyNetwork.propagate_set(testset, db, adaptive_rule, error_function)
+    if details:
+        print("Finished learning.")
+        print("Details on the results:")
+        print('Initial Error:', init_error)
+        print('Final Error:', final_error)
+        print("Total time needed for training:", time.time()-t)
+
+        print("Visualization:")
+        plt.figure(0)
+        plt.plot(range(0, len(errors_by_epoch)), errors_by_epoch)
+        plt.title("Error in each epoch")
+        plt.xlabel("epochs")
+        plt.ylabel("Error")
+        print("Error was measured with error function number", str(error_function))
+        plt.show()  # TODO: muss da ne 0 hin/ was fuer ein argument?
+
     return errors_by_epoch
 
 
@@ -149,16 +171,19 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = "Beno"
+your_name = "Stefan"
 
 # example for training:
 if your_name is "Example":
     MyNetwork = PolicyNet()
-    learningrate = 0.01
-    epochs = 5 #one epoch ~ 25 seconds
-    sgfrange = 10
-    TrainingBasic(MyNetwork , learningrate, epochs, sgfrange)
-    name="weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(learningrate*10000))+"epochs"+str(epochs)+"batchsize"+"1"+"sgfrange"+str(sgfrange)
+    eta = 0.01
+    epochs = 5
+    sgf_range = 10
+    batch_size = 5
+    error_function = 0  # KLD
+    training_basic(MyNetwork, sgf_range, epochs, eta, batch_size, error_function)
+    name = "weights"+datetime.datetime.now().strftime("%y%m%d%H%M")+"eta10000"+str(int(eta*10000))+"epochs"+\
+           str(epochs)+"batchsize"+str(batch_size)+"sgfrange"+str(sgf_range)
     MyNetwork.saveweights(name)
 
 # Paddy
@@ -173,7 +198,7 @@ if your_name is "Paddy":
         int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1"
     MyNetwork.saveweights(name)
 
-#Beno
+# Beno
 # DB_size: 2MB, 1 Epoch, 1 Layer á 1000 neurons ~~ Time: 50
 if your_name is "Beno":
     MyNetwork = PolicyNet([9*9,120,200,120,9*9+1])
@@ -227,12 +252,12 @@ if your_name is "Faruk":
 
 # Stefan:
 if your_name is "Stefan":
-    #hier schreibe ich mein training rein
+    # hier schreibe ich mein training rein
     print("halo I bims")
     
-    training_program = 5
+    training_program = 6
     
-    if training_program == 1: #Checking error on a testset, while training on a different set
+    if training_program == 1:  # Checking error on a testset, while training on a different set
         PN=PolicyNet()
         testset = TrainingDataSgfPass("dgs","dan_data_10")
         trainingset = TrainingDataSgfPass("dgs","dan_data_295")
@@ -357,4 +382,18 @@ if your_name is "Stefan":
         plt.figure(1)
         plt.plot(range(len(zerotarg)),zerotarg)
         plt.plot(range(len(y)),y)
+
+    if training_program == 6:
+        PN = PolicyNet()
+        epochs = 3
+        eta = 0.001
+        batch_size = 10
+        error_function = 0
+        file = "dan_data_10"
+        adaptive_rule = 'linear'
+        db = False
+        db_name = "none"
+        enrichment = False
+        details = True
+        training(PN, epochs, eta, batch_size, error_function, file, adaptive_rule, db, db_name, enrichment, details)
         
