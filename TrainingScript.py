@@ -7,7 +7,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Hashable import Hashable
 import Board
-#from TrainingDataFromSgf import TrainingDataSgf
 from TrainingDataFromSgf import TrainingDataSgfPass
 from PolicyNet import PolicyNet
 import time
