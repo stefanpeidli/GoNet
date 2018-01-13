@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from Board import *
-from PolicyNetForExecutable import *
+from PolicyNet import *
 import time
 
 import random
@@ -26,14 +26,15 @@ class BaseEngine(object):
         pass
 
     def stone_played(self, x, y, stone):
-         if self.board.play_is_legal(x, y, stone):
-             self.board.play_stone(x, y, stone)
+        if self.board.play_is_legal(x, y, stone):
+            self.board.play_stone(x, y, stone)
 
     def play_legal_move(self, board, stone):
         assert False
 
+
 class Engine(BaseEngine):
-    def __init__(self,n):
+    def __init__(self, n):
         super(Engine, self).__init__(n)
 
     def version(self):
@@ -50,6 +51,7 @@ class Engine(BaseEngine):
         if ch != "pass":
             board.play_stone(ch[0], ch[1], stone)
         return ch
+
 
 class IntelligentEngine(BaseEngine):
     def __init__(self,n,weights_file="ambtestfilt.npz"):
@@ -96,20 +98,21 @@ class IntelligentEngine(BaseEngine):
                 out[move]=0
         print("The Policy Network considers passing as the best move with a relative confidence of THIS IS NO OUTPUT YET.")
         return "pass"
-        
-class FilterEngine(BaseEngine):
+
+
+class PolicyEngine(BaseEngine):
     def __init__(self,n):
-        super(FilterEngine, self).__init__(n)
-        self.FilterNet = PolicyNet([9*9,1000,200,9*9+1]) #untrained
-        self.FilterNet.loadweightsfromfile("ambtestfilt.npz")
+        super(PolicyEngine, self).__init__(n)
+        self.PolicyNet = PolicyNet([9*9,1000,200,9*9+1]) #untrained
+        self.PolicyNet.loadweightsfromfile("ambtestfilt.npz")
 
     def version(self):
         return "2.0"
 
     # need to get move from Neural Network here (forward propagate the current board)
-    def play_legal_move(self, board, stone):
-        if(stone == Stone.Black):
-            out=self.FilterNet.Propagate(board)
+    def play_legal_move(self, board, stone, details=False):
+        if stone == Stone.Black:
+            out = self.PolicyNet.propagate_board(board)
         else:
             boardVector = board.vertices.flatten()
             invBoard = np.zeros(9 * 9, dtype=np.int32)
@@ -119,34 +122,111 @@ class FilterEngine(BaseEngine):
                 else:
                     invBoard[count] = 0
             tempVertices = np.copy(board.vertices)
-            board.vertices = invBoard.reshape((9,9))
-            out=self.FilterNet.Propagate(board)
+            board.vertices = invBoard.reshape((9, 9))
+            out = self.PolicyNet.propagate_board(board)
             board.vertices = tempVertices
-        print("Network Output:")
-        print(np.round(out[:-1].reshape((9,9)),2))
+
+        # We need to prohibit passing sometimes:
+        our_stones = np.sum(board.vertices[board.vertices == stone])
+        their_stones = np.sum(board.vertices[board.vertices == -stone])
+        if our_stones + their_stones > 81 * 0.75 and our_stones / their_stones > 1.1:
+            allow_passing = True
+        else:
+            allow_passing = False
+
+        if details:
+            print("Network Output:")
+            print(np.round(out[:-1].reshape((9, 9)), 2))
         while sum(out) > 0:
-            move=np.argmax(out)
-            #print(move)
-            if move == 81: #passing is always legal. 82er eintrag (?)
-                print("The Filter Network considers passing as the best move with a relative confidence of",str(round(out[move]*100))+"%",".")
+            move = np.argmax(out)
+            if move == 81 and allow_passing:  # passing is always legal. 82er eintrag (?)
+                if details:
+                    print("The Policy Network considers passing as the best move with a relative confidence of",
+                          str(round(out[move]*100))+"%", ".")
+                return "pass"
+            elif move == 81 and not allow_passing:  # Get second best suggestion
+                out[move] = 0
+                move = np.argmax(out)
+            x = int(move % 9)
+            y = int(np.floor(move / 9))
+            coords = (y, x)
+            if board.play_is_legal(coords[0], coords[1], stone):
+                board.play_stone(coords[0], coords[1], stone)
+                if details:
+                    print("The Policy Network considers", coords,
+                          "as the best move with a relative confidence of", str(round(out[move]*100))+"%", ".")
+                return coords
+            else:
+                out[move] = 0
+        if details:
+            print("The Policy Network considers passing as the best move with a relative confidence "
+                  "of THIS IS NO OUTPUT YET.")
+        return "pass"
+
+    def play_legal_rand_move(self, board, stone, details=False):
+        try_flag = 0
+        while try_flag < 100:
+            move = np.round(np.random.uniform(0, 81), 0)  # generate randome move
+            if move == 81:  # passing is always legal. 82er eintrag (?)
+                if details:
+                    print("The random bot passes.")
                 return "pass"
             x = int(move % 9)
             y = int(np.floor(move / 9))
-            coords = (y, x)  # check if this is right, i dont think so. The counting is wrong
-            if board.play_is_legal(coords[0],coords[1], stone):
-                board.play_stone(coords[0],coords[1], stone)
-                print("The Filter Network considers",coords,
-                      "as the best move with a relative confidence of",str(round(out[move]*100))+"%",".")
+            coords = (x, y)
+            if board.play_is_legal(coords[0], coords[1], stone):
+                board.play_stone(coords[0], coords[1], stone)
+                if details:
+                    print("The random bot plays at ", coords, ".")
                 return coords
+            try_flag += 1
+        if details:
+            print("Since only passing seems legal, the random bot passes.")
+        return "pass"
+
+    def play_against_random(self, speed, maxturns, details=False):
+        engine = PolicyEngine(9)
+        if details:
+            print("Game starts")
+            engine.board.show()
+        Players = [Stone.Black, Stone.White]
+        PlayerNames = ["Black (PolicyBot)", "White (RandomBot)"]
+        turn = 0
+        flag = 0
+        temp = Board(9)
+        save = temp.vertices
+        while turn < maxturns:
+            if details:
+                print("Now it is turn number", turn, "and", PlayerNames[np.mod(turn, 2)], "is playing.")
+            if PlayerNames[np.mod(turn, 2)] == "Black (PolicyBot)":
+                engine.play_legal_move(engine.board, Players[np.mod(turn, 2)], details)
+            else:  # Random Bot
+                engine.play_legal_rand_move(engine.board, Players[np.mod(turn, 2)], details)
+            if details:
+                print("After move was played board is:")
+                engine.board.show()
+            #print("save", save)
+            #print("current", engine.board.vertices)
+            if details:
+                print("check", (save == engine.board.vertices).all())
+            if (save == engine.board.vertices).all():
+                flag += 1
             else:
-                out[move]=0
-        print("The Filter Network considers passing as the best move with a relative confidence of THIS IS NO OUTPUT YET.")
-        return "pass"  
+                flag = 0
+            if flag == 2:
+                if details:
+                    print("Game over by resign after", turn, "turns.")
+                #return engine.board.history # TODO
+            save = engine.board.vertices
+            turn += 1
+            time.sleep(speed)
+        return engine.board.history
         
-    def play_against_self(self, speed, maxturns):
-        engine = FilterEngine(9)
-        print("Game starts")
-        engine.board.show()
+    def play_against_self(self, speed, maxturns, details=False):
+        engine = PolicyEngine(9)
+        if details:
+            print("Game starts")
+            engine.board.show()
         Players = [Stone.Black, Stone.White]
         PlayerNames = ["Black", "White"]
         turn = 0
@@ -154,21 +234,25 @@ class FilterEngine(BaseEngine):
         temp = Board(9)
         save = temp.vertices
         while turn < maxturns:
-            print("Now it is turn number", turn, "and", PlayerNames[np.mod(turn, 2)], "is playing.")
-            engine.play_legal_move(engine.board, Players[np.mod(turn, 2)])
-            print("After move was played board is:")
-            engine.board.show()
+            if details:
+                print("Now it is turn number", turn, "and", PlayerNames[np.mod(turn, 2)], "is playing.")
+            engine.play_legal_move(engine.board, Players[np.mod(turn, 2)], details)
+            if details:
+                print("After move was played board is:")
+                engine.board.show()
             if (save == engine.board.vertices).all():
                 flag += 1
             else:
                 flag = 0
             if flag == 2:
-                print("Game over by resign after", turn, "turns.")
-                return
+                if details:
+                    print("Game over by resign after", turn, "turns.")
+                return engine.board.history
             save = engine.board.vertices
-            turn +=1
+            turn += 1
             time.sleep(speed)
-        #TODO: netz spielt gespiegelt? output/Vorhersage stimmt nicht mit zug überein (ist nicht legal arg max)
+        return engine.board.history
+
 
 def test():
     engine = Engine(5)
@@ -182,8 +266,8 @@ def test():
 
 def test2():
     engine = Engine(5)
-    engine.board.play_stone(1,0,Stone.Black)
-    engine.board.play_stone(0,1,Stone.Black)
+    engine.board.play_stone(1, 0, Stone.Black)
+    engine.board.play_stone(0, 1, Stone.Black)
     for i in range(22):
         engine.play_legal_move(engine.board, Stone.White)
     engine.board.show()
@@ -199,8 +283,8 @@ def test2():
 def test3():
     engine = IntelligentEngine(9)
     #engine.PolicyNet=NN
-    engine.board.play_stone(1,0,Stone.Black)
-    engine.board.play_stone(0,1,Stone.Black)
+    engine.board.play_stone(1, 0, Stone.Black)
+    engine.board.play_stone(0, 1, Stone.Black)
     engine.board.show()
     engine.play_legal_move(engine.board, Stone.White)
     engine.board.show()
@@ -208,9 +292,9 @@ def test3():
 #test3()
     
 def test4():
-    engine = FilterEngine(9)
-    engine.board.play_stone(1,0,Stone.Black)
-    engine.board.play_stone(0,1,Stone.Black)
+    engine = PolicyEngine(9)
+    engine.board.play_stone(1, 0, Stone.Black)
+    engine.board.play_stone(0, 1, Stone.Black)
     engine.board.show()
     engine.play_legal_move(engine.board, Stone.White)
     engine.board.show()
@@ -218,7 +302,48 @@ def test4():
 #test4()
     
 def test5():
-    engine = FilterEngine(9)
-    engine.play_against_self(0.1, 20)
+    engine = PolicyEngine(9)
+    game_history = engine.play_against_self(0, 100, details=False)
+    final_board = game_history[-1]
+    print("protoscore: Black", np.sum(final_board[final_board == Stone.Black])/Stone.Black)
+    print("protoscore: White", np.sum(final_board[final_board == Stone.White])/Stone.White)
+
     
 #test5()
+
+def test6():
+    engine = PolicyEngine(9)
+    game_history = engine.play_against_random(0, 100, details=False)
+    final_board = game_history[-1]
+    print("protoscore: Black", np.sum(final_board[final_board == Stone.Black]) / Stone.Black)
+    print("protoscore: White", np.sum(final_board[final_board == Stone.White]) / Stone.White)
+
+#test6()
+
+def test7():
+    engine = PolicyEngine(9)
+    winner = []
+    rounds = 100
+    komi = 6
+
+    for i in range(rounds):
+        game_history = engine.play_against_random(0, 100, details=False)
+        final_board = game_history[-1]
+        b = np.sum(final_board[final_board == Stone.Black]) / Stone.Black
+        w = np.sum(final_board[final_board == Stone.White]) / Stone.White
+        w += komi
+        if b > w:
+            winner.append("B")
+        elif b == w:
+            winner.append("D")
+        else:
+            winner.append("W")
+        print("Game", i, ":", b, w)
+
+    # print(winner)
+    print()
+    print("The komi was: ", komi)
+    print("The PolicyNet won", winner.count("B"), "out of", rounds, "games against the Random Bot.")
+    print(winner.count("D"), "games ended in a draw.")
+
+test7()
