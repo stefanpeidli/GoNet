@@ -6,12 +6,15 @@ Created on Tue Oct 31 10:34:08 2017
 """
 import numpy as np
 
+
 class Stone:
     Empty = 0
     Black = -1
     White = 1
 
+
 colour_names = { Stone.Empty:"Empty", Stone.Black:"Black", Stone.White:"White", }
+
 
 def flipped_stone(stone):
     if stone == Stone.Empty:
@@ -21,9 +24,11 @@ def flipped_stone(stone):
     else:
         return Stone.Black
 
+
 # Standardbasis des R2 (Das ist keine Basis du Lurch :P)
 dxdys = [(1, 0), (0, 1), (-1, 0), (0, -1)]
-    
+
+
 class Board:
     def __init__(self, N):
         self.N = N
@@ -59,7 +64,6 @@ class Board:
                 self.vertices[x, y] = Stone.Empty
                 
         return False
-    
 
     # Stein wird gespielt. Dann wird geschaut ob andere Gruppe dadurch gefangen wird. Dann wird Ko gecheckt
     # Benutzt check_group_liberties(..) um zu checken ob der Zug legal ist und spielt den Stein falls ja

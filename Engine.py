@@ -192,9 +192,8 @@ class PolicyEngine(BaseEngine):
         Players = [Stone.Black, Stone.White]
         PlayerNames = ["Black (PolicyBot)", "White (RandomBot)"]
         turn = 0
-        flag = 0
         temp = Board(9)
-        save = temp.vertices
+        # save = temp.vertices
         while turn < maxturns:
             if details:
                 print("Now it is turn number", turn, "and", PlayerNames[np.mod(turn, 2)], "is playing.")
@@ -205,19 +204,11 @@ class PolicyEngine(BaseEngine):
             if details:
                 print("After move was played board is:")
                 engine.board.show()
-            #print("save", save)
-            #print("current", engine.board.vertices)
-            if details:
-                print("check", (save == engine.board.vertices).all())
-            if (save == engine.board.vertices).all():
-                flag += 1
-            else:
-                flag = 0
-            if flag == 2:
-                if details:
-                    print("Game over by resign after", turn, "turns.")
-                #return engine.board.history # TODO
-            save = engine.board.vertices
+            if turn > 3:
+                if (engine.board.history[-1] == engine.board.vertices).all() and (engine.board.history[-1] == engine.board.history[-2]).all():
+                    if details:
+                        print("Game over by resign after", turn, "turns.")
+                    return engine.board.history # TODO
             turn += 1
             time.sleep(speed)
         return engine.board.history

@@ -330,7 +330,7 @@ def filter_groups_eyes_unsec(board, k, color):
 
 # Filters that are not self-mappings
 
-# gives the board with only the stones of one color. ID = 6.
+# gives the board with only the stones of one color. ID = 6. ID = 7 for opponent color.
 def filter_color_separation(board, color):
     temp = board * 1
     # Very interesting. by *1 we make sure temp is only a copy of
@@ -341,9 +341,33 @@ def filter_color_separation(board, color):
 
 # The Summary Fiter Function
     
-def apply_filters_by_id(board,filter_id):
-    # TODO ?
-    return True
+def apply_filters_by_id(board, color, filter_id=[0, 1, 2, 3, 4, 5, 6, 7]):
+    filtered = []
+    if 0 in filter_id:
+        f0 = filter_eyes(board, color).flatten()
+        filtered.extend(f0)
+    if 1 in filter_id:
+        f1 = filter_eyes_create(board, color).flatten()
+        filtered.extend(f1)
+    if 2 in filter_id:
+        f2 = filter_captures(board, color).flatten()
+        filtered.extend(f2)
+    if 3 in filter_id:
+        f3 = filter_add_liberties(board, color).flatten()
+        filtered.extend(f3)
+    if 4 in filter_id:
+        f4 = filter_liberization(board, color).flatten()
+        filtered.extend(f4)
+    if 5 in filter_id:
+        f5 = filter_groups(board, color).flatten()
+        filtered.extend(f5)
+    if 6 in filter_id:
+        f6 = filter_color_separation(board, color).flatten()
+        filtered.extend(f6)
+    if 7 in filter_id:
+        f6 = filter_color_separation(board, -color).flatten()
+        filtered.extend(f6)
+    return filtered
 
     
 # Tests
@@ -401,3 +425,11 @@ def test():
     print(liber_b)
     
 #test()
+
+
+def test1():
+    b = gen_test_board(0)
+    filtered = apply_filters_by_id(b, 1)
+    print(filtered)
+
+#test1()

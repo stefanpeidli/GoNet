@@ -383,8 +383,8 @@ if your_name is "Stefan":
         plt.plot(range(len(y)),y)
 
     if training_program == 6:
-        PN = PolicyNet()
-        epochs = 3
+        PN = PolicyNet(filter_ids=[0, 1, 2, 3, 4, 5, 6, 7])
+        epochs = 10
         eta = 0.001
         batch_size = 10
         error_function = 0

@@ -14,6 +14,7 @@ import random
 import sqlite3
 from Filters import filter_eyes
 from Filters import filter_captures
+from Filters import apply_filters_by_id
 
 
 def softmax(x):
@@ -26,10 +27,11 @@ def relu(x):
     return x
 
 class PolicyNet:
-    def __init__(self, layers=[9*9, 1000, 100, 9*9+1], activation_function=0):
+    def __init__(self, layers=[9*9, 1000, 100, 9*9+1], activation_function=0, filter_ids=[0, 2]):
         # Specifications of the game
         self.n = 9  # 9x9 board
-        self.filtercount = 2
+        self.filter_ids = filter_ids
+        self.filtercount = len(filter_ids)
         layers[0] += self.filtercount*self.n*self.n
         
         # Parameters of the NN
@@ -55,11 +57,17 @@ class PolicyNet:
                 sigma = np.sqrt(2)/np.sqrt(self.layers[i+1])
                 self.weights[i] = np.random.normal(mu, sigma, (self.layers[i+1], self.layers[i]+1))  # the +1 in the input dimension is for the bias
 
-    def apply_filters(self, board, color = -1):
-        filtered_1 = filter_eyes(board,color)
-        filtered_2 = filter_captures(board,color)
-        return [filtered_1.flatten(),filtered_2.flatten()]
-        
+    """
+    def apply_filters(self, board, color=-1):
+        filtered_1 = filter_eyes(board, color)
+        filtered_2 = filter_captures(board, color)
+        return [filtered_1.flatten(), filtered_2.flatten()]
+    """
+
+    def apply_filters(self, board, color=-1):
+        filtered = apply_filters_by_id(board, color, self.filter_ids)
+        return filtered
+
     # Function Definition yard
       
     # error functions
@@ -257,8 +265,8 @@ class PolicyNet:
         for entry in selection:
             if not db:  # Usual Dictionary case. Extract input and target.
                 t0 = Hashable.unwrap(entry)
-                [t1, t2] = self.apply_filters(t0.reshape((9, 9)))
-                testdata = [*self.convert_input(t0), *t1, *t2]
+                tf = self.apply_filters(t0.reshape((9, 9)))
+                testdata = [*self.convert_input(t0), *tf]
                 targ = batch.dic[entry].reshape(9*9+1)  # target output, this is to be approximated
             else:  # DB case
                 testdata = self.convert_input(entry[1])  # input
@@ -379,7 +387,7 @@ class PolicyNet:
             board = board.flatten()
         board = np.asarray(board, float)
         # Like Heining we are setting: (-1.35:w, 0.45:empty, 1.05:b)
-        [t1, t2] = self.apply_filters(board.reshape((9, 9)))
+        tf = self.apply_filters(board.reshape((9, 9)))
         for i in range(0, len(board)):
             if board[i] == np.int(0):
                 board[i] = 0.45
@@ -387,7 +395,7 @@ class PolicyNet:
                 board[i] = -1.35
             if board[i] == 1:
                 board[i] = 1.05
-        board = [*board, *t1, *t2]
+        board = [*board, *tf]
         y = np.append(board, [1])
         # Forward-propagate
         for i in range(0, self.layercount):
@@ -412,8 +420,8 @@ class PolicyNet:
         for entry in given_set:
             if not db:
                 t0 = Hashable.unwrap(entry)
-                [t1, t2] = self.apply_filters(t0.reshape((9, 9)))
-                testdata = [*self.convert_input(t0), *t1, *t2]
+                tf = self.apply_filters(t0.reshape((9, 9)))
+                testdata = [*self.convert_input(t0), *tf]
                 targ = testset.dic[entry].reshape(9*9+1)
             else:
                 pass  # TODO
