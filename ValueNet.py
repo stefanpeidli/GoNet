@@ -116,7 +116,7 @@ class ValueNet:
     
     def Learnpropagate(self, eta, trainingdata):
         for entry in trainingdata.dic:
-            testdata=Hashable.unwrap(entry)-0.25
+            testdata=Hashable.unwrap(entry)
             targ=trainingdata.dic[entry].reshape(9*9)
             if(np.sum(targ)>0): #We can only learn if there are actual target vectors
                 y = np.append(testdata,[1])

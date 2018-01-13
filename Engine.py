@@ -130,9 +130,9 @@ class FilterEngine(BaseEngine):
             if move == 81: #passing is always legal. 82er eintrag (?)
                 print("The Filter Network considers passing as the best move with a relative confidence of",str(round(out[move]*100))+"%",".")
                 return "pass"
-            x=int(move%9)
-            y=int(np.floor(move/9))
-            coords=(x,y) #check if this is right, i dont think so. The counting is wrong
+            x = int(move % 9)
+            y = int(np.floor(move / 9))
+            coords = (y, x)  # check if this is right, i dont think so. The counting is wrong
             if board.play_is_legal(coords[0],coords[1], stone):
                 board.play_stone(coords[0],coords[1], stone)
                 print("The Filter Network considers",coords,
@@ -143,27 +143,27 @@ class FilterEngine(BaseEngine):
         print("The Filter Network considers passing as the best move with a relative confidence of THIS IS NO OUTPUT YET.")
         return "pass"  
         
-    def play_against_self(self,speed,maxturns):
+    def play_against_self(self, speed, maxturns):
         engine = FilterEngine(9)
         print("Game starts")
         engine.board.show()
-        Players=[Stone.Black,Stone.White]
-        PlayerNames=["Black","White"]
-        turn=0
-        flag=0
+        Players = [Stone.Black, Stone.White]
+        PlayerNames = ["Black", "White"]
+        turn = 0
+        flag = 0
         temp = Board(9)
-        save= temp.vertices
-        while turn <maxturns:
-            print("Now it is turn number",turn,"and",PlayerNames[np.mod(turn,2)],"is playing.")
-            engine.play_legal_move(engine.board, Players[np.mod(turn,2)])
+        save = temp.vertices
+        while turn < maxturns:
+            print("Now it is turn number", turn, "and", PlayerNames[np.mod(turn, 2)], "is playing.")
+            engine.play_legal_move(engine.board, Players[np.mod(turn, 2)])
             print("After move was played board is:")
             engine.board.show()
-            if (save==engine.board.vertices).all():
-                flag+=1
+            if (save == engine.board.vertices).all():
+                flag += 1
             else:
-                flag=0
+                flag = 0
             if flag == 2:
-                print("Game over by resign after",turn,"turns.")
+                print("Game over by resign after", turn, "turns.")
                 return
             save = engine.board.vertices
             turn +=1
@@ -219,6 +219,6 @@ def test4():
     
 def test5():
     engine = FilterEngine(9)
-    engine.play_against_self(0.1,100)
+    engine.play_against_self(0.1, 20)
     
 #test5()

@@ -9,16 +9,23 @@ import numpy as np
 
 n = 9
 
-# Testboard
-b = np.zeros((n, n))
-b[0,2]=1
-b[1,3]=1
-b[3,3]=1
-b[2,3]=-1
-b[0,1]=-1
-b[1,0]=-1
-b[1,1]=-1
-b[2,2]=1
+# Testboards
+def gen_test_board(method=0):
+    if method == 0:
+        b = np.zeros((n, n))
+        b[0, 2] = 1
+        b[1, 3] = 1
+        b[3, 3] = 1
+        b[2, 3] = -1
+        b[0, 1] = -1
+        b[1, 0] = -1
+        b[1, 1] = -1
+        b[2, 2] = 1
+    if method == 1:
+        b = np.round(np.random.uniform(-1, 1, (n, n)), 0)
+    return b
+
+gen_test_board(1)
 
 dxdys = [(1, 0), (0, 1), (-1, 0), (0, -1)]
 
@@ -57,7 +64,7 @@ def give_liberties(board,color):
     for row in range(n):
         for col in range(n):
             if board[row, col] == color:
-                [g, li] = give_group_at_position(b, row, col)
+                [g, li] = give_group_at_position(board, row, col)
                 libs[row,col] = li
     return libs
 
@@ -341,6 +348,7 @@ def apply_filters_by_id(board,filter_id):
     
 # Tests
 def test():
+    b = gen_test_board(1)
     print("Board")
     print(b)
      

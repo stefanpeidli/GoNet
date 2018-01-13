@@ -333,3 +333,14 @@ def testWinner():
     TrainingDataSgfPass("dgs", id_list=range(10000))
 
 #testWinner()
+
+def testGetData():
+    testset = TrainingDataSgfPass("dgs", id_list=range(10))
+    print("Type", type(testset.dic))
+    for entry in testset.dic:
+        testdata = Hashable.unwrap(entry)
+        targ = testset.dic[entry].reshape(9 * 9 + 1)
+        #print("Testdata", testdata)
+        print("Target", targ)
+
+testGetData()
