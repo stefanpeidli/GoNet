@@ -9,6 +9,7 @@ import numpy as np
 
 n = 9
 
+
 # Testboards
 def gen_test_board(method=0):
     if method == 0:
