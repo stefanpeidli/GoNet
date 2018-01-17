@@ -59,7 +59,6 @@ def give_group_at_position(board, start_x, start_y):
         return [group, liberts]
 
 
-
 def give_liberties(board,color):
     libs = np.zeros((n, n))
     for row in range(n):

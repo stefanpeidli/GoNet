@@ -7,6 +7,7 @@ Tags: Neural Network
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from matplotlib import colors
 from Filters import apply_filters_by_id as filt
 
@@ -28,15 +29,16 @@ def show_heatmap(data):
 
 
 # make a color map of fixed colors
-cmap = colors.ListedColormap(['white', '#e8b468', 'black'])
-bounds = [-1.5, -0.5, 0.5, 1]
+cmap = colors.ListedColormap(['red', 'black', '#e8b468', 'white', 'green', "blue"])
+bounds = [-2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5]
 norm = colors.BoundaryNorm(bounds, cmap.N)
 
 
-def show_filtered_map(data, color, submode=False, maxid=8):
+def show_filtered_map(data, color, submode=False, maxid=8, grid=True):
     f = [data]
-    for i in range(maxid):
+    for i in range(maxid-1):
         f.append(np.asanyarray(filt(test_data, color, [i])).reshape((n, n)))
+    f.append(np.asanyarray(filt(test_data, color, [maxid-1])).reshape((n, n)))
     if not submode:
         for image in f:
             plt.matshow(image)
@@ -45,15 +47,28 @@ def show_filtered_map(data, color, submode=False, maxid=8):
         fig = plt.figure()
         fig.subplots_adjust(left=0.2, wspace=0.6)
         ax = []
-        for i in range(maxid):
+        subplot_names = ['board', 'eyes', "eyes_create", "captures", "add_liberties", "liberization", "groups",
+                         'only own color', "only enemy color"]
+        for i in range(maxid+1):
             ax.append(fig.add_subplot(331+i))
-            ax[i].imshow(f[i], interpolation='nearest', origin='lower', cmap=cmap, norm=norm)
+            ag = ax[i].imshow(f[i], interpolation='nearest', origin='lower', cmap=cmap, norm=norm)
             ax[i].set_yticks(range(n))
             ax[i].set_yticklabels(reversed(np.array(range(n))+1))
             ax[i].set_xticks(range(n))
             ax[i].set_xticklabels(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'])
-            ax[i].set_title("Filter ID "+str(i+1))
+            if grid:
+                ax[i].set_xticks(np.arange(-.5, n, 1), minor=True)
+                ax[i].set_yticks(np.arange(-.5, n, 1), minor=True)
+                ax[i].grid(which='minor', color='black', linestyle='-', linewidth=3)
+            # ax[i].set_title("Filter ID "+str(i+1))
+            ax[i].set_title("Filter " + subplot_names[i])
         fig.tight_layout()
+        fig.subplots_adjust(right=0.8)
+        cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+        cb = fig.colorbar(ag, cax=cbar_ax)
+        cb.set_ticks([-2, -1, 0, 1, 2, 3])
+        cb.set_ticklabels(['<-2', '-1 (black)', '0 (empty)', '1 (white)', 2, '>2'])
+
         plt.show()
 
 
