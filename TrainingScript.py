@@ -66,7 +66,7 @@ def training_basic(PolicyNetwork, sgf_range=100, epochs=10, eta=0.001, batch_siz
     return errors_by_epoch
 
 
-# TODO delete this if it's fine for beno
+# TODO delete this if it's fine for beno, Beno: I'll delete it then
 """ 
 def TrainingAdvanced(PolicyNetwork, dbName = "dan_data_10", epochs=1, sample_proportion=0.01, error_function=0):
     con = sqlite3.connect(r"DB's/DistributionDB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
@@ -170,7 +170,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = "Stefan"
+your_name = "Beno"
 
 # example for training:
 if your_name is "Example":
@@ -198,14 +198,15 @@ if your_name is "Paddy":
     MyNetwork.saveweights(name)
 
 # Beno
-# DB_size: 2MB, 1 Epoch, 1 Layer á 1000 neurons ~~ Time: 50
 if your_name is "Beno":
     MyNetwork = PolicyNet([9*9,120,200,120,9*9+1])
-    epochs=1000
+    epochs=1
     sample_proportion=1
     error_function=0
-    TrainingAdvanced(MyNetwork, "dan_data_295", epochs, sample_proportion, error_function)
-    learningrate=0.01
+    eta=0.01
+    batchsize = 5
+    training(MyNetwork, epochs, eta, batchsize, error_function, 'dan_data_10', db = True, db_name = 'dan_data_10',
+             enrichment = True)
     name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
         int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "errorfct" + str(error_function)
     MyNetwork.saveweights(name)

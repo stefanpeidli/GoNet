@@ -7,14 +7,35 @@ Created on Thu Jan  4 20:54:24 2018
 import numpy as np
 import matplotlib.pyplot as plt
 from Hashable import Hashable
-from TrainingDataFromSgf import TrainingDataSgfPass
+#from TrainingDataFromSgf import TrainingDataSgfPass
 import os
 import time
 import random
 import sqlite3
-from Filters import filter_eyes
-from Filters import filter_captures
 from Filters import apply_filters_by_id
+import collections
+import io
+
+#neccessarry to store arrays in database (from stackOverFlow)
+from TrainingDataFromSgf import TrainingDataSgfPass
+
+
+def adapt_array(arr):
+    out = io.BytesIO()
+    np.save(out, arr)
+    out.seek(0)
+    return sqlite3.Binary(out.read())
+
+def convert_array(text):
+    out = io.BytesIO(text)
+    out.seek(0)
+    return np.load(out)
+
+# Converts np.array to TEXT when inserting
+sqlite3.register_adapter(np.ndarray, adapt_array)
+
+# Converts TEXT to np.array when selecting
+sqlite3.register_converter("array", convert_array)
 
 
 def softmax(x):
@@ -167,20 +188,45 @@ class PolicyNet:
         number_of_batchs = k
         return[number_of_batchs, Batch_sets]
 
-    def extract_batch_from_db(self, db_name, batchsize, enrichment=False):
+    def extract_batches_from_db(self, db_name, batchsize, enrichment=False):
         con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
-        #cur.execute("select count(*) from test")
-        #data = cur.fetchall()
-        #datasize = data[0][0]  # number of boards present in the database
-        #number_of_batchs = int(np.ceil(datasize / batchsize))
-        if not enrichment:
-            cur.execute("select * from test order by Random() Limit " + str(batchsize))
+        if enrichment:
+            cur.execute("select count(*) from test")
         else:
-            cur.execute("select * from dist order by Random() Limit " + str(batchsize))
-        batch = cur.fetchall()
-        con.close()
-        return batch
+            cur.execute("select count(*) from dist")
+        data = cur.fetchall()
+        datasize = data[0][0]
+        number_of_batches = int(np.ceil(datasize / batchsize))
+        id_set = set(range(datasize) + np.ones(datasize, dtype='Int32'))
+        batch_id_list = [0]*number_of_batches
+        for i in range(number_of_batches):
+            try:
+                batch = set(random.sample(id_set, batchsize))
+                batch_id_list[i] = batch
+                id_set -= batch
+            except ValueError:
+                batch_id_list[i] = id_set
+        batches = collections.defaultdict(dict)
+        for i in range(len(batch_id_list)):
+            batches[i] = collections.defaultdict(np.ndarray)
+            for j in batch_id_list[i]:
+                if enrichment:
+                    cur2 = con.cursor()
+                    cur2.execute("SELECT * FROM dist WHERE id = ?;", (j,))
+                    data2 = cur2.fetchall()
+                    print(data2)
+                    print("...")
+                else:
+                    con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+                    cur = con.cursor()
+                    k = 5
+                    cur.execute("select * from test where id = ?", (k,))
+                    data = cur.fetchone()
+                    batches[i][data[1]] = data[2]
+                con.close()
+        return [number_of_batches, batches]
+
 
     def saveweights(self, filename, folder='Saved_Weights'):
         dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -212,25 +258,13 @@ class PolicyNet:
         if not db:  # Dictionary Case
             [number_of_batchs, batches] = self.splitintobatches(trainingdata, batch_size)
         else:  # Database Case
-            con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
-            cur = con.cursor()
-            if enrichment:
-                cur.execute("select count(*) from dist")
-            else:
-                cur.execute("select count(*) from test")
-            data = cur.fetchall()
-            datasize = data[0][0]  # number of boards present in the database
-            number_of_batchs = int(np.ceil(datasize / batch_size))
-            con.close()
+            [number_of_batchs, batches] = self.extract_batches_from_db(db_name, batch_size, enrichment)
         errors_by_epoch = []
         for epoch in range(0, epochs):
             errors_by_epoch.append(0)
             for i_batch in range(0, number_of_batchs):
-                if not db:  # Dictionary Case
-                    batch = batches[i_batch]
-                else:  # Database Case
-                    batch = self.extract_batch_from_db(db_name, batch_size, enrichment)
-                error_in_batch = self.learn_batch(batch, eta, error_function)
+                batch = batches[i_batch]
+                error_in_batch = self.learn_batch(batch, eta, db, error_function)
                 errors_by_epoch[epoch] += error_in_batch
             errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
         return errors_by_epoch
@@ -255,11 +289,11 @@ class PolicyNet:
     # Takes a batch, propagates all boards in that batch while accumulating delta weights. Then sums the delta weights
     # up and then adjusts the weights of the Network.
     def learn_batch(self, batch, eta_start=0.01, error_function=0,
-                    db=False, adaptive_rule="linear", error_feedback=True, db_name='dan_data_295_db'):
+                    db=False, adaptive_rule="linear", error_feedback=True):
         deltaweights_batch = [0] * self.layercount
         if not db:  # Dictionary case
             selection = random.sample(list(batch.dic.keys()), len(batch.dic))  # This is indeed random order.
-        else:  # TODO: Do we need to shuffle the db batch? What do we get? A db, batch or dict???
+        else:  # TODO: build selection: batch should be a dictionary with (board, distribution)-entries just as the dict we had before
             pass
 
         for entry in selection:
@@ -599,3 +633,20 @@ def test3():
     plt.figure(1)
     plt.bar(range(len(s2)),s2)
 #test3()
+
+def batch_extraction_test():
+    net = PolicyNet()
+    [no, batches] = net.extract_batches_from_db('dan_data_10_topped_up', 100, enrichment=False)
+    print(no)
+    print(batches.entries().count())
+
+
+batch_extraction_test()
+
+def test4():
+    con = sqlite3.connect(r"DB's/DistributionDB's/dan_data_10_topped_up", detect_types=sqlite3.PARSE_DECLTYPES)
+    cur = con.cursor()
+    cur.execute("select * from dist where id = ?", (3,))
+    data = cur.fetchone()
+    print(data[1])
+#test4()

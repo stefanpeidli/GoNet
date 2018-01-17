@@ -27,9 +27,6 @@ def createTable(dbNameDist):
     data = cur.fetchall()
     db_size = data[0][0]
     cur.execute("create table dist as select * from test")
-    cur.execute("select * from dist where id = 250")
-    data = cur.fetchall()
-    print(data)
     for i in range(db_size):
         cur.execute("select * from test where id = ?", (i+1,))
         current = cur.fetchall()
@@ -40,11 +37,11 @@ def createTable(dbNameDist):
 
 
 def test():
-    td.TrainingDataSgfPass(folder="dgs", id_list='dan_data_295', dbNameDist="dan_data_295")
-    dbNameDist = 'dan_data_295'
+    td.TrainingDataSgfPass(folder="dgs", id_list='dan_data_10', dbNameDist="dan_data_10_new")
+    dbNameDist = 'dan_data_10_new'
     createTable(dbNameDist)
     con= sqlite3.connect(r"DB's/DistributionDB's/" + dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("select * from dist where id > 5700")
+    cur.execute("select * from dist where id = 2")
 
 test()

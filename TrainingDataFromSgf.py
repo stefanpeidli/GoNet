@@ -38,7 +38,7 @@ sqlite3.register_converter("array", convert_array)
 
 class TrainingDataSgfPass:
     # standard initialize with boardsize 9
-    def __init__(self, folder=None, id_list=range(1000), dbNameMoves = False, dbNameDist = False):
+    def __init__(self, folder="dgs", id_list=range(1000), dbNameMoves = False, dbNameDist = 'dan_data_10_new'):
         self.n = 9
         self.board = Board(self.n)
         self.dic = defaultdict(np.ndarray)
@@ -210,7 +210,7 @@ class TrainingDataSgfPass:
             else:
                 cur.execute("insert into test values (?, ?, ?)", (None, entryBoardVector, np.copy(self.passVector)))
             con.commit()
-        if self.dbFlagDist == True:
+        elif self.dbFlagDist == True:
             con = sqlite3.connect(r"DB's/DistributionDB's/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             if passing == False:
@@ -251,10 +251,11 @@ class TrainingDataSgfPass:
 
 # end class TrainingDataSgfPass
 def dbTest2():
-    dbName = 'dan_data_10'
+    dbName = 'dan_data_10_topped_up'
     con = sqlite3.connect(r"DB's/DistributionDB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("Select * from test where id > 5730")
+    i = 5732
+    cur.execute("Select * from test where id = ?", (i,))
     data = cur.fetchall()
     print(data)
     con.close()
@@ -351,12 +352,12 @@ def dbCreate():
 #dbCreate()
 
 def distDbCreate():
-    TrainingDataSgfPass(folder="dgs", id_list='dan_data_10', dbNameDist="dan_data_10_test")
-    con = sqlite3.connect(r"DB's/DistributionDB's/dan_data_10_test", detect_types=sqlite3.PARSE_DECLTYPES)
+    TrainingDataSgfPass(folder="dgs", id_list='dan_data_10', dbNameDist="dan_data_10_new")
+    con = sqlite3.connect(r"DB's/DistributionDB's/dan_data_10_new", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select count(*) from test where id <= 100")
     data = cur.fetchall()
     con.close()
     print(data[0][0])
-#distDbCreate()
+distDbCreate()
 
