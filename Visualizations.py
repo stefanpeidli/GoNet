@@ -7,7 +7,6 @@ Tags: Neural Network
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 from matplotlib import colors
 from Filters import apply_filters_by_id as filt
 
@@ -59,7 +58,7 @@ def show_filtered_map(data, color, submode=False, maxid=8, grid=True):
             if grid:
                 ax[i].set_xticks(np.arange(-.5, n, 1), minor=True)
                 ax[i].set_yticks(np.arange(-.5, n, 1), minor=True)
-                ax[i].grid(which='minor', color='black', linestyle='-', linewidth=3)
+                ax[i].grid(which='minor', color='gray', linestyle='-', linewidth=3)
             # ax[i].set_title("Filter ID "+str(i+1))
             ax[i].set_title("Filter " + subplot_names[i])
         fig.tight_layout()

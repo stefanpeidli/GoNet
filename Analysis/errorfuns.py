@@ -62,7 +62,7 @@ def EXPEGRAD( suggested, target, gamma=1000):
     gradient = alpha*beta*np.exp((suggested - target)*beta)
     return gradient
     
-#error fct Number x, actually not a good one. Only for statistics
+# error fct Number x, actually not a good one. Only for statistics
 def MAE (suggested, target): #compare the prediction with the answer/target, absolute error
     difference = np.absolute(suggested - target)
     Error = np.inner(difference,np.ones(len(target)))

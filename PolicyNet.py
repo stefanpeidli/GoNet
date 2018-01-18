@@ -7,7 +7,7 @@ Created on Thu Jan  4 20:54:24 2018
 import numpy as np
 import matplotlib.pyplot as plt
 from Hashable import Hashable
-#from TrainingDataFromSgf import TrainingDataSgfPass
+# from TrainingDataFromSgf import TrainingDataSgfPass
 import os
 import time
 import random
@@ -16,7 +16,7 @@ from Filters import apply_filters_by_id
 import collections
 import io
 
-#neccessarry to store arrays in database (from stackOverFlow)
+# neccessarry to store arrays in database (from stackOverFlow)
 from TrainingDataFromSgf import TrainingDataSgfPass
 
 
@@ -26,10 +26,12 @@ def adapt_array(arr):
     out.seek(0)
     return sqlite3.Binary(out.read())
 
+
 def convert_array(text):
     out = io.BytesIO(text)
     out.seek(0)
     return np.load(out)
+
 
 # Converts np.array to TEXT when inserting
 sqlite3.register_adapter(np.ndarray, adapt_array)
@@ -42,10 +44,12 @@ def softmax(x):
         """Compute softmax values for each sets of scores in x."""
         e_x = np.exp(x - np.max(x))
         return e_x / e_x.sum()
-    
+
+
 def relu(x):
-    x[x<0]=0
+    x[x < 0] = 0
     return x
+
 
 class PolicyNet:
     def __init__(self, layers=[9*9, 1000, 100, 9*9+1], activation_function=0, filter_ids=[0, 2]):
@@ -188,17 +192,15 @@ class PolicyNet:
         number_of_batchs = k
         return[number_of_batchs, Batch_sets]
 
-    def extract_batches_from_db(self, db_name, batchsize, enrichment=False):
+    def extract_batches_from_db(self, db_name, batchsize, sample_proportion):
         con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
-        if enrichment:
-            cur.execute("select count(*) from test")
-        else:
-            cur.execute("select count(*) from dist")
+        cur.execute("select count(*) from test")
         data = cur.fetchall()
         datasize = data[0][0]
-        number_of_batches = int(np.ceil(datasize / batchsize))
-        id_set = set(range(datasize) + np.ones(datasize, dtype='Int32'))
+        dataprop = np.floor(float(data[0][0]) * sample_proportion)
+        number_of_batches = int(np.ceil(dataprop / batchsize))
+        id_set = set(range(int(datasize)) + np.ones(int(datasize), dtype='Int32'))
         batch_id_list = [0]*number_of_batches
         for i in range(number_of_batches):
             try:
@@ -210,21 +212,12 @@ class PolicyNet:
         batches = collections.defaultdict(dict)
         for i in range(len(batch_id_list)):
             batches[i] = collections.defaultdict(np.ndarray)
-            for j in batch_id_list[i]:
-                if enrichment:
-                    cur2 = con.cursor()
-                    cur2.execute("SELECT * FROM dist WHERE id = ?;", (j,))
-                    data2 = cur2.fetchall()
-                    print(data2)
-                    print("...")
-                else:
-                    con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
-                    cur = con.cursor()
-                    k = 5
-                    cur.execute("select * from test where id = ?", (k,))
-                    data = cur.fetchone()
-                    batches[i][data[1]] = data[2]
-                con.close()
+        for key in batches.keys():
+            for j in batch_id_list[key]:
+                cur.execute("select * from test where id = ?", (int(j),))
+                data = cur.fetchone()
+                batches[key][Hashable(data[1])] = data[2]
+        con.close()
         return [number_of_batches, batches]
 
 
@@ -254,17 +247,20 @@ class PolicyNet:
 
     # The actual functions
 
-    def learn(self, trainingdata, epochs=1, eta=0.01, batch_size=10, error_function=0, db=False, db_name='none', enrichment=False):
+    def learn(self, trainingdata, epochs=1, eta=0.01, batch_size=10, sample_proportion = 1, error_function=0, db=False, db_name='none'):
         if not db:  # Dictionary Case
             [number_of_batchs, batches] = self.splitintobatches(trainingdata, batch_size)
-        else:  # Database Case
-            [number_of_batchs, batches] = self.extract_batches_from_db(db_name, batch_size, enrichment)
+        elif type(trainingdata) is list:  # Database Case
+            [number_of_batchs, batches] = trainingdata
+        else:
+            [number_of_batchs, batches] = self.extract_batches_from_db(db_name, batch_size, sample_proportion)
         errors_by_epoch = []
         for epoch in range(0, epochs):
+            print("current epoch: " + str(epoch))
             errors_by_epoch.append(0)
-            for i_batch in range(0, number_of_batchs):
+            for i_batch in range(number_of_batchs):
                 batch = batches[i_batch]
-                error_in_batch = self.learn_batch(batch, eta, db, error_function)
+                error_in_batch = self.learn_batch(batch, eta, error_function, db, adaptive_rule='linear')
                 errors_by_epoch[epoch] += error_in_batch
             errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
         return errors_by_epoch
@@ -293,18 +289,16 @@ class PolicyNet:
         deltaweights_batch = [0] * self.layercount
         if not db:  # Dictionary case
             selection = random.sample(list(batch.dic.keys()), len(batch.dic))  # This is indeed random order.
-        else:  # TODO: build selection: batch should be a dictionary with (board, distribution)-entries just as the dict we had before
-            pass
-
+        else:
+            selection = list(batch.keys())
         for entry in selection:
+            t0 = Hashable.unwrap(entry)
+            tf = self.apply_filters(t0.reshape((9, 9)))
+            testdata = [*self.convert_input(t0), *tf]
             if not db:  # Usual Dictionary case. Extract input and target.
-                t0 = Hashable.unwrap(entry)
-                tf = self.apply_filters(t0.reshape((9, 9)))
-                testdata = [*self.convert_input(t0), *tf]
                 targ = batch.dic[entry].reshape(9*9+1)  # target output, this is to be approximated
             else:  # DB case
-                testdata = self.convert_input(entry[1])  # input
-                targ = entry[2]  # target output, this is to be approximated
+                targ = batch[entry].reshape(9 * 9 + 1)
 
             if np.sum(targ) > 0:  # We can only learn if there are actual target vectors
                 targ_sum = np.sum(targ)  # save this for the adaptive eta
@@ -410,7 +404,10 @@ class PolicyNet:
                 self.weights[i][:, :-1] = self.weights[i][:, :-1] + deltaweights_batch[i].T  # Problem: atm we only
                 # adjust non-bias weights. Change that! TODO
         if error_feedback:
-            error = self.propagate_set(batch, error_function)
+            if not db:
+                error = self.propagate_set(batch, error_function)
+            else:
+                error = self.propagate_set(batch, db, error_function=error_function)
             return error
 
     def propagate_board(self, board):
@@ -450,15 +447,16 @@ class PolicyNet:
         if not db:
             given_set = testset.dic
         else:
-            pass  # TODO
+            given_set = testset
         for entry in given_set:
+            t0 = Hashable.unwrap(entry)
+            tf = self.apply_filters(t0.reshape((9, 9)))
+            testdata = [*self.convert_input(t0), *tf]
             if not db:
-                t0 = Hashable.unwrap(entry)
-                tf = self.apply_filters(t0.reshape((9, 9)))
-                testdata = [*self.convert_input(t0), *tf]
                 targ = testset.dic[entry].reshape(9*9+1)
             else:
-                pass  # TODO
+                targ = testset[entry].reshape(9*9+1)
+
             if np.sum(targ) > 0:  # We can only learn if there are actual target vectors
                 targ_sum = np.sum(targ)
                 targ = targ/np.linalg.norm(targ, ord=1)  # normalize (L1-norm)
@@ -620,7 +618,7 @@ def test3():
     FN = PolicyNet([9*9,1000,200,9*9+1])
     FN.loadweightsfromfile("ambtestfilt")
     testset = TrainingDataSgfPass("dgs",range(30))
-    b1=np.zeros((9,9))
+    b1=np.zeros((9, 9))
     err = FN.propagate_set(testset)
     print(err)
     s1=FN.propagate_board(b1)
@@ -636,12 +634,17 @@ def test3():
 
 def batch_extraction_test():
     net = PolicyNet()
-    [no, batches] = net.extract_batches_from_db('dan_data_10_topped_up', 100, enrichment=False)
+    [no, batches] = net.extract_batches_from_db('dan_data_10', 100, enrichment=True)
+    data=batches[57].keys()
     print(no)
+<<<<<<< HEAD
     print(batches.entries().count())
 
 
-batch_extraction_test()
+=======
+    print(data)
+>>>>>>> 07374767d99cc1a22022a279a610c6539efbe896
+#batch_extraction_test()
 
 def test4():
     con = sqlite3.connect(r"DB's/DistributionDB's/dan_data_10_topped_up", detect_types=sqlite3.PARSE_DECLTYPES)

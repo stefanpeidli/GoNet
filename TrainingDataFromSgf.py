@@ -359,5 +359,5 @@ def distDbCreate():
     data = cur.fetchall()
     con.close()
     print(data[0][0])
-distDbCreate()
+#distDbCreate()
 
