@@ -211,8 +211,8 @@ if your_name is "Paddy":
 # Beno
 if your_name is "Beno":
     MyNetwork = PolicyNet([9*9, 120, 200, 120, 9*9+1], filter_ids=[6, 7])
-    epochs=500
-    sample_proportion=1
+    epochs=3
+    sample_proportion=0.1
     error_function=0
     eta=0.01
     batchsize = 100
