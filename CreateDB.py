@@ -38,8 +38,8 @@ def upgradeTable(dbNameDist):
 
 
 def createDB():
-    td.TrainingDataSgfPass(folder="dgs", id_list='dan_data_295', dbNameDist="dan_data_295")
-    dbNameDist = 'dan_data_295'
+    td.TrainingDataSgfPass(folder="dgs", id_list='dan_data_10', dbNameDist="dan_data_10_Paddy")
+    dbNameDist = 'dan_data_10_Paddy'
     upgradeTable(dbNameDist)
     con= sqlite3.connect(r"DB's/DistributionDB's/" + dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
