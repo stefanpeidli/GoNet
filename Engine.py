@@ -65,7 +65,7 @@ class IntelligentEngine(BaseEngine):
     # need to get move from Neural Network here (forward propagate the current board)
     def play_legal_move(self, board, stone):
         if(stone == Stone.Black):
-            out=self.PolicyNet.Propagate(board)
+            out=self.PolicyNet.propagate_board(board)
         else:
             boardVector = board.vertices.flatten()
             invBoard = np.zeros(9 * 9, dtype=np.int32)
@@ -76,7 +76,7 @@ class IntelligentEngine(BaseEngine):
                     invBoard[count] = 0
             tempVertices = np.copy(board.vertices)
             board.vertices = invBoard.reshape((9,9))
-            out=self.PolicyNet.Propagate(board)
+            out=self.PolicyNet.propagate_board(board)
             board.vertices = tempVertices
         print("Network Output:")
         print(np.round(out[:-1].reshape((9,9)),2))
@@ -337,4 +337,4 @@ def test7():
     print("The PolicyNet won", winner.count("B"), "out of", rounds, "games against the Random Bot.")
     print(winner.count("D"), "games ended in a draw.")
 
-test7()
+#test7()

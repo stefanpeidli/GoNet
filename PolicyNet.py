@@ -212,7 +212,8 @@ class PolicyNet:
             for j in batch_id_list[key]:
                 cur.execute("select * from test where id = ?", (int(j),))
                 data = cur.fetchone()
-                batches[key][Hashable(data[1])] = data[2]
+                batches[key][int(j)] = [data[1], data[2]]
+                #TODO: Dictionaries umstellen auf (id, [board, dist])
         con.close()
         return [number_of_batches, batches]
 
@@ -288,13 +289,16 @@ class PolicyNet:
         else:
             selection = list(batch.keys())
         for entry in selection:
-            t0 = Hashable.unwrap(entry)
-            tf = self.apply_filters(t0.reshape((9, 9)))
-            testdata = [*self.convert_input(t0), *tf]
-            if not db:  # Usual Dictionary case. Extract input and target.
+            if not db:   # Usual Dictionary case. Extract input and target.
+                t0 = Hashable.unwrap(entry)
+                tf = self.apply_filters(t0.reshape((9, 9)))
+                testdata = [*self.convert_input(t0), *tf]
                 targ = batch.dic[entry].reshape(9*9+1)  # target output, this is to be approximated
             else:  # DB case
-                targ = batch[entry].reshape(9 * 9 + 1)
+                t0 = batch[entry][0]
+                tf = self.apply_filters(t0.reshape((9, 9)))
+                testdata = [*self.convert_input(t0), *tf]
+                targ = batch[entry][1].reshape(9 * 9 + 1)
 
             if np.sum(targ) > 0:  # We can only learn if there are actual target vectors
                 targ_sum = np.sum(targ)  # save this for the adaptive eta
@@ -445,13 +449,16 @@ class PolicyNet:
         else:
             given_set = testset
         for entry in given_set:
-            t0 = Hashable.unwrap(entry)
-            tf = self.apply_filters(t0.reshape((9, 9)))
-            testdata = [*self.convert_input(t0), *tf]
             if not db:
+                t0 = Hashable.unwrap(entry)
+                tf = self.apply_filters(t0.reshape((9, 9)))
+                testdata = [*self.convert_input(t0), *tf]
                 targ = testset.dic[entry].reshape(9*9+1)
             else:
-                targ = testset[entry].reshape(9*9+1)
+                t0 = testset[entry][0]
+                tf = self.apply_filters(t0.reshape((9, 9)))
+                testdata = [*self.convert_input(t0), *tf]
+                targ = testset[entry][1].reshape(9*9+1)
 
             if np.sum(targ) > 0:  # We can only learn if there are actual target vectors
                 targ_sum = np.sum(targ)
