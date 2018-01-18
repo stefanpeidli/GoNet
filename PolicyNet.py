@@ -552,34 +552,36 @@ def test1():
 
 
 def test2():
-    FN = PolicyNet([9*9,1000,200,9*9+1])
-    testset = TrainingDataSgfPass("dgs","dan_data_10")
+    FN = PolicyNet([9*9,1000,200,9*9+1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7])
+    testset = TrainingDataSgfPass("dgs", "dan_data_10")
     print("games imported")
     batch_size = 20
     eta = 0.001
     err_fct = 0
-    [number_of_batchs, batchs] = FN.splitintobatches(testset,batch_size)
-    print("split up into",number_of_batchs,"with size",batch_size)
+    adaptive_rule = "linear"
+    [number_of_batchs, batchs] = FN.splitintobatches(testset, batch_size)
+    print("split up into", number_of_batchs, "batches each with size", batch_size)
     errors_by_epoch = []
-    start=time.time()
-    epoch=0
+    start = time.time()
+    epoch = 0
     while time.time()-start < 8*60*60:
-    #for epoch in range(0,epochs):
-        t=time.time()
+    #epochs = 2
+    #for epoch in range(0, epochs):
+        t = time.time()
         errors_by_epoch.append(0)
-        for i_batch in range(0,number_of_batchs):
-            error_in_batch = FN.LearnSingleBatchAdaptive(batchs[i_batch], eta, 1, err_fct)
+        for i_batch in range(0, number_of_batchs):
+            error_in_batch = FN.learn_batch(batchs[i_batch], eta, err_fct, False, adaptive_rule, True)
             errors_by_epoch[epoch] += error_in_batch
         errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
-        print("epoch",epoch,"error",errors_by_epoch[epoch])
+        print("epoch", epoch, "error", errors_by_epoch[epoch])
         print(np.round(time.time()-t))
-        epoch=epoch+1
-    FN.saveweights("ambitestfilt1")
-    print("total time:",time.time()-start,"and epochs",epoch)
-    print("final error:",errors_by_epoch)
-    plt.plot(range(0,len(errors_by_epoch)),errors_by_epoch)
+        epoch = epoch+1
+    FN.saveweights("ambitestfiltfullIDfor8hours")
+    print("total time:", time.time()-start, "and epochs", epoch)
+    print("final error:", errors_by_epoch)
+    plt.plot(range(0,len(errors_by_epoch)), errors_by_epoch)
 
-# test2()
+test2()
 
 
 def test3():
