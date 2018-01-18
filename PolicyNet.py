@@ -247,14 +247,12 @@ class PolicyNet:
     def learn(self, trainingdata, epochs=1, eta=0.01, batch_size=10, sample_proportion = 1, error_function=0, db=False, db_name='none'):
         if not db:  # Dictionary Case
             [number_of_batchs, batches] = self.splitintobatches(trainingdata, batch_size)
-        elif type(trainingdata) is list:  # Database Case
-            [number_of_batchs, batches] = trainingdata
-        else:
-            [number_of_batchs, batches] = self.extract_batches_from_db(db_name, batch_size, sample_proportion)
         errors_by_epoch = []
         for epoch in range(0, epochs):
             print("current epoch: " + str(epoch))
             errors_by_epoch.append(0)
+            if db:
+                [number_of_batchs, batches] = self.extract_batches_from_db(db_name, batch_size, sample_proportion)
             for i_batch in range(number_of_batchs):
                 batch = batches[i_batch]
                 error_in_batch = self.learn_batch(batch, eta, error_function, db, adaptive_rule='linear')
