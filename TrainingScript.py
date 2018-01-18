@@ -94,10 +94,14 @@ def training_split(PolicyNetwork, trainingrate, error_tolerance, maxepochs, sgf_
 
     
 def training(PolicyNetwork, epochs=10, eta=0.001, batch_size=5, error_function=0, file="dan_data_10",
-             adaptive_rule='linear', db=False, db_name="none", enrichment=False, details=True):
-    testset = TrainingDataSgfPass("dgs", file)
+             adaptive_rule='linear', sample_proportion = 1, db=False, db_name="none", details=True):
+    if not db:
+        testset = TrainingDataSgfPass("dgs", file)
+    else:
+        [no, sett]= PolicyNetwork.extract_batches_from_db(db_name, batch_size, sample_proportion)
+        testset =[no, sett]
     t = time.time()
-    init_error = PolicyNetwork.propagate_set(testset, db, adaptive_rule, error_function)
+    init_error = PolicyNetwork.propagate_set(sett[0], db, adaptive_rule, error_function)
     if details:
         print("Propagation of the set took", np.round(time.time()-t,3), "seconds.")
         print("Learning is done for", epochs, "epochs, with batch size", batch_size, ",eta", eta,
@@ -105,9 +109,9 @@ def training(PolicyNetwork, epochs=10, eta=0.001, batch_size=5, error_function=0
         t = time.time()
         print("Learning in progress...")
     
-    errors_by_epoch = PolicyNetwork.learn(testset, epochs, eta, batch_size, error_function, db, db_name, enrichment)
+    errors_by_epoch = PolicyNetwork.learn(testset, epochs, eta, batch_size, sample_proportion, error_function, db, db_name)
     
-    final_error = PolicyNetwork.propagate_set(testset, db, adaptive_rule, error_function)
+    final_error = PolicyNetwork.propagate_set(sett[0], db, adaptive_rule, error_function)
     if details:
         print("Finished learning.")
         print("Details on the results:")
@@ -199,16 +203,16 @@ if your_name is "Paddy":
 
 # Beno
 if your_name is "Beno":
-    MyNetwork = PolicyNet([9*9,120,200,120,9*9+1])
-    epochs=1
+    MyNetwork = PolicyNet([9*9, 120, 200, 120, 9*9+1], filter_ids=[6, 7])
+    epochs=5
     sample_proportion=1
     error_function=0
-    eta=0.01
-    batchsize = 5
-    training(MyNetwork, epochs, eta, batchsize, error_function, 'dan_data_10', db = True, db_name = 'dan_data_10',
-             enrichment = True)
+    eta=0.1
+    batchsize = 100
+    training(MyNetwork, epochs, eta, batchsize, error_function, 'dan_data_10', sample_proportion = sample_proportion,
+             db=True, db_name='dan_data_10')
     name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
-        int(learningrate * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "errorfct" + str(error_function)
+        int(eta * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "errorfct" + str(error_function)
     MyNetwork.saveweights(name)
 
 # Faruk
