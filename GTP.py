@@ -1,5 +1,5 @@
 import sys
-from Engine import PolicyEngine
+from Engine import Engine, IntelligentEngine
 from Board import *
 import os
 
@@ -156,7 +156,7 @@ class GTP:
 
 #choose if Intelligent or Filter Engine first ;)
 def run():
-    engine = PolicyEngine(9)
+    engine = IntelligentEngine(9,"ambtestfilt.npz")
     logfile = "log_3.txt"
     gtp = GTP(engine, logfile)
     # gtp.list_commands()

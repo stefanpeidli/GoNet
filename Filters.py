@@ -37,7 +37,7 @@ def is_on_board(n, x, y):
         return 0 <= x < n and 0 <= y < n
 
 
-# TODO da ist irgendwo ein fehler. libs stimmen manchmal nicht (?)
+# TODO da ist irgendwo ein fehler. libs stimmen manchmal nicht
 def give_group_at_position(board, start_x, start_y):
         group = [(start_x, start_y)]
         checked = []
