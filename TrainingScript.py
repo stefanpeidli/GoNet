@@ -67,6 +67,7 @@ def training_basic(PolicyNetwork, sgf_range=100, epochs=10, eta=0.001, batch_siz
 
 
 # TODO delete this if it's fine for beno, Beno: I'll delete it then
+# TODO delete this if it's fine for beno, Beno: I'll delete it then, Stefan: ok, cool
 """ 
 def TrainingAdvanced(PolicyNetwork, dbName = "dan_data_10", epochs=1, sample_proportion=0.01, error_function=0):
     con = sqlite3.connect(r"DB's/DistributionDB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
@@ -95,23 +96,29 @@ def training_split(PolicyNetwork, trainingrate, error_tolerance, maxepochs, sgf_
     
 def training(PolicyNetwork, epochs=10, eta=0.001, batch_size=5, error_function=0, file="dan_data_10",
              adaptive_rule='linear', sample_proportion = 1, db=False, db_name="none", details=True):
+    t = time.time()
     if not db:
         testset = TrainingDataSgfPass("dgs", file)
+        init_error = PolicyNetwork.propagate_set(testset, db, adaptive_rule, error_function)
     else:
-        [no, sett]= PolicyNetwork.extract_batches_from_db(db_name, batch_size, sample_proportion)
-        testset =[no, sett]
-    t = time.time()
-    init_error = PolicyNetwork.propagate_set(sett[0], db, adaptive_rule, error_function)
+        [no, sett] = PolicyNetwork.extract_batches_from_db(db_name, batch_size, sample_proportion)
+        testset = [no, sett]
+        init_error = "TODO"  # TODO do this
+
     if details:
-        print("Propagation of the set took", np.round(time.time()-t,3), "seconds.")
+        print("Propagation and import of the set took", np.round(time.time()-t, 3), "seconds.")
         print("Learning is done for", epochs, "epochs, with batch size", batch_size, ",eta", eta,
               ",error function number", error_function, "and with games given by the file ", file, ".")
         t = time.time()
         print("Learning in progress...")
     
     errors_by_epoch = PolicyNetwork.learn(testset, epochs, eta, batch_size, sample_proportion, error_function, db, db_name)
-    
-    final_error = PolicyNetwork.propagate_set(sett[0], db, adaptive_rule, error_function)
+
+    if not db:
+        testset = TrainingDataSgfPass("dgs", file)
+        init_error = PolicyNetwork.propagate_set(testset, db, adaptive_rule, error_function)
+    else:
+        final_error = "TODO"  # TODO do this
     if details:
         print("Finished learning.")
         print("Details on the results:")
@@ -126,7 +133,7 @@ def training(PolicyNetwork, epochs=10, eta=0.001, batch_size=5, error_function=0
         plt.xlabel("epochs")
         plt.ylabel("Error")
         print("Error was measured with error function number", str(error_function))
-        plt.show()  # TODO: muss da ne 0 hin/ was fuer ein argument?
+        plt.show()
 
     return errors_by_epoch
 
@@ -174,7 +181,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = "Beno"
+your_name = "Stefan"
 
 # example for training:
 if your_name is "Example":
@@ -388,8 +395,8 @@ if your_name is "Stefan":
         plt.plot(range(len(y)),y)
 
     if training_program == 6:
-        PN = PolicyNet(filter_ids=[0, 1, 2, 3, 4, 5, 6, 7])
-        epochs = 10
+        PN = PolicyNet(filter_ids=[0, 1])
+        epochs = 2
         eta = 0.001
         batch_size = 10
         error_function = 0
@@ -399,5 +406,5 @@ if your_name is "Stefan":
         db_name = "none"
         enrichment = False
         details = True
-        training(PN, epochs, eta, batch_size, error_function, file, adaptive_rule, db, db_name, enrichment, details)
+        training(PN, epochs, eta, batch_size, error_function, file, adaptive_rule, db=False, details=details)
         

@@ -38,7 +38,7 @@ sqlite3.register_converter("array", convert_array)
 
 class TrainingDataSgfPass:
     # standard initialize with boardsize 9
-    def __init__(self, folder="dgs", id_list=range(1000), dbNameMoves = False, dbNameDist = 'dan_data_10_new'):
+    def __init__(self, folder="dgs", id_list=range(1000), dbNameMoves = False, dbNameDist = False):
         self.n = 9
         self.board = Board(self.n)
         self.dic = defaultdict(np.ndarray)
@@ -53,7 +53,7 @@ class TrainingDataSgfPass:
             cur = con.cursor()
             cur.execute("create table test (id INTEGER PRIMARY KEY, board array, move array)")
             con.close()
-        if dbNameDist:
+        if dbNameDist: # TODO Beno!
             self.dbFlagDist = True
             self.dbNameDist = dbNameDist
             con = sqlite3.connect(r"DB's/DistributionDB's/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
