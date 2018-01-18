@@ -252,6 +252,7 @@ class PolicyNet:
             [number_of_batchs, batches] = self.extract_batches_from_db(db_name, batch_size, sample_proportion)
         errors_by_epoch = []
         for epoch in range(0, epochs):
+            print("current epoch: " + str(epoch))
             errors_by_epoch.append(0)
             for i_batch in range(number_of_batchs):
                 batch = batches[i_batch]
