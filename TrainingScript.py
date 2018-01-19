@@ -181,7 +181,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = "Stefan"
+your_name = "Beno"
 
 # example for training:
 if your_name is "Example":
@@ -210,9 +210,9 @@ if your_name is "Paddy":
 
 # Beno
 if your_name is "Beno":
-    MyNetwork = PolicyNet([9*9, 120, 200, 120, 9*9+1], filter_ids=[6, 7])
-    epochs=3
-    sample_proportion=0.1
+    MyNetwork = PolicyNet([9*9, 120, 200, 120, 9*9+1], filter_ids=[2, 6, 7])
+    epochs=500
+    sample_proportion=1
     error_function=0
     eta=0.01
     batchsize = 100
