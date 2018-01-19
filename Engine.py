@@ -101,10 +101,10 @@ class IntelligentEngine(BaseEngine):
 
 
 class PolicyEngine(BaseEngine):
-    def __init__(self,n):
+    def __init__(self,n, weights_file):
         super(PolicyEngine, self).__init__(n)
         self.PolicyNet = PolicyNet([9*9,1000,200,9*9+1]) #untrained
-        self.PolicyNet.loadweightsfromfile("ambtestfilt.npz")
+        self.PolicyNet.loadweightsfromfile(weights_file)
 
     def version(self):
         return "2.0"
