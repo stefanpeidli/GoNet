@@ -221,7 +221,6 @@ class PolicyNet:
         con.close()
         return [number_of_batches, batches]
 
-
     def saveweights(self, filename, folder='Saved_Weights'):
         dir_path = os.path.dirname(os.path.realpath(__file__))
         file = dir_path + "/" + folder + "/" + filename
@@ -248,7 +247,8 @@ class PolicyNet:
 
     # The actual functions
 
-    def learn(self, trainingdata, epochs=1, eta=0.01, batch_size=10, sample_proportion = 1, error_function=0, db=False, db_name='none'):
+    def learn(self, trainingdata, epochs=1, eta=0.01, batch_size=10, sample_proportion=1, error_function=0, db=False,
+              db_name='none'):
         if not db:  # Dictionary Case
             [number_of_batchs, batches] = self.splitintobatches(trainingdata, batch_size)
         errors_by_epoch = []
@@ -639,8 +639,9 @@ def test3():
 
 def batch_extraction_test():
     net = PolicyNet()
-    [no, batches] = net.extract_batches_from_db('dan_data_10', 100, enrichment=True)
-    data=batches[57].keys()
+    sample_prop = 1
+    [no, batches] = net.extract_batches_from_db('dan_data_10', 100, sample_proportion=sample_prop)
+    data = batches[1].keys()
     print(no)
     print(data)
 #batch_extraction_test()

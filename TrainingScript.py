@@ -117,7 +117,7 @@ def training(PolicyNetwork, epochs=10, eta=0.001, batch_size=5, error_function=0
 
     if not db:
         testset = TrainingDataSgfPass("dgs", file)
-        init_error = PolicyNetwork.propagate_set(testset, db, adaptive_rule, error_function)
+        final_error = PolicyNetwork.propagate_set(testset, db, adaptive_rule, error_function)
     else:
         final_error = "TODO"  # TODO do this
     if details:
@@ -182,7 +182,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = "Beno"
+your_name = "Stefan"
 
 # example for training:
 if your_name is "Example":
@@ -359,15 +359,29 @@ if your_name is "Stefan":
 
     if training_program == 6:
         PN = PolicyNet(filter_ids=[0, 1])
-        epochs = 2
+        epochs = 10
         eta = 0.001
-        batch_size = 10
+        batch_size = 100
         error_function = 0
         file = "dan_data_10"
-        adaptive_rule = 'linear'
+        adaptive_rule = 'none'
         db = False
         db_name = "none"
         enrichment = False
         details = True
         training(PN, epochs, eta, batch_size, error_function, file, adaptive_rule, db=False, details=details)
+
+    if training_program == 7:  # with dbs
+        PN = PolicyNet(filter_ids=[0, 1])
+        epochs = 1
+        eta = 0.001
+        batch_size = 100
+        error_function = 0
+        file = "dan_data_10"
+        adaptive_rule = 'none'
+        sample_proportion = 1
+        details = True
+        training(PN, epochs, eta, batch_size, error_function, file, adaptive_rule, sample_proportion, True,
+                 "dan_data_10", details=details)
+
         
