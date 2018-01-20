@@ -26,10 +26,12 @@ def adapt_array(arr):
     out.seek(0)
     return sqlite3.Binary(out.read())
 
+
 def convert_array(text):
     out = io.BytesIO(text)
     out.seek(0)
     return np.load(out)
+
 
 # Converts np.array to TEXT when inserting
 sqlite3.register_adapter(np.ndarray, adapt_array)
@@ -42,10 +44,12 @@ def softmax(x):
         """Compute softmax values for each sets of scores in x."""
         e_x = np.exp(x - np.max(x))
         return e_x / e_x.sum()
-    
+
+
 def relu(x):
     x[x<0]=0
     return x
+
 
 class PolicyNet:
     def __init__(self, layers=[9*9, 1000, 100, 9*9+1], activation_function=0, filter_ids=[0, 2]):

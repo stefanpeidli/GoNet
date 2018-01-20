@@ -112,7 +112,8 @@ def training(PolicyNetwork, epochs=10, eta=0.001, batch_size=5, error_function=0
         t = time.time()
         print("Learning in progress...")
     
-    errors_by_epoch = PolicyNetwork.learn(testset, epochs, eta, batch_size, sample_proportion, error_function, db, db_name)
+    errors_by_epoch = PolicyNetwork.learn(testset, epochs, eta, batch_size, sample_proportion,
+                                          error_function, db, db_name)
 
     if not db:
         testset = TrainingDataSgfPass("dgs", file)
@@ -211,7 +212,7 @@ if your_name is "Paddy":
 # Beno
 if your_name is "Beno":
     MyNetwork = PolicyNet([9*9, 120, 200, 120, 9*9+1], filter_ids=[2, 6, 7])
-    epochs=250
+    epochs=10
     sample_proportion=0.01
     error_function=0
     eta=0.01
@@ -221,44 +222,6 @@ if your_name is "Beno":
     name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
         int(eta * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "errorfct" + str(error_function)
     MyNetwork.saveweights(name)
-
-# Faruk
-if your_name is "Faruk":
-    MyNetwork = PolicyNet()  
-    #w=MyNetwork.weights
-    learningrate = 0.01
-    epochs = 5
-    batchsize = 10
-    ComparisonTraining1(MyNetwork,learningrate,epochs,batchsize)
-    
-""" 
-    MyNetwork = PolicyNet()
-    w=MyNetwork.weights
-    learningrate = 0.01
-    epochs = 5 #one epoch ~ 25 seconds
-    TrainingBasicDan10(MyNetwork , learningrate, epochs)
-    print("Faruk hats drauf")
-    
-    MyNetwork.weights = w
-    learningrate = 0.05
-    TrainingBasicDan10(MyNetwork,learningrate,epochs)
-    print("Faruk geht ab")
-    
-    if training_program == 2:
-        PN=PolicyNet()
-        PN.saveweights('test')
-        epochs = 20
-        print("I think I will need",np.round(epochs/3*(1+0.2+0.7),2),"minutes for this task.")
-        errors_by_epoch1 = TrainingBasicDan10(PN,0.001,epochs,1)#vanilla grad descent
-        PN.loadweightsfromfile('test')
-        errors_by_epoch2 = TrainingBasicDan10(PN,0.001,epochs,0.2)
-        PN.loadweightsfromfile('test')
-        errors_by_epoch3 = TrainingBasicDan10(PN,0.001,epochs,0.7)
-        plt.plot(range(0,epochs),errors_by_epoch1,'b')
-        plt.plot(range(0,epochs),errors_by_epoch2,'g')
-        plt.plot(range(0,epochs),errors_by_epoch3,'r')
-        
-"""
 
 
 # Stefan:
