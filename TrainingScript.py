@@ -103,7 +103,7 @@ def training(PolicyNetwork, epochs=10, eta=0.001, batch_size=5, error_function=0
     else:
         [no, sett] = PolicyNetwork.extract_batches_from_db(db_name, batch_size, sample_proportion)
         testset = [no, sett]
-        init_error = "TODO"  # TODO do this
+        init_error = "TODO"  # TODO do this. Problem: Sett might not contain all games (sample-prop!=1)
 
     if details:
         print("Propagation and import of the set took", np.round(time.time()-t, 3), "seconds.")
@@ -229,7 +229,7 @@ if your_name is "Stefan":
     # hier schreibe ich mein training rein
     print("halo I bims")
     
-    training_program = 6
+    training_program = 7
     
     if training_program == 1:  # Checking error on a testset, while training on a different set
         PN=PolicyNet()
@@ -373,7 +373,7 @@ if your_name is "Stefan":
 
     if training_program == 7:  # with dbs
         PN = PolicyNet(filter_ids=[0, 1])
-        epochs = 1
+        epochs = 10
         eta = 0.001
         batch_size = 100
         error_function = 0
