@@ -67,7 +67,7 @@ class PolicyNet:
         self.layercount = len(self.layers)-1
         self.init_weights()
 
-        if self.activation_function is 0:  #TODO wie im last layer haben wir softmax! wie initialisieren???
+        if self.activation_function is 0:  # TODO wie im last layer haben wir softmax! wie initialisieren???
             mu = 0
             self.weights = [0]*self.layercount  # alloc memory
             for i in range(0, self.layercount):
@@ -226,12 +226,14 @@ class PolicyNet:
         file = dir_path + "/" + folder + "/" + filename
         np.savez(file, self.weights)
         
-    def loadweightsfromfile(self, filename, folder='Saved_Weights'):
+    def loadweightsfromfile(self, filename, folder='Saved_Weights', filter_ids=[0, 1, 2, 3, 4, 5, 6, 7]):
         # if file doesnt exist, do nothing
         dir_path = os.path.dirname(os.path.realpath(__file__))
         file = dir_path + "/" + folder + "/" + filename
         if os.path.exists(file):
             with np.load(file) as data:
+                self.filter_ids = filter_ids
+                self.filtercount = len(filter_ids)
                 self.weights = []
                 self.layer = [data['arr_0'][0].shape[1]]  # there are n+1 layers if there are n weight matrices
                 for i in range(len(data['arr_0'])):
