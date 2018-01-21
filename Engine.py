@@ -101,10 +101,11 @@ class IntelligentEngine(BaseEngine):
 
 
 class PolicyEngine(BaseEngine):
-    def __init__(self,n, weights_file):
+    def __init__(self, n, weights_file='none', filter_ids=[0,1,2,3,4,5,6,7]):
         super(PolicyEngine, self).__init__(n)
-        self.PolicyNet = PolicyNet([9*9,1000,200,9*9+1],filter_ids=[0,1,2,3,4,5,6,7]) #untrained
-        self.PolicyNet.loadweightsfromfile(weights_file)
+        self.PolicyNet = PolicyNet([9*9,1000,200,9*9+1], filter_ids=filter_ids)  # untrained
+        if weights_file is not "none":
+            self.PolicyNet.loadweightsfromfile(weights_file)
 
     def version(self):
         return "2.0"
@@ -184,8 +185,8 @@ class PolicyEngine(BaseEngine):
             print("Since only passing seems legal, the random bot passes.")
         return "pass"
 
-    def play_against_random(self, speed, maxturns, weights_file="ambitestfilt1234567logrule", details=False):
-        engine = PolicyEngine(9, weights_file)
+    def play_against_random(self, speed, maxturns, details=False):
+        engine = self
         if details:
             print("Game starts")
             engine.board.show()
@@ -214,7 +215,7 @@ class PolicyEngine(BaseEngine):
         return engine.board.history
         
     def play_against_self(self, speed, maxturns, details=False):
-        engine = PolicyEngine(9, "ambitestfilt1234567logrule")
+        engine = self
         if details:
             print("Game starts")
             engine.board.show()
@@ -312,7 +313,7 @@ def test6():
 #test6()
 
 def test7():
-    engine = PolicyEngine(9, "ambitestfilt1234567logrule")
+    engine = PolicyEngine(9, "ambitestfilt1234567logrule", filter_ids=[0,1,2,3,4,5,6,7])
     winner = []
     rounds = 100
     komi = 6
@@ -323,6 +324,7 @@ def test7():
         b = np.sum(final_board[final_board == Stone.Black]) / Stone.Black
         w = np.sum(final_board[final_board == Stone.White]) / Stone.White
         w += komi
+        # PROTOSCORE
         if b > w:
             winner.append("B")
         elif b == w:
@@ -338,31 +340,3 @@ def test7():
     print(winner.count("D"), "games ended in a draw.")
 
 #test7()
-
-def test8():
-    engine = PolicyEngine(9, "ambitestfilt1234567logrule")
-    winner = []
-    rounds = 100
-    komi = 6
-
-    for i in range(rounds):
-        game_history = engine.play_against_self(0, 100, details=False)
-        final_board = game_history[-1]
-        b = np.sum(final_board[final_board == Stone.Black]) / Stone.Black
-        w = np.sum(final_board[final_board == Stone.White]) / Stone.White
-        w += komi
-        if b > w:
-            winner.append("B")
-        elif b == w:
-            winner.append("D")
-        else:
-            winner.append("W")
-        print("Game", i, ":", b, w)
-
-    # print(winner)
-    print()
-    print("The komi was: ", komi)
-    print("The PolicyNet won", winner.count("B"), "out of", rounds, "games against the Random Bot.")
-    print(winner.count("D"), "games ended in a draw.")
-
-test8()

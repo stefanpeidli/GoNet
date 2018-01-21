@@ -1,5 +1,5 @@
 import sys
-from Engine import Engine, IntelligentEngine, PolicyEngine
+from Engine import PolicyEngine
 from Board import *
 import os
 
@@ -16,17 +16,20 @@ def coords_from_str(string):
     y = int(string[1:]) - 1
     return x, y
 
+
 def colour_from_str(string):
     if 'W' in string or 'w' in string:
         return Stone.White
     else:
         return Stone.Black
 
+
 # zurücktransformieren der Koordinaten in Buchstaben
 def str_from_coords(x, y):
     if x >= 8:
         x += 1
     return chr(ord('A')+x) + str(y+1)
+
 
 class GTP:
     def __init__(self, engine, logfile):
@@ -156,7 +159,9 @@ class GTP:
 
 #choose if Intelligent or Filter Engine first ;)
 def run():
-    engine = PolicyEngine(9,"weights1801191025eta10000100epochs500batchsize1errorfct0.npz")
+    #engine = PolicyEngine(9,"weights1801191025eta10000100epochs500batchsize1errorfct0.npz")
+    # HINWEIS: You will have to specify the filters the weights were trained with. This can't be read from the file!
+    engine = PolicyEngine(9, "ambitestfilt1234567logrule", filter_ids=[0, 1, 2, 3, 4, 5, 6, 7])
     logfile = "log_3.txt"
     gtp = GTP(engine, logfile)
     # gtp.list_commands()
