@@ -113,7 +113,7 @@ def training(PolicyNetwork, epochs=10, eta=0.001, batch_size=5, error_function=0
         print("Learning in progress...")
     
     errors_by_epoch = PolicyNetwork.learn(testset, epochs, eta, batch_size, sample_proportion,
-                                          error_function, db, db_name)
+                                          error_function, db, db_name, adaptive_rule)
 
     if not db:
         testset = TrainingDataSgfPass("dgs", file)
@@ -138,6 +138,58 @@ def training(PolicyNetwork, epochs=10, eta=0.001, batch_size=5, error_function=0
 
     return errors_by_epoch
 
+
+def train_dict(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=100, eta=0.001,
+               err_fct=0, duration_in_hours=8, custom_save_name="none", adaptive_rule="logarithmic"):
+    print("This Script will generate a PolicyNet and train it for a certain time.")
+    print("For this, Dictionaries are used. No DBs are involved.")
+    print("")
+    print("Info:")
+    print("Layers ", layers)
+    print("filter_ids ", filter_ids)
+    print("batch_size", batch_size)
+    print("eta", eta)
+    print("err_fct", err_fct)
+    print("duration_in_hours", duration_in_hours)
+    print("custom_save_name", custom_save_name)
+    print("adaptive_rule", adaptive_rule)
+    print("")
+    PN = PolicyNet(layers=layers, filter_ids=filter_ids)
+    testset = TrainingDataSgfPass("dgs", "dan_data_10")
+    print("Games have been imported from dan_data_10.")
+    [number_of_batchs, batchs] = PN.splitintobatches(testset, batch_size)
+    print("Split up into", number_of_batchs, "Batches with size", batch_size, ".")
+    errors_by_epoch = []
+    init_error = PN.propagate_set(testset, False, adaptive_rule, err_fct)
+    start = time.time()
+    epoch = 0
+    print("Training process starts now. It will take ", duration_in_hours, " hours.")
+    while time.time() - start < duration_in_hours * 60 * 60:
+        t = time.time()
+        errors_by_epoch.append(0)
+        for i_batch in range(0, number_of_batchs):
+            error_in_batch = PN.learn_batch(batchs[i_batch], eta, err_fct, False, adaptive_rule, True)
+            errors_by_epoch[epoch] += error_in_batch
+        errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
+        print("Epoch", epoch, "with error", errors_by_epoch[epoch])
+        print("Time needed for epoch in seconds:", np.round(time.time() - t))
+        epoch = epoch + 1
+    if custom_save_name is "none":
+        save_name = "weights"+str(duration_in_hours)+"hours"+"".join(str(x) for x in filter_ids)+"filtids"+epoch+"epochs"
+    else:
+        save_name = custom_save_name
+    PN.saveweights(save_name)
+    total_time = time.time() - start
+    print("Total time taken for training:", total_time, "and epochs", epoch)
+    print("Average time per epoch:", total_time / epoch)
+    print("Initial error:", init_error)
+    print("Final error:", errors_by_epoch[-1])
+    improvement = init_error - errors_by_epoch[-1]
+    print("Total error improvement:", improvement)
+    print("Error development: ", errors_by_epoch)
+    print("Error reduction per second:", improvement / total_time)
+    plt.plot(range(0, len(errors_by_epoch)), errors_by_epoch)
+    plt.show()
 
 """
 def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
@@ -229,7 +281,7 @@ if your_name is "Stefan":
     # hier schreibe ich mein training rein
     print("halo I bims")
     
-    training_program = 7
+    training_program = 8
     
     if training_program == 1:  # Checking error on a testset, while training on a different set
         PN=PolicyNet()
@@ -372,16 +424,19 @@ if your_name is "Stefan":
         training(PN, epochs, eta, batch_size, error_function, file, adaptive_rule, db=False, details=details)
 
     if training_program == 7:  # with dbs
-        PN = PolicyNet(filter_ids=[0, 1])
-        epochs = 10
+        PN = PolicyNet(filter_ids=[0, 1, 2, 3, 4, 5, 6, 7])
+        epochs = 5
         eta = 0.001
         batch_size = 100
         error_function = 0
         file = "dan_data_10"
-        adaptive_rule = 'none'
+        adaptive_rule = 'linear'
         sample_proportion = 1
         details = True
         training(PN, epochs, eta, batch_size, error_function, file, adaptive_rule, sample_proportion, True,
                  "dan_data_10", details=details)
 
+    if training_program == 8:
+        train_dict(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=100, eta=0.001,
+                   err_fct=0, duration_in_hours=10/60, custom_save_name="TEST123", adaptive_rule="logarithmic")
         

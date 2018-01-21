@@ -47,7 +47,7 @@ def softmax(x):
 
 
 def relu(x):
-    x[x<0]=0
+    x[x < 0] = 0
     return x
 
 
@@ -81,13 +81,6 @@ class PolicyNet:
             for i in range(0, self.layercount):
                 sigma = np.sqrt(2)/np.sqrt(self.layers[i+1])
                 self.weights[i] = np.random.normal(mu, sigma, (self.layers[i+1], self.layers[i]+1))  # the +1 in the input dimension is for the bias
-
-    """
-    def apply_filters(self, board, color=-1):
-        filtered_1 = filter_eyes(board, color)
-        filtered_2 = filter_captures(board, color)
-        return [filtered_1.flatten(), filtered_2.flatten()]
-    """
 
     def apply_filters(self, board, color=-1):
         filtered = apply_filters_by_id(board, color, self.filter_ids)
@@ -192,8 +185,11 @@ class PolicyNet:
         number_of_batchs = k
         return[number_of_batchs, Batch_sets]
 
-    def extract_batches_from_db(self, db_name, batchsize, sample_proportion):
-        con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    def extract_batches_from_db(self, db_name, batchsize, sample_proportion, duplicate=True):
+        if duplicate:
+            con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+        else:
+            con = sqlite3.connect(r"DB's/MoveDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
         cur.execute("select count(*) from test")
         data = cur.fetchall()
@@ -217,7 +213,7 @@ class PolicyNet:
                 cur.execute("select * from test where id = ?", (int(j),))
                 data = cur.fetchone()
                 batches[key][int(j)] = [data[1], data[2]]
-                #TODO: Dictionaries umstellen auf (id, [board, dist])
+                # TODO: Dictionaries umstellen auf (id, [board, dist])
         con.close()
         return [number_of_batches, batches]
 
@@ -249,8 +245,12 @@ class PolicyNet:
 
     # The actual functions
 
-    def learn(self, trainingdata, epochs=1, eta=0.01, batch_size=10, sample_proportion=1, error_function=0, db=False,
-              db_name='none'):
+    def learn(self, trainingdata, epochs=1, eta=0.001, batch_size=10, sample_proportion=1, error_function=0, db=False,
+              db_name='none', adaptive_rule='logarithmic'):
+        if adaptive_rule is "none":
+            duplicate = True
+        else:
+            duplicate = False
         if not db:  # Dictionary Case
             [number_of_batchs, batches] = self.splitintobatches(trainingdata, batch_size)
         errors_by_epoch = []
@@ -258,10 +258,10 @@ class PolicyNet:
             print("current epoch: " + str(epoch))
             errors_by_epoch.append(0)
             if db:
-                [number_of_batchs, batches] = self.extract_batches_from_db(db_name, batch_size, sample_proportion)
+                [number_of_batchs, batches] = self.extract_batches_from_db(db_name, batch_size, sample_proportion, duplicate)
             for i_batch in range(number_of_batchs):
                 batch = batches[i_batch]
-                error_in_batch = self.learn_batch(batch, eta, error_function, db, adaptive_rule='linear')
+                error_in_batch = self.learn_batch(batch, eta, error_function, db, adaptive_rule=adaptive_rule)
                 errors_by_epoch[epoch] += error_in_batch
             errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
         return errors_by_epoch
@@ -663,6 +663,7 @@ def test5():  # vgl dbs mit dicts
     PN = PolicyNet()
     sample_prop = 1
     batch_size = 100
+
     t = time.time()
     dictset = TrainingDataSgfPass("dgs", "dan_data_10")
     t1 = time.time()
@@ -670,11 +671,30 @@ def test5():  # vgl dbs mit dicts
     [dict_n, dict_batches] = PN.splitintobatches(dictset, batch_size)
     t2 = time.time()
     print("dict split time:", t2-t1)
+
     [db_n, db_batches] = PN.extract_batches_from_db('dan_data_10', batch_size, sample_proportion=sample_prop)
     t3 = time.time()
     print("db import and split time:", t3 - t2)
-    data = db_batches[1].keys()
-    print(db_n)
-    print(dict_n)
-    print(data)
+
+    #data = db_batches[1].keys()
+    print("DB batches: ", db_n)
+    print("Dict batches: ", dict_n)
+    #print(data)
 #test5()
+
+def test6():
+    PN = PolicyNet()
+    sample_prop = 1
+    batch_size = 100
+    [db_n, db_batches] = PN.extract_batches_from_db('dan_data_10', batch_size, sample_proportion=sample_prop, duplicate=False)
+    print(db_n)
+
+    db_name = 'dan_data_10'
+    con = sqlite3.connect(r"DB's/MoveDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    cur = con.cursor()
+    cur.execute("select count(*) from test")
+    data = cur.fetchall()
+    datasize = data[0][0]
+    print(np.ceil(datasize/100))
+
+#test6()
