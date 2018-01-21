@@ -174,6 +174,7 @@ def train_dict(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 
         print("Epoch", epoch, "with error", errors_by_epoch[epoch])
         print("Time needed for epoch in seconds:", np.round(time.time() - t))
         epoch = epoch + 1
+    print("")
     if custom_save_name is "none":
         save_name = "weights"+str(duration_in_hours)+"hours"+"".join(str(x) for x in filter_ids)+"filtids"+epoch+"epochs"
     else:
@@ -185,6 +186,85 @@ def train_dict(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 
     print("Initial error:", init_error)
     print("Final error:", errors_by_epoch[-1])
     improvement = init_error - errors_by_epoch[-1]
+    print("Total error improvement:", improvement)
+    print("Error development: ", errors_by_epoch)
+    print("Error reduction per second:", improvement / total_time)
+    plt.plot(range(0, len(errors_by_epoch)), errors_by_epoch)
+    plt.show()
+
+
+def train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=200, eta=0.001,
+             err_fct=0, duration_in_hours=8, custom_save_name="none", adaptive_rule="none"):
+    print("This Script will generate a PolicyNet and train it for a certain time.")
+    print("For this, DBs are used. Static: This means we will keep the batches once created.")
+    print("")
+    print("Info:")
+    print("Layers ", layers)
+    print("filter_ids ", filter_ids)
+    print("batch_size", batch_size)
+    print("eta", eta)
+    print("err_fct", err_fct)
+    print("duration_in_hours", duration_in_hours)
+    print("custom_save_name", custom_save_name)
+    print("adaptive_rule", adaptive_rule)
+    if adaptive_rule is "none":
+        print("No adaptive eta rule will be applied. Instead, boards will be duplicated according to their frequency of"
+              " appearance in DB. This means we are using DistributionDBs.")
+        duplicate = True
+    else:
+        print("Since a adaptive rule has been selected, we will work with MoveDBs instead of DistributionDBs. This "
+              "means we won't use board duplicates.")
+        duplicate = False
+    print("")
+
+    PN = PolicyNet(layers=layers, filter_ids=filter_ids)
+    db_name = "dan_data_10"
+    print("Games have been imported from dan_data_10.")
+    if not duplicate:
+        con = sqlite3.connect(r"DB's/MoveDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    else:
+        con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    cur = con.cursor()
+    cur.execute("select count(*) from test")
+    data = cur.fetchall()
+    con.close()
+    datasize = data[0][0]
+
+    [_, whole_set_temp] = PN.extract_batches_from_db(db_name, datasize, 1, duplicate=duplicate)
+    whole_set = whole_set_temp[0]
+
+    [number_of_batchs, batches] = PN.extract_batches_from_db(db_name, batch_size, 1, duplicate=duplicate)
+    print("Split up into", number_of_batchs, "Batches with size", batch_size, ".")
+
+    errors_by_epoch = []
+    init_error = PN.propagate_set(whole_set, True, adaptive_rule, err_fct)  # Error needs to be measured on whole set
+    start = time.time()
+    epoch = 0
+    print("Training process starts now. It will take ", duration_in_hours, " hours.")
+    while time.time() - start < duration_in_hours * 60 * 60:
+        t = time.time()
+        errors_by_epoch.append(0)
+        for i_batch in range(0, number_of_batchs):
+            error_in_batch = PN.learn_batch(batches[i_batch], eta, err_fct, True, adaptive_rule, True)
+            errors_by_epoch[epoch] += error_in_batch
+        errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
+        print("Epoch", epoch, "with error", errors_by_epoch[epoch])
+        print("Time needed for epoch in seconds:", np.round(time.time() - t))
+        epoch = epoch + 1
+    print("")
+    if custom_save_name is "none":
+        save_name = "weights" + str(duration_in_hours) + "hours" + "".join(
+            str(x) for x in filter_ids) + "filtids" + epoch + "epochs"
+    else:
+        save_name = custom_save_name
+    PN.saveweights(save_name)
+    total_time = time.time() - start
+    final_error = PN.propagate_set(whole_set, True, adaptive_rule, err_fct)  # Error needs to be measured on whole set
+    print("Total time taken for training:", total_time, "and epochs", epoch)
+    print("Average time per epoch:", total_time / epoch)
+    print("Initial error:", init_error)
+    print("Final error:", final_error)
+    improvement = init_error - final_error
     print("Total error improvement:", improvement)
     print("Error development: ", errors_by_epoch)
     print("Error reduction per second:", improvement / total_time)
@@ -281,7 +361,7 @@ if your_name is "Stefan":
     # hier schreibe ich mein training rein
     print("halo I bims")
     
-    training_program = 8
+    training_program = 10
     
     if training_program == 1:  # Checking error on a testset, while training on a different set
         PN=PolicyNet()
@@ -436,7 +516,14 @@ if your_name is "Stefan":
         training(PN, epochs, eta, batch_size, error_function, file, adaptive_rule, sample_proportion, True,
                  "dan_data_10", details=details)
 
-    if training_program == 8:
+    if training_program == 8:  # dict with adaptive eta rule.
         train_dict(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=100, eta=0.001,
-                   err_fct=0, duration_in_hours=10/60, custom_save_name="TEST123", adaptive_rule="logarithmic")
-        
+                   err_fct=0, duration_in_hours=20/60, custom_save_name="TEST8", adaptive_rule="logarithmic")
+
+    if training_program == 9:  # db with duplicates
+        train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=200,
+                        eta=0.005, err_fct=0, duration_in_hours=10/60, custom_save_name="TEST9", adaptive_rule="none")
+
+    if training_program == 10:  # db without duplicates, i.e. with adaptive eta rule.
+        train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=100,
+                        eta=0.001, err_fct=0, duration_in_hours=20/60, custom_save_name="TEST10", adaptive_rule="logarithmic")
