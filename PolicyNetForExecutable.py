@@ -20,7 +20,7 @@ def softmax(x):
         return e_x / e_x.sum()
 
 def relu(x):
-    x[x<0]=0
+    x[x < 0] = 0
     return x
 
 class PolicyNet:

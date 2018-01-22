@@ -322,59 +322,58 @@ class PolicyNet:
                 
                 # Forward-propagate
                 for i in range(0, self.layercount):
-                    W = self.weights[i]
-                    s = W.dot(y)
+                    w = self.weights[i]
+                    s = w.dot(y)
                     if i == self.layercount-1:  # softmax as activationfct only in last layer
                         y = np.append(softmax(s), [1])
-                    else:  # in all other hidden layers we use tanh/relu as activation fct
-                        if self.activation_function is 0:
-                            y = np.append(np.tanh(s), [1])
-                        else: 
-                            if self.activation_function is 1:
-                                y = np.append(relu(s), [1])
+                    elif self.activation_function is 0:  # in all other hidden layers we use tanh/relu as activation fct
+                        y = np.append(np.tanh(s), [1])
+                    elif self.activation_function is 1:
+                        y = np.append(relu(s), [1])
                     ys[i] = y  # save the y values for backpropagation
                 out = y
                 
                 # Back-propagate
                 
                 # Calculate Jacobian of the softmax activationfct in last layer only
-                Jacobian_Softmax = [0] * self.layercount
+                jacobian_softmax = [0] * self.layercount
                 for i in range(self.layercount-1, self.layercount):
                     # Please note that I think this is pure witchcraft happening here
                     yt = ys[i]  # load y from ys and lets call it yt y_temporary
                     yt = yt[:-1]  # the last entry is from the offset, we don't need this
                     le = len(yt)
-                    Jacobian_Softmax_temporary = np.ones((le, le))  # alloc storage temporarily
+                    jacobian_softmax_temporary = np.ones((le, le))  # alloc storage temporarily
                     for j in range(0, le):
-                        Jacobian_Softmax_temporary[j, :] *= yt[j]
-                    Jacobian_Softmax_temporary = np.identity(le) - Jacobian_Softmax_temporary
+                        jacobian_softmax_temporary[j, :] *= yt[j]
+                    jacobian_softmax_temporary = np.identity(le) - jacobian_softmax_temporary
                     for j in range(0, le):
-                        Jacobian_Softmax_temporary[:, j] *= yt[j]
-                    Jacobian_Softmax[i] = Jacobian_Softmax_temporary
+                        jacobian_softmax_temporary[:, j] *= yt[j]
+                    jacobian_softmax[i] = jacobian_softmax_temporary
 
+                # Calculate Jacobian fot the not-last layers
                 if self.activation_function is 0:  # Tanh
-                    Jacobian_tanh = [0] * self.layercount
+                    jacobian_tanh = [0] * self.layercount
                     for i in range(0, self.layercount):
                         yt = ys[i]  # load y from ys and lets call it yt
                         yt = yt[:-1]  # the last entry is from the offset, we don't need this
                         u = 1 - yt * yt
-                        Jacobian_tanh[i] = np.diag(u)
-                    Jacobian_hidden = Jacobian_tanh
+                        jacobian_tanh[i] = np.diag(u)
+                    jacobian_hidden = jacobian_tanh
                 if self.activation_function is 1:  # ReLU
-                    Jacobian_relu = [0]*self.layercount
-                    for i in range(0,self.layercount): #please note that I think this is pure witchcraft happening here
-                        yt=ys[i] #load y from ys and lets call it yt
-                        yt=yt[:-1] #the last entry is from the offset, we don't need this
-                        yt[yt>0]=1#actually 0 values go to 1 also. this is not so easy, thus I leave it like that for now
-                        Jacobian_relu[i]=np.diag(yt)
-                    Jacobian_hidden = Jacobian_relu
+                    jacobian_relu = [0]*self.layercount
+                    for i in range(0, self.layercount):  # please note I think this is pure witchcraft happening here
+                        yt = ys[i]  # load y from ys and lets call it yt
+                        yt = yt[:-1]  # the last entry is from the offset, we don't need this
+                        yt[yt > 0] = 1
+                        jacobian_relu[i] = np.diag(yt)
+                    jacobian_hidden = jacobian_relu
                 
-                #Use (L2) and (L3) to get the error signals of the layers
+                # Use (L2) and (L3) to get the error signals of the layers
                 errorsignals = [0] * self.layercount
-                errorsignals[self.layercount-1] = Jacobian_Softmax[self.layercount-1]
+                errorsignals[self.layercount-1] = jacobian_softmax[self.layercount-1]
                 for i in range(2, self.layercount+1):
                     w = self.weights[self.layercount-i+1]
-                    dft = Jacobian_hidden[self.layercount-i]
+                    dft = jacobian_hidden[self.layercount-i]
                     errdet = np.matmul(w[:, :-1], dft)  # temporary
                     errorsignals[self.layercount-i] = np.dot(errorsignals[self.layercount-i+1], errdet)
                 
@@ -395,7 +394,7 @@ class PolicyNet:
                 # Use (2.2) to get the sought derivatives. Observe that this is an outer product, though not mentioned
                 # in the source (Fuck you Heining, you b*stard)
                 errorbyweights = [0]*self.layercount  # dE/dW
-                errorbyweights[0] = np.outer(err_errorsignals[0], testdata).T  # TODO: Why do I need to transpose here?
+                errorbyweights[0] = np.outer(err_errorsignals[0], testdata).T
                 for i in range(1, self.layercount):
                     errorbyweights[i] = np.outer(err_errorsignals[i-1], ys[i][:-1])  # (L1)
                 
@@ -441,8 +440,8 @@ class PolicyNet:
         y = np.append(board, [1])
         # Forward-propagate
         for i in range(0, self.layercount):
-            W = self.weights[i]
-            s = W.dot(y)
+            w = self.weights[i]
+            s = w.dot(y)
             if i == self.layercount-1:  # softmax as activationfct only in last layer
                 y = np.append(softmax(s), [1])
             elif self.activation_function is 0:
@@ -477,8 +476,8 @@ class PolicyNet:
                 y = np.append(testdata, [1])
                 # Forward-propagate
                 for i in range(0, self.layercount):
-                    W = self.weights[i]
-                    s = W.dot(y)
+                    w = self.weights[i]
+                    s = w.dot(y)
                     if i == self.layercount - 1:  # softmax as activationfct only in last layer
                         y = np.append(softmax(s), [1])
                     elif self.activation_function is 0:
@@ -542,22 +541,26 @@ class PolicyNet:
 def test():
     FN = PolicyNet([9*9,100,9*9+1])
     testset = TrainingDataSgfPass("dgs",'dan_data_10')
-    #FN.weight_ensemble(testset,5)
-    err = FN.PropagateSet(testset)
+    t1 = time.time()
+    err = FN.propagate_set(testset)
     print(err)
+    t2 = time.time()
+    print("Prop set time:",t2-t1)
     
-    err_by_epoch = FN.Learn(testset,epochs=2,eta=0.01,batch_size=20,error_function=0)
-    plt.figure(0)
-    plt.plot(range(0,len(err_by_epoch)),err_by_epoch)
+    err_by_epoch = FN.learn(testset, epochs=1, eta=0.01, batch_size=200, error_function=0)
+    t3 = time.time()
+    print("Learn an epoch,", t3-t2)
     
     b=np.zeros((9,9))
-    b[1,0]=1
-    b[0,0]=-1
-    sug=FN.Propagate(b)
+    #b[1,0]=1
+    #b[0,0]=-1
+    sug = FN.propagate_board(b)
+    print("Prop board time:", time.time()-t3)
     plt.figure(1)
-    plt.bar(range(len(sug)),sug)
+    plt.bar(range(len(sug)), sug)
+    plt.show()
 
-# test()
+test()
 
 
 def test1():
