@@ -560,7 +560,7 @@ def test():
     plt.bar(range(len(sug)), sug)
     plt.show()
 
-test()
+#test()
 
 
 def test1():
