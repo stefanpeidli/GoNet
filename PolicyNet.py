@@ -67,7 +67,7 @@ class PolicyNet:
         self.layercount = len(self.layers)-1
         self.init_weights()
 
-        if self.activation_function is 0:  # TODO wie im last layer haben wir softmax! wie initialisieren???
+        if self.activation_function is 0:
             mu = 0
             self.weights = [0]*self.layercount  # alloc memory
             for i in range(0, self.layercount):
@@ -122,6 +122,16 @@ class PolicyNet:
         return -np.inner(distribution, np.log(distribution))
     
     # Auxilary and Utilary Functions
+
+    def compute_error(self, suggested, target, error_function):
+        if error_function == 0:
+            return self.compute_KL_divergence(suggested, target)
+        elif error_function == 1:
+            return self.compute_ms_error(suggested, target)
+        elif error_function == 2:
+            return self.compute_Hellinger_dist(suggested, target)
+        elif error_function == 3:
+            return self.compute_cross_entropy(suggested, target)
 
     def init_weights(self):
         # Xavier Initialization
@@ -408,10 +418,7 @@ class PolicyNet:
                 self.weights[i][:, :-1] = self.weights[i][:, :-1] + deltaweights_batch[i].T  # Problem: atm we only
                 # adjust non-bias weights. Change that! TODO
         if error_feedback:
-            if not db:
-                error = self.propagate_set(batch, error_function)
-            else:
-                error = self.propagate_set(batch, db, error_function=error_function)
+            error = self.propagate_set(batch, db, adaptive_rule, error_function=error_function)
             return error
 
     def propagate_board(self, board):

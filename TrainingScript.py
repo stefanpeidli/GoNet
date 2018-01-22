@@ -361,7 +361,7 @@ if your_name is "Stefan":
     # hier schreibe ich mein training rein
     print("halo I bims")
     
-    training_program = 10
+    training_program = 9
     
     if training_program == 1:  # Checking error on a testset, while training on a different set
         PN=PolicyNet()
@@ -522,7 +522,7 @@ if your_name is "Stefan":
 
     if training_program == 9:  # db with duplicates
         train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=200,
-                        eta=0.005, err_fct=0, duration_in_hours=10/60, custom_save_name="TEST9", adaptive_rule="none")
+                        eta=0.005, err_fct=0, duration_in_hours=20/60, custom_save_name="TEST9", adaptive_rule="none")
 
     if training_program == 10:  # db without duplicates, i.e. with adaptive eta rule.
         train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=100,
