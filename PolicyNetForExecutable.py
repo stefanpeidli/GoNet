@@ -143,7 +143,7 @@ class PolicyNet:
 
 
     def extract_batch_from_db(self, db_name, batchsize, enrichment=False):
-        con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+        con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
         #cur.execute("select count(*) from test")
         #data = cur.fetchall()
