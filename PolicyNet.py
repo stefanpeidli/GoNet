@@ -5,7 +5,9 @@ Created on Thu Jan  4 20:54:24 2018
 @author: Stefan
 """
 import numpy as np
+import matplotlib.pyplot as plt
 from Hashable import Hashable
+# from TrainingDataFromSgf import TrainingDataSgfPass
 import os
 import time
 import random
@@ -14,6 +16,8 @@ from Filters import apply_filters_by_id
 import collections
 import io
 
+# neccessarry to store arrays in database (from stackOverFlow)
+from TrainingDataFromSgf import TrainingDataSgfPass
 
 
 def adapt_array(arr):
@@ -173,39 +177,8 @@ class PolicyNet:
             if boardvector[i] == 1:
                 boardvector[i] = 1.05
         return boardvector
-
-    def saveweights(self, filename, folder='Saved_Weights'):
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        file = dir_path + "/" + folder + "/" + filename
-        np.savez(file, self.weights)
-
-    def loadweightsfromfile(self, filename, folder='Saved_Weights', filter_ids=[0, 1, 2, 3, 4, 5, 6, 7]):
-        # if file doesnt exist, do nothing
-        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-        path = os.path.join(base_path, folder+"/"+filename)
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        file = dir_path + "/" + folder + "/" + filename
-        if os.path.exists(path):
-            with np.load(path) as data:
-                self.filter_ids = filter_ids
-                self.filtercount = len(filter_ids)
-                self.weights = []
-                self.layer = [data['arr_0'][0].shape[1]]  # there are n+1 layers if there are n weight matrices
-                for i in range(len(data['arr_0'])):
-                    self.weights.append(data['arr_0'][i])
-                    tempshape = data['arr_0'][i].shape
-                    self.layer.append(tempshape[0])
-                self.layercount = len(self.layer) - 1
-        elif os.path.exists(path + ".npz"):
-            with np.load(path + ".npz") as data:
-                self.weights = []
-                for i in range(len(data['arr_0'])):
-                    self.weights.append(data['arr_0'][i])
-
-    # Pyinstall start comment
-
+    
     def splitintobatches(self, trainingdata, batchsize):  # splits trainingdata into batches of size batchsize
-        from TrainingDataFromSgf import TrainingDataSgfPass
         N = len(trainingdata.dic)
         if batchsize > N:
             batchsize = N
@@ -224,11 +197,11 @@ class PolicyNet:
 
     def extract_batches_from_db(self, db_name, batchsize, sample_proportion, duplicate=True):
         if duplicate:
-            con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         else:
-            con = sqlite3.connect(r"DB's/MoveDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
-        cur.execute("select count(*) from test")
+        cur.execute("select count(*) from nofilter")
         data = cur.fetchall()
         datasize = data[0][0]
         dataprop = np.floor(float(data[0][0]) * sample_proportion)
@@ -247,17 +220,43 @@ class PolicyNet:
             batches[i] = collections.defaultdict(np.ndarray)
         for key in batches.keys():
             for j in batch_id_list[key]:
-                cur.execute("select * from test where id = ?", (int(j),))
+                cur.execute("select * from nofilter where id = ?", (int(j),))
                 data = cur.fetchone()
                 batches[key][int(j)] = [data[1], data[2]]
                 # TODO: Dictionaries umstellen auf (id, [board, dist])
         con.close()
         return [number_of_batches, batches]
 
+    def saveweights(self, filename, folder='Saved_Weights'):
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        file = dir_path + "/" + folder + "/" + filename
+        np.savez(file, self.weights)
+        
+    def loadweightsfromfile(self, filename, folder='Saved_Weights', filter_ids=[0, 1, 2, 3, 4, 5, 6, 7]):
+        # if file doesnt exist, do nothing
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        file = dir_path + "/" + folder + "/" + filename
+        if os.path.exists(file):
+            with np.load(file) as data:
+                self.filter_ids = filter_ids
+                self.filtercount = len(filter_ids)
+                self.weights = []
+                self.layer = [data['arr_0'][0].shape[1]]  # there are n+1 layers if there are n weight matrices
+                for i in range(len(data['arr_0'])):
+                    self.weights.append(data['arr_0'][i])
+                    tempshape = data['arr_0'][i].shape
+                    self.layer.append(tempshape[0])
+                self.layercount = len(self.layer) - 1
+        elif os.path.exists(file + ".npz"):
+            with np.load(file + ".npz") as data:
+                self.weights = []
+                for i in range(len(data['arr_0'])):
+                    self.weights.append(data['arr_0'][i])
+
     # The actual functions
 
     def learn(self, trainingdata, epochs=1, eta=0.001, batch_size=10, sample_proportion=1, error_function=0, db=False,
-              db_name='none', adaptive_rule='logarithmic', regularization=0):
+              db_name='none', adaptive_rule='logarithmic'):
         if adaptive_rule is "none":
             duplicate = True
         else:
@@ -297,7 +296,7 @@ class PolicyNet:
     # Takes a batch, propagates all boards in that batch while accumulating delta weights. Then sums the delta weights
     # up and then adjusts the weights of the Network.
     def learn_batch(self, batch, eta_start=0.01, error_function=0,
-                    db=False, adaptive_rule="linear", error_feedback=True):
+                    db=False, adaptive_rule="linear", error_feedback=True, regularization=0):
         deltaweights_batch = [0] * self.layercount
         if not db:  # Dictionary case
             selection = random.sample(list(batch.dic.keys()), len(batch.dic))  # This is indeed random order.
@@ -305,7 +304,6 @@ class PolicyNet:
             selection = list(batch.keys())
         batch_counter = 0
         for entry in selection:
-            batch_counter += 1
             if not db:   # Usual Dictionary case. Extract input and target.
                 t0 = Hashable.unwrap(entry)
                 tf = self.apply_filters(t0.reshape((9, 9)))
@@ -318,6 +316,7 @@ class PolicyNet:
                 targ = batch[entry][1].reshape(9 * 9 + 1)
 
             if np.sum(targ) > 0:  # We can only learn if there are actual target vectors
+                batch_counter += 1
                 targ_sum = np.sum(targ)  # save this for the adaptive eta
                 targ = targ/np.linalg.norm(targ, ord=1)  # normalize (L1-norm)
                 y = np.append(testdata, [1])  # We append 1 for the bias
@@ -414,18 +413,20 @@ class PolicyNet:
                     else:
                         deltaweights_batch[i] -= eta * errorbyweights[i]
 
-        batch_size = batch_counter
+
+        # Regularization Factor:
+        regul = (1-(eta_start*regularization)/batch_counter)
         # TODO which eta to choose for the regularization???
+        # TODO Frage: Muss ich dann auch die Error measures anpassen?
+
         # Now adjust weights
         for i in range(0, self.layercount):
             if type(deltaweights_batch[i]) is not int:  # in this case we had no target for any board in this batch
-                self.weights[i][:, :-1] = self.weights[i][:, :-1] + deltaweights_batch[i].T  # Problem: atm we only
-                # adjust non-bias weights. Change that! TODO
+                self.weights[i][:, :-1] = regul * self.weights[i][:, :-1] + deltaweights_batch[i].T
+                # Problem: atm we only adjust non-bias weights. Change that! TODO
         if error_feedback:
             error = self.propagate_set(batch, db, adaptive_rule, error_function=error_function)
             return error
-
-    # Pyinstall end comment
 
     def propagate_board(self, board):
         # Convert board to NeuroNet format (82-dim vector)
@@ -507,42 +508,4 @@ class PolicyNet:
             error = error / checked  # average over the test set
             return error
     
-    # Plot results and error:
-    def visualize(self, firstout, out, targ):
-        import matplotlib as plt
-        games = len(out)
-        f, axa = plt.subplots(3, sharex=True)
-        axa[0].set_title("Error Plot")
-        axa[0].set_ylabel("Mean square Error")
-        axa[0].plot(range(0, games), self.errorsbyepoch)
-        
-        axa[1].set_ylabel("Abs Error")
-        axa[1].set_ylim(0, 2)
-        axa[1].plot(range(0, games), self.abserrorbyepoch)
-        
-        axa[2].set_xlabel("Epochs")
-        axa[2].set_ylabel("K-L divergence")
-        axa[2].plot(range(0, games), self.KLdbyepoch)
 
-        plt.show()
-
-        # Plot the results:
-        plt.figure(1)
-        f, axarr = plt.subplots(3, sharex=True)
-        axarr[0].set_title("Neuronal Net Output Plot: First epoch vs last epoch vs target")
-        axarr[0].bar(range(1, (self.n*self.n+2)), firstout)  # output of first epoch
-        
-        axarr[1].set_ylabel("quality in percentage")
-        axarr[1].bar(range(1, (self.n*self.n+2)), out[:-1])  # output of last epoch
-        
-        axarr[2].set_xlabel("Board field number")
-        axarr[2].bar(range(1, (self.n*self.n+2)), targ)  # target distribution
-
-        plt.show()
-    
-    def visualize_error(self, errors):
-        import matplotlib as plt
-        plt.plot(range(0, len(errors)), errors)
-        plt.show()
-
-        
