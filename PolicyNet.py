@@ -302,7 +302,6 @@ class PolicyNet:
             selection = random.sample(list(batch.dic.keys()), len(batch.dic))  # This is indeed random order.
         else:
             selection = list(batch.keys())
-        batch_counter = 0
         for entry in selection:
             if not db:   # Usual Dictionary case. Extract input and target.
                 t0 = Hashable.unwrap(entry)
