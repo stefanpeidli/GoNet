@@ -225,7 +225,7 @@ def train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3
     else:
         con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("select count(*) from test")
+    cur.execute("select count(*) from nofilter")
     data = cur.fetchall()
     con.close()
     datasize = data[0][0]

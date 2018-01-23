@@ -507,4 +507,22 @@ class PolicyNet:
             error = error / checked  # average over the test set
             return error
     
+# Tests
 
+
+def test():
+    PN = PolicyNet()
+    db_name = "dan_data_10"
+    con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    cur = con.cursor()
+    cur.execute("select count(*) from nofilter")
+    data = cur.fetchall()
+    con.close()
+    datasize = data[0][0]
+
+    [_, whole_set_temp] = PN.extract_batches_from_db(db_name, datasize, 1, duplicate=False)
+    whole_set = whole_set_temp[0]
+
+    PN.propagate_set(whole_set,True, "linear",0)
+
+test()
