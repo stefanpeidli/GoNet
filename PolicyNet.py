@@ -5,9 +5,7 @@ Created on Thu Jan  4 20:54:24 2018
 @author: Stefan
 """
 import numpy as np
-import matplotlib.pyplot as plt
 from Hashable import Hashable
-# from TrainingDataFromSgf import TrainingDataSgfPass
 import os
 import time
 import random
@@ -16,8 +14,6 @@ from Filters import apply_filters_by_id
 import collections
 import io
 
-# neccessarry to store arrays in database (from stackOverFlow)
-from TrainingDataFromSgf import TrainingDataSgfPass
 
 
 def adapt_array(arr):
@@ -177,8 +173,39 @@ class PolicyNet:
             if boardvector[i] == 1:
                 boardvector[i] = 1.05
         return boardvector
-    
+
+    def saveweights(self, filename, folder='Saved_Weights'):
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        file = dir_path + "/" + folder + "/" + filename
+        np.savez(file, self.weights)
+
+    def loadweightsfromfile(self, filename, folder='Saved_Weights', filter_ids=[0, 1, 2, 3, 4, 5, 6, 7]):
+        # if file doesnt exist, do nothing
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        path = os.path.join(base_path, folder+"/"+filename)
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        file = dir_path + "/" + folder + "/" + filename
+        if os.path.exists(path):
+            with np.load(path) as data:
+                self.filter_ids = filter_ids
+                self.filtercount = len(filter_ids)
+                self.weights = []
+                self.layer = [data['arr_0'][0].shape[1]]  # there are n+1 layers if there are n weight matrices
+                for i in range(len(data['arr_0'])):
+                    self.weights.append(data['arr_0'][i])
+                    tempshape = data['arr_0'][i].shape
+                    self.layer.append(tempshape[0])
+                self.layercount = len(self.layer) - 1
+        elif os.path.exists(path + ".npz"):
+            with np.load(path + ".npz") as data:
+                self.weights = []
+                for i in range(len(data['arr_0'])):
+                    self.weights.append(data['arr_0'][i])
+
+    # Pyinstall start comment
+
     def splitintobatches(self, trainingdata, batchsize):  # splits trainingdata into batches of size batchsize
+        from TrainingDataFromSgf import TrainingDataSgfPass
         N = len(trainingdata.dic)
         if batchsize > N:
             batchsize = N
@@ -226,32 +253,6 @@ class PolicyNet:
                 # TODO: Dictionaries umstellen auf (id, [board, dist])
         con.close()
         return [number_of_batches, batches]
-
-    def saveweights(self, filename, folder='Saved_Weights'):
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        file = dir_path + "/" + folder + "/" + filename
-        np.savez(file, self.weights)
-        
-    def loadweightsfromfile(self, filename, folder='Saved_Weights', filter_ids=[0, 1, 2, 3, 4, 5, 6, 7]):
-        # if file doesnt exist, do nothing
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        file = dir_path + "/" + folder + "/" + filename
-        if os.path.exists(file):
-            with np.load(file) as data:
-                self.filter_ids = filter_ids
-                self.filtercount = len(filter_ids)
-                self.weights = []
-                self.layer = [data['arr_0'][0].shape[1]]  # there are n+1 layers if there are n weight matrices
-                for i in range(len(data['arr_0'])):
-                    self.weights.append(data['arr_0'][i])
-                    tempshape = data['arr_0'][i].shape
-                    self.layer.append(tempshape[0])
-                self.layercount = len(self.layer) - 1
-        elif os.path.exists(file + ".npz"):
-            with np.load(file + ".npz") as data:
-                self.weights = []
-                for i in range(len(data['arr_0'])):
-                    self.weights.append(data['arr_0'][i])
 
     # The actual functions
 
@@ -424,6 +425,8 @@ class PolicyNet:
             error = self.propagate_set(batch, db, adaptive_rule, error_function=error_function)
             return error
 
+    # Pyinstall end comment
+
     def propagate_board(self, board):
         # Convert board to NeuroNet format (82-dim vector)
         if type(board) != list and type(board) != np.ndarray:
@@ -506,6 +509,7 @@ class PolicyNet:
     
     # Plot results and error:
     def visualize(self, firstout, out, targ):
+        import matplotlib as plt
         games = len(out)
         f, axa = plt.subplots(3, sharex=True)
         axa[0].set_title("Error Plot")
@@ -537,196 +541,8 @@ class PolicyNet:
         plt.show()
     
     def visualize_error(self, errors):
+        import matplotlib as plt
         plt.plot(range(0, len(errors)), errors)
         plt.show()
 
         
-# Tests:
-def test():
-    FN = PolicyNet([9*9,100,9*9+1])
-    testset = TrainingDataSgfPass("dgs",'dan_data_10')
-    t1 = time.time()
-    err = FN.propagate_set(testset)
-    print(err)
-    t2 = time.time()
-    print("Prop set time:",t2-t1)
-    
-    err_by_epoch = FN.learn(testset, epochs=1, eta=0.01, batch_size=200, error_function=0)
-    t3 = time.time()
-    print("Learn an epoch,", t3-t2)
-    
-    b=np.zeros((9,9))
-    #b[1,0]=1
-    #b[0,0]=-1
-    sug = FN.propagate_board(b)
-    print("Prop board time:", time.time()-t3)
-    plt.figure(1)
-    plt.bar(range(len(sug)), sug)
-    plt.show()
-
-#test()
-
-
-def test1():
-    FN = PolicyNet([9*9,100,9*9+1])
-    FNA = PolicyNet([9*9,100,9*9+1])
-    testset = TrainingDataSgfPass("dgs",range(10))
-    err=FN.PropagateSet(testset)
-    errA=FNA.PropagateSetAdaptive(testset)
-    print(err,errA)
-    
-    epochs=3
-    e1=FN.Learn(testset,epochs,0.01,10,1,0)
-    print("first done")
-    
-    batch_size=10    
-    [number_of_batchs, batchs] = FNA.splitintobatches(testset,batch_size)
-    errors_by_epoch = []
-    for epoch in range(0,epochs):
-        errors_by_epoch.append(0)
-        for i_batch in range(0,number_of_batchs):
-            error_in_batch = FNA.LearnSingleBatchAdaptive(batchs[i_batch], 0.01, 1, 0)
-            errors_by_epoch[epoch] += error_in_batch
-        errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
-    e2=errors_by_epoch
-    
-    b=np.zeros((9,9))
-    s1=FN.Propagate(b)
-    s2=FNA.Propagate(b)
-    
-    plt.figure(0)
-    plt.bar(range(len(s1)),s1)
-    plt.figure(1)
-    plt.bar(range(len(s2)),s2)
-    
-    print(e1,e2)
-    
-# test1()
-
-
-def test2():
-    FN = PolicyNet([9*9,1000,200,9*9+1], filter_ids=[0,1,2,3,4,5,6,7])
-    testset = TrainingDataSgfPass("dgs","dan_data_10")
-    print("games imported")
-    batch_size = 50
-    eta = 0.001
-    err_fct = 0
-    [number_of_batchs, batchs] = FN.splitintobatches(testset,batch_size)
-    print("split up into",number_of_batchs,"with size",batch_size)
-    errors_by_epoch = []
-    start = time.time()
-    epoch = 0
-    while time.time()-start < 8.5*60*60:
-    #for epoch in range(0,epochs):
-        t=time.time()
-        errors_by_epoch.append(0)
-        for i_batch in range(0,number_of_batchs):
-            error_in_batch = FN.learn_batch(batchs[i_batch], eta, 0, False, "logarithmic", True)
-            errors_by_epoch[epoch] += error_in_batch
-        errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
-        print("epoch",epoch,"error",errors_by_epoch[epoch])
-        print(np.round(time.time()-t))
-        epoch=epoch+1
-    FN.saveweights("ambitestfilt1234567logrule_111")
-    print("total time:",time.time()-start,"and epochs",epoch)
-    print("final error:",errors_by_epoch)
-    plt.plot(range(0,len(errors_by_epoch)),errors_by_epoch)
-
-#test2()
-
-
-def test3():
-    FN = PolicyNet([9*9,1000,200,9*9+1])
-    FN.loadweightsfromfile("ambtestfilt")
-    testset = TrainingDataSgfPass("dgs",range(30))
-    b1=np.zeros((9,9))
-    err = FN.propagate_set(testset)
-    print(err)
-    s1=FN.propagate_board(b1)
-    b2=b1
-    b2[0,1]=1
-    b2[0,0]=-1
-    s2=FN.propagate_board(b2)
-    plt.figure(0)
-    plt.bar(range(len(s1)),s1)
-    plt.figure(1)
-    plt.bar(range(len(s2)),s2)
-#test3()
-
-def batch_extraction_test():
-    net = PolicyNet()
-    sample_prop = 1
-    [no, batches] = net.extract_batches_from_db('dan_data_10', 100, sample_proportion=sample_prop)
-    data = batches[1].keys()
-    print(no)
-    print(data)
-#batch_extraction_test()
-
-def test4():
-    con = sqlite3.connect(r"DB's/DistributionDB's/dan_data_10_topped_up", detect_types=sqlite3.PARSE_DECLTYPES)
-    cur = con.cursor()
-    cur.execute("select * from dist where id = ?", (3,))
-    data = cur.fetchone()
-    print(data[1])
-#test4()
-
-def test5():  # vgl dbs mit dicts
-    PN = PolicyNet()
-    sample_prop = 1
-    batch_size = 100
-
-    t = time.time()
-    dictset = TrainingDataSgfPass("dgs", "dan_data_10")
-    t1 = time.time()
-    print("dict import time:", t1 - t)
-    [dict_n, dict_batches] = PN.splitintobatches(dictset, batch_size)
-    t2 = time.time()
-    print("dict split time:", t2-t1)
-
-    [db_n, db_batches] = PN.extract_batches_from_db('dan_data_10', batch_size, sample_proportion=sample_prop)
-    t3 = time.time()
-    print("db import and split time:", t3 - t2)
-
-    #data = db_batches[1].keys()
-    print("DB batches: ", db_n)
-    print("Dict batches: ", dict_n)
-    #print(data)
-#test5()
-
-def test6():
-    PN = PolicyNet()
-    sample_prop = 1
-    batch_size = 100
-    [db_n, db_batches] = PN.extract_batches_from_db('dan_data_10', batch_size, sample_proportion=sample_prop, duplicate=False)
-    print(db_n)
-
-    db_name = 'dan_data_10'
-    con = sqlite3.connect(r"DB's/MoveDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
-    cur = con.cursor()
-    cur.execute("select count(*) from test")
-    data = cur.fetchall()
-    datasize = data[0][0]
-    print(np.ceil(datasize/100))
-
-#test6()
-
-def test7():  # Test the error of the set on a db-fan file
-    PN = PolicyNet(filter_ids=[0, 1, 2, 3, 4, 5, 6, 7])
-    PN.loadweightsfromfile("ambitestfilt1234567logrule", filter_ids=[0, 1, 2, 3, 4, 5, 6, 7])
-    db_name = "dan_data_295"
-    con = sqlite3.connect(r"DB's/MoveDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
-    cur = con.cursor()
-    cur.execute("select count(*) from test")
-    data = cur.fetchall()
-    con.close()
-    datasize = data[0][0]
-
-    [_, whole_set_temp] = PN.extract_batches_from_db(db_name, datasize, 1, duplicate=False)
-    db_dan_295 = whole_set_temp[0]
-
-    print("Games have been imported from ", db_name)
-
-    error = PN.propagate_set(db_dan_295, True, "logarithmic", 0)
-    print(error)
-
-#test7()
