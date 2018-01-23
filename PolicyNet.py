@@ -302,6 +302,7 @@ class PolicyNet:
             selection = random.sample(list(batch.dic.keys()), len(batch.dic))  # This is indeed random order.
         else:
             selection = list(batch.keys())
+        batch_counter = 0
         for entry in selection:
             if not db:   # Usual Dictionary case. Extract input and target.
                 t0 = Hashable.unwrap(entry)
@@ -523,6 +524,6 @@ def test():
     [_, whole_set_temp] = PN.extract_batches_from_db(db_name, datasize, 1, duplicate=False)
     whole_set = whole_set_temp[0]
 
-    PN.propagate_set(whole_set,True, "linear",0)
+    PN.propagate_set(whole_set,True, "linear", 0)
 
 test()
