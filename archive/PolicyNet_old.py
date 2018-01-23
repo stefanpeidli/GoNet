@@ -571,7 +571,7 @@ class PolicyNet:
     def LearnDB(self,  selection=False, error_function=0, dbName='dan_data_10_topped_up', sample_proportion=0.01,
                 eta_start=0.05):
         if selection is False:
-            con = sqlite3.connect(r"DB/Dist/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB's/DistributionDB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             cur.execute("select count(*) from test")
             data = cur.fetchall()

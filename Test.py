@@ -1,6 +1,6 @@
 import sqlite3
 
-con = sqlite3.connect(r"DB/Dist/" + 'dan_data_10', detect_types=sqlite3.PARSE_DECLTYPES)
+con = sqlite3.connect(r"DB's/DistributionDB's/" + 'dan_data_10', detect_types=sqlite3.PARSE_DECLTYPES)
 cur = con.cursor()
 cur.execute("select count(*) from test")
 data = cur.fetchall()

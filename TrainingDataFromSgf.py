@@ -49,16 +49,16 @@ class TrainingDataSgfPass:
         if dbNameMoves:
             self.dbFlagMoves = True
             self.dbNameMoves = dbNameMoves
-            con = sqlite3.connect(r"DB/Move/" + self.dbNameMoves, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB's/MoveDB's/" + self.dbNameMoves, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
-            cur.execute("create table nofilter (id INTEGER PRIMARY KEY, board array, move array)")
+            cur.execute("create table test (id INTEGER PRIMARY KEY, board array, move array)")
             con.close()
         if dbNameDist: # TODO Beno!
             self.dbFlagDist = True
             self.dbNameDist = dbNameDist
-            con = sqlite3.connect(r"DB/Dist/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB's/DistributionDB's/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
-            cur.execute("create table nofilter (id INTEGER PRIMARY KEY, board array, distribution array)")
+            cur.execute("create table test (id INTEGER PRIMARY KEY, board array, distribution array)")
             con.close()
 
         if folder is not None:
@@ -90,10 +90,10 @@ class TrainingDataSgfPass:
                 self.importSingleFile(currfile)
         # close db after last call of importSingleFile
         if self.dbFlagMoves:
-            con = sqlite3.connect(r"DB/Move/" + self.dbNameMoves, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB's/MoveDB's/" + self.dbNameMoves, detect_types=sqlite3.PARSE_DECLTYPES)
             con.close()
         if self.dbFlagDist:
-            con = sqlite3.connect(r"DB/Dist/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB's/DistributionDB's/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
             con.close()
 
 
@@ -202,37 +202,37 @@ class TrainingDataSgfPass:
     def addEntryToDic(self, entryBoardVector, prevBoardVector, currBoardVector, passing):
         move = np.absolute(currBoardVector - prevBoardVector)
         if self.dbFlagMoves == True:
-            con = sqlite3.connect(r"DB/Move/" + self.dbNameMoves, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB's/MoveDB's/" + self.dbNameMoves, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             if passing == False:
-                cur.execute("insert into nofilter values (?, ?, ?)",
+                cur.execute("insert into test values (?, ?, ?)",
                             (None, entryBoardVector, np.append(np.absolute(currBoardVector - prevBoardVector), 0)))
             else:
-                cur.execute("insert into nofilter values (?, ?, ?)", (None, entryBoardVector, np.copy(self.passVector)))
+                cur.execute("insert into test values (?, ?, ?)", (None, entryBoardVector, np.copy(self.passVector)))
             con.commit()
         elif self.dbFlagDist == True:
-            con = sqlite3.connect(r"DB/Dist/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB's/DistributionDB's/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             if passing == False:
-                cur.execute("select count(*) from nofilter where board = ?", (entryBoardVector,))
+                cur.execute("select count(*) from test where board = ?", (entryBoardVector,))
                 data = cur.fetchall()
                 if data[0][0] == 0:
-                    cur.execute("insert into nofilter values (?, ?, ?)",
+                    cur.execute("insert into test values (?, ?, ?)",
                                 (None, entryBoardVector, np.append(np.absolute(currBoardVector - prevBoardVector), 0)))
                 else:
-                    cur.execute("select distribution from nofilter where board = ?", (entryBoardVector,))
+                    cur.execute("select distribution from test where board = ?", (entryBoardVector,))
                     old_dist = cur.fetchall()
-                    cur.execute("UPDATE nofilter SET distribution = ? WHERE board = ?",  (old_dist[0][0] + np.append(np.absolute(currBoardVector - prevBoardVector), 0), entryBoardVector))
+                    cur.execute("UPDATE test SET distribution = ? WHERE board = ?",  (old_dist[0][0] + np.append(np.absolute(currBoardVector - prevBoardVector), 0), entryBoardVector))
             else:
-                cur.execute("select count(*) from nofilter where board = ?", (entryBoardVector,))
+                cur.execute("select count(*) from test where board = ?", (entryBoardVector,))
                 data = cur.fetchall()
                 if data[0][0] == 0:
-                    cur.execute("insert into nofilter values (?, ?, ?)",
+                    cur.execute("insert into test values (?, ?, ?)",
                                 (None, entryBoardVector, np.copy(self.passVector)))
                 else:
-                    cur.execute("select distribution from nofilter where board = ?", (entryBoardVector,))
+                    cur.execute("select distribution from test where board = ?", (entryBoardVector,))
                     old_dist = cur.fetchall()
-                    cur.execute("UPDATE nofilter SET distribution = ? WHERE board = ?",
+                    cur.execute("UPDATE test SET distribution = ? WHERE board = ?",
                                 (old_dist[0][0] + np.copy(self.passVector), prevBoardVector))
             con.commit()
 
@@ -252,10 +252,10 @@ class TrainingDataSgfPass:
 # end class TrainingDataSgfPass
 def dbTest2():
     dbName = 'dan_data_10_topped_up'
-    con = sqlite3.connect(r"DB/Dist/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(r"DB's/DistributionDB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     i = 5732
-    cur.execute("Select * from nofilter where id = ?", (i,))
+    cur.execute("Select * from test where id = ?", (i,))
     data = cur.fetchall()
     print(data)
     con.close()
@@ -343,9 +343,9 @@ def test3pass():
 
 def dbCreate():
     TrainingDataSgfPass(folder="dgs", id_list = 'dan_data_10', dbNameMoves="dan_data_10")
-    con = sqlite3.connect(r"DB/Move/dan_data_10", detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(r"DB's/MoveDB's/dan_data_10", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("select * from nofilter where id <= 100")
+    cur.execute("select * from test where id <= 100")
     data = cur.fetchall()
     con.close
     print(data)
@@ -353,9 +353,9 @@ def dbCreate():
 
 def distDbCreate():
     TrainingDataSgfPass(folder="dgs", id_list='dan_data_10', dbNameDist="dan_data_10_new")
-    con = sqlite3.connect(r"DB/Dist/dan_data_10_new", detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(r"DB's/DistributionDB's/dan_data_10_new", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("select count(*) from nofilter where id <= 100")
+    cur.execute("select count(*) from test where id <= 100")
     data = cur.fetchall()
     con.close()
     print(data[0][0])

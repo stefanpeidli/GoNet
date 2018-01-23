@@ -70,7 +70,7 @@ def training_basic(PolicyNetwork, sgf_range=100, epochs=10, eta=0.001, batch_siz
 # TODO delete this if it's fine for beno, Beno: I'll delete it then, Stefan: ok, cool
 """ 
 def TrainingAdvanced(PolicyNetwork, dbName = "dan_data_10", epochs=1, sample_proportion=0.01, error_function=0):
-    con = sqlite3.connect(r"DB/Dist/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(r"DB's/DistributionDB's/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select count(*) from test")
     data = cur.fetchall()
@@ -221,9 +221,9 @@ def train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3
     db_name = "dan_data_10"
     print("Games have been imported from dan_data_10.")
     if not duplicate:
-        con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+        con = sqlite3.connect(r"DB's/MoveDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
     else:
-        con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+        con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select count(*) from test")
     data = cur.fetchall()
