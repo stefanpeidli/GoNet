@@ -705,3 +705,24 @@ def test6():
     print(np.ceil(datasize/100))
 
 #test6()
+
+def test7():  # Test the error of the set on a db-fan file
+    PN = PolicyNet(filter_ids=[0, 1, 2, 3, 4, 5, 6, 7])
+    PN.loadweightsfromfile("ambitestfilt1234567logrule", filter_ids=[0, 1, 2, 3, 4, 5, 6, 7])
+    db_name = "dan_data_295"
+    con = sqlite3.connect(r"DB's/MoveDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    cur = con.cursor()
+    cur.execute("select count(*) from test")
+    data = cur.fetchall()
+    con.close()
+    datasize = data[0][0]
+
+    [_, whole_set_temp] = PN.extract_batches_from_db(db_name, datasize, 1, duplicate=False)
+    db_dan_295 = whole_set_temp[0]
+
+    print("Games have been imported from ", db_name)
+
+    error = PN.propagate_set(db_dan_295, True, "logarithmic", 0)
+    print(error)
+
+#test7()
