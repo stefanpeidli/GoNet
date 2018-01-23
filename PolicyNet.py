@@ -256,7 +256,7 @@ class PolicyNet:
     # The actual functions
 
     def learn(self, trainingdata, epochs=1, eta=0.001, batch_size=10, sample_proportion=1, error_function=0, db=False,
-              db_name='none', adaptive_rule='logarithmic'):
+              db_name='none', adaptive_rule='logarithmic', regularization=0):
         if adaptive_rule is "none":
             duplicate = True
         else:
@@ -302,7 +302,9 @@ class PolicyNet:
             selection = random.sample(list(batch.dic.keys()), len(batch.dic))  # This is indeed random order.
         else:
             selection = list(batch.keys())
+        batch_counter = 0
         for entry in selection:
+            batch_counter += 1
             if not db:   # Usual Dictionary case. Extract input and target.
                 t0 = Hashable.unwrap(entry)
                 tf = self.apply_filters(t0.reshape((9, 9)))
@@ -411,6 +413,8 @@ class PolicyNet:
                     else:
                         deltaweights_batch[i] -= eta * errorbyweights[i]
 
+        batch_size = batch_counter
+        # TODO which eta to choose for the regularization???
         # Now adjust weights
         for i in range(0, self.layercount):
             if type(deltaweights_batch[i]) is not int:  # in this case we had no target for any board in this batch
