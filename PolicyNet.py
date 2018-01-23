@@ -197,11 +197,11 @@ class PolicyNet:
 
     def extract_batches_from_db(self, db_name, batchsize, sample_proportion, duplicate=True):
         if duplicate:
-            con = sqlite3.connect(r"DB's/DistributionDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         else:
-            con = sqlite3.connect(r"DB's/MoveDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
-        cur.execute("select count(*) from test")
+        cur.execute("select count(*) from nofilter")
         data = cur.fetchall()
         datasize = data[0][0]
         dataprop = np.floor(float(data[0][0]) * sample_proportion)
@@ -220,7 +220,7 @@ class PolicyNet:
             batches[i] = collections.defaultdict(np.ndarray)
         for key in batches.keys():
             for j in batch_id_list[key]:
-                cur.execute("select * from test where id = ?", (int(j),))
+                cur.execute("select * from nofilter where id = ?", (int(j),))
                 data = cur.fetchone()
                 batches[key][int(j)] = [data[1], data[2]]
                 # TODO: Dictionaries umstellen auf (id, [board, dist])
@@ -656,10 +656,10 @@ def batch_extraction_test():
     data = batches[1].keys()
     print(no)
     print(data)
-#batch_extraction_test()
+batch_extraction_test()
 
 def test4():
-    con = sqlite3.connect(r"DB's/DistributionDB's/dan_data_10_topped_up", detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(r"DB/Dist/dan_data_10_topped_up", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select * from dist where id = ?", (3,))
     data = cur.fetchone()
@@ -697,9 +697,9 @@ def test6():
     print(db_n)
 
     db_name = 'dan_data_10'
-    con = sqlite3.connect(r"DB's/MoveDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("select count(*) from test")
+    cur.execute("select count(*) from nofilter")
     data = cur.fetchall()
     datasize = data[0][0]
     print(np.ceil(datasize/100))
@@ -710,9 +710,9 @@ def test7():  # Test the error of the set on a db-fan file
     PN = PolicyNet(filter_ids=[0, 1, 2, 3, 4, 5, 6, 7])
     PN.loadweightsfromfile("ambitestfilt1234567logrule", filter_ids=[0, 1, 2, 3, 4, 5, 6, 7])
     db_name = "dan_data_295"
-    con = sqlite3.connect(r"DB's/MoveDB's/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("select count(*) from test")
+    cur.execute("select count(*) from nofilter")
     data = cur.fetchall()
     con.close()
     datasize = data[0][0]
