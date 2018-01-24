@@ -51,14 +51,16 @@ class TrainingDataSgfPass:
             self.dbNameMoves = dbNameMoves
             con = sqlite3.connect(r"DB/Move/" + self.dbNameMoves, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
-            cur.execute("create table nofilter (id INTEGER PRIMARY KEY, board array, move array)")
+            cur.execute("create table movedata (id INTEGER PRIMARY KEY, board array, move array, f0 array,"
+                        "f1 array, f2 array, f3 array, f4 array, f5 array, f6 array, f7 array)")
             con.close()
-        if dbNameDist: # TODO Beno!
+        if dbNameDist:
             self.dbFlagDist = True
             self.dbNameDist = dbNameDist
             con = sqlite3.connect(r"DB/Dist/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
-            cur.execute("create table nofilter (id INTEGER PRIMARY KEY, board array, distribution array)")
+            cur.execute("create table movedata (id INTEGER PRIMARY KEY, board array, distribution array, f0 array, "
+                        "f1 array, f2 array, f3 array, f4 array, f5 array, f6 array, f7 array)")
             con.close()
 
         if folder is not None:
@@ -201,47 +203,59 @@ class TrainingDataSgfPass:
 
     def addEntryToDic(self, entryBoardVector, prevBoardVector, currBoardVector, passing):
         move = np.absolute(currBoardVector - prevBoardVector)
+        one_vec = apply_filters_by_id(entryBoardVector.reshape(9, 9), -1)
+        filtered = []
+        for i in range(8): #in range(no_of_filters + 1)
+            filtered.append(np.array(one_vec[i*81:(i+1)*81]).astype(np.int32))
         if self.dbFlagMoves == True:
             con = sqlite3.connect(r"DB/Move/" + self.dbNameMoves, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             if passing == False:
-                cur.execute("insert into nofilter values (?, ?, ?)",
-                            (None, entryBoardVector, np.append(np.absolute(currBoardVector - prevBoardVector), 0)))
+                cur.execute("insert into movedata values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            (None, entryBoardVector, np.append(move, 0), filtered[0], filtered[1], filtered[2],
+                             filtered[3], filtered[4], filtered[5], filtered[6], filtered[7]))
             else:
-                cur.execute("insert into nofilter values (?, ?, ?)", (None, entryBoardVector, np.copy(self.passVector)))
+                cur.execute("insert into movedata values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            (None, entryBoardVector, np.copy(self.passVector), filtered[0], filtered[1], filtered[2],
+                            filtered[3], filtered[4], filtered[5], filtered[6], filtered[7]))
             con.commit()
+            con.close()
         elif self.dbFlagDist == True:
             con = sqlite3.connect(r"DB/Dist/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             if passing == False:
-                cur.execute("select count(*) from nofilter where board = ?", (entryBoardVector,))
-                data = cur.fetchall()
-                if data[0][0] == 0:
-                    cur.execute("insert into nofilter values (?, ?, ?)",
-                                (None, entryBoardVector, np.append(np.absolute(currBoardVector - prevBoardVector), 0)))
+                cur.execute("select count(*) from movedata where board = ?", (entryBoardVector,))
+                data = cur.fetchone()
+                if data[0] == 0:
+                    cur.execute("INSERT INTO movedata VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                (None, entryBoardVector, np.append(move, 0), filtered[0], filtered[1], filtered[2],
+                                 filtered[3], filtered[4], filtered[5], filtered[6], filtered[7]))
                 else:
-                    cur.execute("select distribution from nofilter where board = ?", (entryBoardVector,))
+                    cur.execute("select distribution from movedata where board = ?", (entryBoardVector,))
                     old_dist = cur.fetchall()
-                    cur.execute("UPDATE nofilter SET distribution = ? WHERE board = ?",  (old_dist[0][0] + np.append(np.absolute(currBoardVector - prevBoardVector), 0), entryBoardVector))
+                    cur.execute("UPDATE movedata SET distribution = ? WHERE board = ?",
+                                (old_dist[0][0] + np.append(move, 0), entryBoardVector))
             else:
-                cur.execute("select count(*) from nofilter where board = ?", (entryBoardVector,))
+                cur.execute("select count(*) from movedata where board = ?", (entryBoardVector,))
                 data = cur.fetchall()
                 if data[0][0] == 0:
-                    cur.execute("insert into nofilter values (?, ?, ?)",
-                                (None, entryBoardVector, np.copy(self.passVector)))
+                    cur.execute("INSERT INTO movedata VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                (None, entryBoardVector, np.copy(self.passVector), filtered[0], filtered[1],
+                                 filtered[2], filtered[3], filtered[4], filtered[5], filtered[6], filtered[7]))
                 else:
-                    cur.execute("select distribution from nofilter where board = ?", (entryBoardVector,))
+                    cur.execute("select distribution from movedata where board = ?", (entryBoardVector,))
                     old_dist = cur.fetchall()
-                    cur.execute("UPDATE nofilter SET distribution = ? WHERE board = ?",
+                    cur.execute("UPDATE movedata SET distribution = ? WHERE board = ?",
                                 (old_dist[0][0] + np.copy(self.passVector), prevBoardVector))
             con.commit()
+            con.close()
 
         else:
             if passing==False:
                 if Hashable(entryBoardVector) in self.dic:
-                    self.dic[Hashable(entryBoardVector)] += np.append(np.absolute(currBoardVector - prevBoardVector), 0)
+                    self.dic[Hashable(entryBoardVector)] += np.append(move, 0)
                 else:
-                    self.dic[Hashable(entryBoardVector)] = np.append(np.absolute(currBoardVector - prevBoardVector), 0)
+                    self.dic[Hashable(entryBoardVector)] = np.append(move, 0)
             else:
                 if Hashable(entryBoardVector) in self.dic:
                     self.dic[Hashable(entryBoardVector)] += np.copy(self.passVector)
@@ -255,7 +269,7 @@ def dbTest2():
     con = sqlite3.connect(r"DB/Dist/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     i = 5732
-    cur.execute("Select * from nofilter where id = ?", (i,))
+    cur.execute("Select * from movedata where id = ?", (i,))
     data = cur.fetchall()
     print(data)
     con.close()
@@ -345,7 +359,7 @@ def dbCreate():
     TrainingDataSgfPass(folder="dgs", id_list = 'dan_data_10', dbNameMoves="dan_data_10")
     con = sqlite3.connect(r"DB/Move/dan_data_10", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("select * from nofilter where id <= 100")
+    cur.execute("select * from movedata where id <= 100")
     data = cur.fetchall()
     con.close
     print(data)
@@ -355,7 +369,7 @@ def distDbCreate():
     TrainingDataSgfPass(folder="dgs", id_list='dan_data_10', dbNameDist="dan_data_10_new")
     con = sqlite3.connect(r"DB/Dist/dan_data_10_new", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("select count(*) from nofilter where id <= 100")
+    cur.execute("select count(*) from movedata where id <= 100")
     data = cur.fetchall()
     con.close()
     print(data[0][0])

@@ -201,7 +201,7 @@ class PolicyNet:
         else:
             con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
-        cur.execute("select count(*) from nofilter")
+        cur.execute("select count(*) from movedata")
         data = cur.fetchall()
         datasize = data[0][0]
         dataprop = np.floor(float(data[0][0]) * sample_proportion)
@@ -220,10 +220,9 @@ class PolicyNet:
             batches[i] = collections.defaultdict(np.ndarray)
         for key in batches.keys():
             for j in batch_id_list[key]:
-                cur.execute("select * from nofilter where id = ?", (int(j),))
+                cur.execute("select * from movedata where id = ?", (int(j),))
                 data = cur.fetchone()
                 batches[key][int(j)] = [data[1], data[2]]
-                # TODO: Dictionaries umstellen auf (id, [board, dist])
         con.close()
         return [number_of_batches, batches]
 
@@ -516,7 +515,7 @@ def test():
     db_name = "dan_data_10"
     con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("select count(*) from nofilter")
+    cur.execute("select count(*) from movedata")
     data = cur.fetchall()
     con.close()
     datasize = data[0][0]
@@ -526,4 +525,4 @@ def test():
 
     PN.propagate_set(whole_set,True, "linear", 0)
 
-test()
+#test()

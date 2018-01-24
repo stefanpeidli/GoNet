@@ -365,8 +365,8 @@ def apply_filters_by_id(board, color, filter_id=[0, 1, 2, 3, 4, 5, 6, 7]):
         f6 = filter_color_separation(board, color).flatten()
         filtered.extend(f6)
     if 7 in filter_id:
-        f6 = filter_color_separation(board, -color).flatten()
-        filtered.extend(f6)
+        f7 = filter_color_separation(board, -color).flatten()
+        filtered.extend(f7)
     return filtered
 
     
@@ -430,6 +430,12 @@ def test():
 def test1():
     b = gen_test_board(0)
     filtered = apply_filters_by_id(b, 1)
+    print(filtered)
+    print('...')
+    one_vec = apply_filters_by_id(b, -1)
+    filtered = []
+    for i in range(8):  # in range(no_of_filters + 1)
+        filtered.append(one_vec[i * 81:(i + 1) * 81])
     print(filtered)
 
 #test1()

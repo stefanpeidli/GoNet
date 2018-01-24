@@ -72,10 +72,10 @@ def training_basic(PolicyNetwork, sgf_range=100, epochs=10, eta=0.001, batch_siz
 def TrainingAdvanced(PolicyNetwork, dbName = "dan_data_10", epochs=1, sample_proportion=0.01, error_function=0):
     con = sqlite3.connect(r"DB/Dist/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("select count(*) from test")
+    cur.execute("select count(*) from movedata")
     data = cur.fetchall()
     sample_size = str(int(np.ceil(data[0][0] * sample_proportion)))
-    cur.execute("select * from test order by Random() Limit ?", (sample_size,))
+    cur.execute("select * from movedata order by Random() Limit ?", (sample_size,))
     selectionVar = cur.fetchall()
     con.close()
     for i in range(epochs):
@@ -225,7 +225,7 @@ def train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3
     else:
         con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
-    cur.execute("select count(*) from nofilter")
+    cur.execute("select count(*) from movedata")
     data = cur.fetchall()
     con.close()
     datasize = data[0][0]
@@ -314,7 +314,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = "Stefan"
+your_name = "Beno"
 
 # example for training:
 if your_name is "Example":
@@ -345,12 +345,12 @@ if your_name is "Paddy":
 if your_name is "Beno":
     MyNetwork = PolicyNet([9*9, 120, 200, 120, 9*9+1], filter_ids=[2, 6, 7])
     epochs=10
-    sample_proportion=0.01
+    sample_proportion=1
     error_function=0
     eta=0.01
     batchsize = 100
-    training(MyNetwork, epochs, eta, batchsize, error_function, 'dan_data_10', sample_proportion = sample_proportion,
-             db=True, db_name='dan_data_10')
+    training(MyNetwork, epochs, eta, batchsize, error_function, 'dan_data_1', sample_proportion = sample_proportion,
+             db=True, db_name='dan_data_1')
     name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
         int(eta * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "errorfct" + str(error_function)
     MyNetwork.saveweights(name)
