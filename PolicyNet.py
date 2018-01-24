@@ -412,7 +412,6 @@ class PolicyNet:
                     else:
                         deltaweights_batch[i] -= eta * errorbyweights[i]
 
-
         # Regularization Factor:
         regul = (1-(eta_start*regularization)/batch_counter)
         # TODO which eta to choose for the regularization???

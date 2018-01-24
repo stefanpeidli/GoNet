@@ -33,13 +33,14 @@ def expand_db(dbNameDist):
         count = sum(current[2])
         for j in range(count-1):
             cur.execute("insert into movedata values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        (None, current[1], current[2], current[3], current[4],current[5], current[6], current[7],
+                        (None, current[1], current[2], current[3], current[4], current[5], current[6], current[7],
                          current[8],current[9], current[10]))
         con.commit()
     con.close()
-#TODO: debugging: filtered should be array of ints not doubles
+# TODO: debugging: filtered should be array of ints not doubles
 
-def createDB(id_list, db_name, mode = 'dist', expandDB = False):
+
+def createDB(id_list, db_name, mode='dist', expandDB=False):
     if mode == 'dist':
         td.TrainingDataSgfPass(folder="dgs", id_list=id_list, dbNameDist=db_name)
         if expandDB:
@@ -48,6 +49,7 @@ def createDB(id_list, db_name, mode = 'dist', expandDB = False):
         td.TrainingDataSgfPass(folder="dgs", id_list=id_list, dbNameMoves=db_name)
     else:
         print('please select a valid mode: \"dist\" or \"move\"')
+
 
 '''
 readme:
@@ -59,4 +61,15 @@ data structure
 4. additional argument: choose expandDB = True if you want to additionally enrich the database by copying the
 distributions as often as the board was played
 '''
-#createDB('dan_data_1', 'dan_data_1', expandDB = True)
+#createDB('dan_data_1', 'dan_data_1_expanded', expandDB=True)
+
+def test():
+    db_name = "dan_data_10"
+    con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    cur = con.cursor()
+    cur.execute("select count(*) from movedata")
+    cur.fetchall()
+    data = con.close()
+    print(data[0])
+
+test()
