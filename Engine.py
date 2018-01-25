@@ -305,7 +305,7 @@ def test5():
 
 def test6():
     engine = PolicyEngine(9, "ambitestfilt1234567logrule")
-    game_history = engine.play_against_random(0, 100, details=False)
+    game_history = engine.play_against_random(0, 100, details=True)
     final_board = game_history[-1]
     print("protoscore: Black", np.sum(final_board[final_board == Stone.Black]) / Stone.Black)
     print("protoscore: White", np.sum(final_board[final_board == Stone.White]) / Stone.White)

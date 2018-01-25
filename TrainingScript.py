@@ -60,31 +60,6 @@ On saving and loading weights:
 """
 
 
-def training_basic(PolicyNetwork, sgf_range=100, epochs=10, eta=0.001, batch_size=5, error_function=0):
-    testdata = TrainingDataSgfPass("dgs", range(0, sgf_range))
-    errors_by_epoch = PolicyNetwork.learn(testdata, epochs, eta, batch_size, error_function)
-    return errors_by_epoch
-
-
-# TODO delete this if it's fine for beno, Beno: I'll delete it then
-# TODO delete this if it's fine for beno, Beno: I'll delete it then, Stefan: ok, cool
-""" 
-def TrainingAdvanced(PolicyNetwork, dbName = "dan_data_10", epochs=1, sample_proportion=0.01, error_function=0):
-    con = sqlite3.connect(r"DB/Dist/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
-    cur = con.cursor()
-    cur.execute("select count(*) from movedata")
-    data = cur.fetchall()
-    sample_size = str(int(np.ceil(data[0][0] * sample_proportion)))
-    cur.execute("select * from movedata order by Random() Limit ?", (sample_size,))
-    selectionVar = cur.fetchall()
-    con.close()
-    for i in range(epochs):
-        print("Epoch ", i)
-        errors_by_epoch = PolicyNetwork.LearnDB(selectionVar, error_function)
-    return errors_by_epoch
-"""
-
-
 """    
 def training_split(PolicyNetwork, trainingrate, error_tolerance, maxepochs, sgf_range = 1000, eta = 0.01, batch_size=1, stoch_coeff=1, error_function=1, activation_function=0):
     trainingdata = TrainingDataSgfPass("dgs",range(0,sgf_range))

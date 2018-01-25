@@ -202,9 +202,9 @@ class PolicyNet:
             con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
         cur.execute("select count(*) from movedata")
-        data = cur.fetchall()
-        datasize = data[0][0]
-        dataprop = np.floor(float(data[0][0]) * sample_proportion)
+        data = cur.fetchone()
+        datasize = data[0]
+        dataprop = np.floor(float(data[0]) * sample_proportion)
         number_of_batches = int(np.ceil(dataprop / batchsize))
         id_set = set(range(int(datasize)) + np.ones(int(datasize), dtype='Int32'))
         batch_id_list = [0]*number_of_batches
@@ -214,7 +214,7 @@ class PolicyNet:
                 batch_id_list[i] = batch
                 id_set -= batch
             except ValueError:
-                batch_id_list[i] = id_set
+                batch_id_list[i] = id_set #TODO Beno: Funktionen trennen: 1.id_set generieren (nur einmal) 2. batches aus id_set bilden (jedes mal)
         batches = collections.defaultdict(dict)
         for i in range(len(batch_id_list)):
             batches[i] = collections.defaultdict(np.ndarray)
@@ -259,7 +259,7 @@ class PolicyNet:
         if adaptive_rule is "none":
             duplicate = True
         else:
-            duplicate = False
+            duplicate = False #TODO Stefan:
         if not db:  # Dictionary Case
             [number_of_batchs, batches] = self.splitintobatches(trainingdata, batch_size)
         errors_by_epoch = []
