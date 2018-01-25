@@ -60,6 +60,8 @@ for creating databases there are several options which need to be configured bef
 data structure
 4. additional argument: choose expandDB = True if you want to additionally enrich the database by copying the
 distributions as often as the board was played
+
+Stefans Notiz: Expand = board duplicates. "dist" = Absolute Board Verteilungen, "moves" = Dirac-Verteilungen.
 '''
 #createDB('dan_data_1', 'dan_data_1_expanded', expandDB=True)
 
@@ -68,8 +70,11 @@ def test():
     con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select count(*) from movedata")
-    cur.fetchall()
-    data = con.close()
+    datasize = cur.fetchall()
+    cur.execute("select * from movedata")
+    data = cur.fetchall()
+    con.close()
+    print("datasize", datasize[0])
     print(data[0])
 
 test()

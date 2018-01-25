@@ -193,11 +193,13 @@ def train_dict(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 
     plt.show()
 
 
-def train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=200, eta=0.001,
-             err_fct=0, duration_in_hours=8, custom_save_name="none", adaptive_rule="none"):
+def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=200, eta=0.001,
+             err_fct=0, duration_in_hours=8, custom_save_name="none", adaptive_rule="none", static=True):
     print("This Script will generate a PolicyNet and train it for a certain time.")
-    print("For this, DBs are used. Static: This means we will keep the batches once created.")
-    print("")
+    print("For this, DBs are used. Static: This means we will keep the batches once created, else we would rebuild it.")
+    print("If and only if you don't choose an adaptive rule, Board duplicates will be used.")
+    print("This Script ONLY works with Absolute board distributions, not dirac!. So we use the 'dist' DB folder.")
+    print()
     print("Info:")
     print("Layers ", layers)
     print("filter_ids ", filter_ids)
@@ -215,15 +217,19 @@ def train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3
         print("Since a adaptive rule has been selected, we will work with MoveDBs instead of DistributionDBs. This "
               "means we won't use board duplicates.")
         duplicate = False
+    if static:
+        print("We are working in static batch mode (=> no SGD, batches will not be rebuild every epoch, only once).")
+    else:
+        print("We are working in dynamic batch mode (=> SGD, we rebuild batches new each epoch).")
     print("")
 
     PN = PolicyNet(layers=layers, filter_ids=filter_ids)
     db_name = "dan_data_10"
     print("Games have been imported from dan_data_10.")
     if not duplicate:
-        con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
-    else:
         con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    else:
+        con = sqlite3.connect(r"DB/Dist/" + db_name + "_expanded", detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select count(*) from movedata")
     data = cur.fetchall()
@@ -233,8 +239,9 @@ def train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3
     [_, whole_set_temp] = PN.extract_batches_from_db(db_name, datasize, 1, duplicate=duplicate)
     whole_set = whole_set_temp[0]
 
-    [number_of_batchs, batches] = PN.extract_batches_from_db(db_name, batch_size, 1, duplicate=duplicate)
-    print("Split up into", number_of_batchs, "Batches with size", batch_size, ".")
+    if static:
+        [number_of_batchs, batches] = PN.extract_batches_from_db(db_name, batch_size, 1, duplicate=duplicate)
+        print("Split up into", number_of_batchs, "Batches with size", batch_size, ".")
 
     errors_by_epoch = []
     init_error = PN.propagate_set(whole_set, True, adaptive_rule, err_fct)  # Error needs to be measured on whole set
@@ -244,6 +251,8 @@ def train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3
     while time.time() - start < duration_in_hours * 60 * 60:
         t = time.time()
         errors_by_epoch.append(0)
+        if not static:
+            [number_of_batchs, batches] = PN.extract_batches_from_db(db_name, batch_size, 1, duplicate=duplicate)
         for i_batch in range(0, number_of_batchs):
             error_in_batch = PN.learn_batch(batches[i_batch], eta, err_fct, True, adaptive_rule, True)
             errors_by_epoch[epoch] += error_in_batch
@@ -314,7 +323,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = "Beno"
+your_name = "Stefan"
 
 # example for training:
 if your_name is "Example":
@@ -521,8 +530,9 @@ if your_name is "Stefan":
                    err_fct=0, duration_in_hours=20/60, custom_save_name="TEST8", adaptive_rule="logarithmic")
 
     if training_program == 9:  # db with duplicates
-        train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=200,
-                        eta=0.005, err_fct=0, duration_in_hours=20/60, custom_save_name="TEST9", adaptive_rule="none")
+        train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=200,
+                 eta=0.005, err_fct=0, duration_in_hours=10/60, custom_save_name="TEST9", adaptive_rule="none",
+                 static=True)
 
     if training_program == 10:  # db without duplicates, i.e. with adaptive eta rule.
         train_db_static(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=100,

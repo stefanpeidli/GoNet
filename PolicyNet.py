@@ -195,11 +195,11 @@ class PolicyNet:
         number_of_batchs = k
         return[number_of_batchs, Batch_sets]
 
-    def extract_batches_from_db(self, db_name, batchsize, sample_proportion, duplicate=True):
+    def extract_batches_from_db(self, db_name, batchsize, sample_proportion, duplicate=False):
         if duplicate:
-            con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB/Dist/" + db_name + "_expanded", detect_types=sqlite3.PARSE_DECLTYPES)
         else:
-            con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
         cur.execute("select count(*) from movedata")
         data = cur.fetchall()
@@ -222,7 +222,7 @@ class PolicyNet:
             for j in batch_id_list[key]:
                 cur.execute("select * from movedata where id = ?", (int(j),))
                 data = cur.fetchone()
-                batches[key][int(j)] = [data[1], data[2]]
+                batches[key][int(j)] = [data[1:]]
         con.close()
         return [number_of_batches, batches]
 
@@ -511,17 +511,28 @@ class PolicyNet:
 
 def test():
     PN = PolicyNet()
-    db_name = "dan_data_10"
-    con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    db_name = "dan_data_1"
+    con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select count(*) from movedata")
     data = cur.fetchall()
     con.close()
     datasize = data[0][0]
 
-    [_, whole_set_temp] = PN.extract_batches_from_db(db_name, datasize, 1, duplicate=False)
-    whole_set = whole_set_temp[0]
+    [_, set] = PN.extract_batches_from_db(db_name, 10, 1, duplicate=False)
+    whole_set = set[0]
 
-    PN.propagate_set(whole_set,True, "linear", 0)
+    #error_on_whole_set = PN.propagate_set(whole_set, True, "linear", 0)
+    #print(error_on_whole_set)
+
+    print(set.keys())
+    print(set.items())
+    for batch in set.keys():
+        print("Batchnummer/key", batch)
+        print("ID des Batchs/items", set[batch])
+        for entry in set[batch].keys():
+            print("Boardnummer/key", entry)
+            print("Boarddaten/item", set[batch][entry])
+
 
 #test()
