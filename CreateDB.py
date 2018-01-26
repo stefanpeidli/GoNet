@@ -37,10 +37,8 @@ def expand_db(dbNameDist):
                          current[8],current[9], current[10]))
         con.commit()
     con.close()
-# TODO: debugging: filtered should be array of ints not doubles
 
-
-def createDB(id_list, db_name, mode='dist', expandDB=False):
+def createDB(id_list, db_name, mode='move', expandDB=False):
     if mode == 'dist':
         td.TrainingDataSgfPass(folder="dgs", id_list=id_list, dbNameDist=db_name)
         if expandDB:
@@ -63,7 +61,7 @@ distributions as often as the board was played
 
 Stefans Notiz: Expand = board duplicates. "dist" = Absolute Board Verteilungen, "moves" = Dirac-Verteilungen.
 '''
-#createDB('dan_data_1', 'dan_data_1', expandDB=True)
+#createDB('data_4_5369', 'data_4', mode='move', expandDB=True)
 
 def test():
     db_name = "dan_data_10"

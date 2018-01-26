@@ -52,7 +52,8 @@ class TrainingDataSgfPass:
             con = sqlite3.connect(r"DB/Move/" + self.dbNameMoves, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             cur.execute("create table movedata (id INTEGER PRIMARY KEY, board array, move array, f0 array,"
-                        "f1 array, f2 array, f3 array, f4 array, f5 array, f6 array, f7 array)")
+                        "f1 array, f2 array, f3 array, f4 array, f5 array, f6 array, f7 array, f8 array)")
+            con.commit()
             con.close()
         if dbNameDist:
             self.dbFlagDist = True
@@ -60,7 +61,8 @@ class TrainingDataSgfPass:
             con = sqlite3.connect(r"DB/Dist/" + self.dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             cur.execute("create table movedata (id INTEGER PRIMARY KEY, board array, distribution array, f0 array, "
-                        "f1 array, f2 array, f3 array, f4 array, f5 array, f6 array, f7 array)")
+                        "f1 array, f2 array, f3 array, f4 array, f5 array, f6 array, f7 array, f8 array)")
+            con.commit()
             con.close()
 
         if folder is not None:
@@ -154,12 +156,8 @@ class TrainingDataSgfPass:
                     stone = 1
             else:
                 return
-
             # now we extract the next move, e.g. 'bb'
             move = movelist[i].split('[')[1].split(']')[0]
-
-            # print(stoneColor, "plays", move)
-
             # If not Pass
             if len(move) > 0:
                 currBoardMatrix[ord(move[1]) - 97, ord(move[0]) - 97] = stone
@@ -171,7 +169,6 @@ class TrainingDataSgfPass:
                     self.board.play_stone(coords[1], coords[0], stone)
                     prevBoardMatrix = np.copy(self.board.vertices)
                     currBoardMatrix = np.copy(self.board.vertices)
-
             # add pass as move to dic
             else:
                 self.addToDict(prevBoardMatrix, currBoardMatrix, stone, passing=True)
@@ -205,19 +202,19 @@ class TrainingDataSgfPass:
         move = np.absolute(currBoardVector - prevBoardVector)
         one_vec = apply_filters_by_id(entryBoardVector.reshape(9, 9), -1)
         filtered = []
-        for i in range(8): #in range(no_of_filters + 1)
+        for i in range(9): #in range(no_of_filters + 1)
             filtered.append(np.array(one_vec[i*81:(i+1)*81]).astype(np.int32))
         if self.dbFlagMoves == True:
             con = sqlite3.connect(r"DB/Move/" + self.dbNameMoves, detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             if passing == False:
-                cur.execute("insert into movedata values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                cur.execute("insert into movedata values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                             (None, entryBoardVector, np.append(move, 0), filtered[0], filtered[1], filtered[2],
-                             filtered[3], filtered[4], filtered[5], filtered[6], filtered[7]))
+                                 filtered[3], filtered[4], filtered[5], filtered[6], filtered[7], filtered[8]))
             else:
-                cur.execute("insert into movedata values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                cur.execute("insert into movedata values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                             (None, entryBoardVector, np.copy(self.passVector), filtered[0], filtered[1], filtered[2],
-                            filtered[3], filtered[4], filtered[5], filtered[6], filtered[7]))
+                                 filtered[3], filtered[4], filtered[5], filtered[6], filtered[7], filtered[8]))
             con.commit()
             con.close()
         elif self.dbFlagDist == True:
@@ -227,9 +224,9 @@ class TrainingDataSgfPass:
                 cur.execute("select count(*) from movedata where board = ?", (entryBoardVector,))
                 data = cur.fetchone()
                 if data[0] == 0:
-                    cur.execute("INSERT INTO movedata VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    cur.execute("INSERT INTO movedata VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                 (None, entryBoardVector, np.append(move, 0), filtered[0], filtered[1], filtered[2],
-                                 filtered[3], filtered[4], filtered[5], filtered[6], filtered[7]))
+                                 filtered[3], filtered[4], filtered[5], filtered[6], filtered[7], filtered[8]))
                 else:
                     cur.execute("select distribution from movedata where board = ?", (entryBoardVector,))
                     old_dist = cur.fetchall()
@@ -239,9 +236,10 @@ class TrainingDataSgfPass:
                 cur.execute("select count(*) from movedata where board = ?", (entryBoardVector,))
                 data = cur.fetchall()
                 if data[0][0] == 0:
-                    cur.execute("INSERT INTO movedata VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    cur.execute("INSERT INTO movedata VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                 (None, entryBoardVector, np.copy(self.passVector), filtered[0], filtered[1],
-                                 filtered[2], filtered[3], filtered[4], filtered[5], filtered[6], filtered[7]))
+                                 filtered[2], filtered[3], filtered[4], filtered[5], filtered[6], filtered[7],
+                                 filtered[8]))
                 else:
                     cur.execute("select distribution from movedata where board = ?", (entryBoardVector,))
                     old_dist = cur.fetchall()
@@ -262,116 +260,3 @@ class TrainingDataSgfPass:
 
                 else:
                     self.dic[Hashable(entryBoardVector)] = np.copy(self.passVector)
-
-# end class TrainingDataSgfPass
-def dbTest2():
-    dbName = 'dan_data_10_topped_up'
-    con = sqlite3.connect(r"DB/Dist/" + dbName, detect_types=sqlite3.PARSE_DECLTYPES)
-    cur = con.cursor()
-    i = 5732
-    cur.execute("Select * from movedata where id = ?", (i,))
-    data = cur.fetchall()
-    print(data)
-    con.close()
-#dbTest2()
-
-def test():
-    t = TrainingData("dgs", range(10000))
-
-    # print complete dictionary, don't if dic is big ;)
-    # for entry in t.dic:
-    #      testdata = Hashable.unwrap(entry)
-    #      targ = t.dic[entry].reshape(9*9)
-    #      print('\n', '\n', Hashable.unwrap(entry), '\n', t.dic[entry].reshape((9,9)), '\n')
-
-    # print cumulated move distribution for empty board
-    zeroMatrix = t.dic[Hashable(np.zeros(t.n * t.n, dtype=np.int32))]
-    print('\n', zeroMatrix.reshape((9, 9)), '\n')
-    print(np.sum(zeroMatrix))
-
-    # print cumulated move distributions for boards with exactly one stone
-    secondMoveDist = np.zeros(9 * 9, dtype=np.int32)
-    for entry in t.dic:
-        thisis = Hashable.unwrap(entry)
-        if np.sum(np.absolute(thisis)) == 1:
-            secondMoveDist += t.dic[entry]
-    print(secondMoveDist.reshape((9, 9)))
-    print(np.sum(secondMoveDist))
-# test()
-
-def test2():
-    start = time.clock()
-    l = []
-    #ranged=1000
-    #t = TrainingDataSgf("dgs",range(0,ranged))
-    t=TrainingDataSgf("dgs","dan_data_10")
-    end = time.clock()
-    length = 0
-    for entry in t.dic:
-        length += 1
-    l.append(length)
-    #print("Range:",ranged)
-    print("imported distinct boards:",length)
-    print("importing took", np.round(end - start,3), "seconds")
-#test2()
-
-def test3():
-    start = time.clock()
-    t = TrainingDataSgf("dgs", range(10000))
-
-    zeroMatrix = t.dic[Hashable(np.zeros(t.n * t.n, dtype=np.int32))]
-    print('\n', zeroMatrix.reshape((9, 9)), '\n')
-    print(np.sum(zeroMatrix))
-
-    # print cumulated move distributions for boards with exactly one stone
-    secondMoveDist = np.zeros(9 * 9, dtype=np.int32)
-    for entry in t.dic:
-        thisis = Hashable.unwrap(entry)
-        if np.sum(np.absolute(thisis)) == 1:
-            secondMoveDist += t.dic[entry]
-    print(secondMoveDist.reshape((9, 9)))
-    print(np.sum(secondMoveDist))
-    print("\nTime " + str(time.clock() - start))
-#test3()
-
-def test3pass():
-    start = time.clock()
-    t = TrainingDataSgfPass("dgs")
-
-    zeroMatrix = t.dic[Hashable(np.zeros(t.n * t.n, dtype=np.int32))]
-    print('\n', zeroMatrix[:-1].reshape((9, 9)), '\n')
-    print("passing: ", zeroMatrix[81])
-    print("entries: ", np.sum(zeroMatrix))
-
-    # print cumulated move distributions for boards with exactly one stone
-    secondMoveDist = np.zeros(9 * 9+1, dtype=np.int32)
-    for entry in t.dic:
-        thisis = Hashable.unwrap(entry)
-        if np.sum(np.absolute(thisis)) == 1:
-            secondMoveDist += t.dic[entry]
-    print(secondMoveDist[:-1].reshape((9, 9)))
-    print("passing: ", secondMoveDist[81])
-    print("entries: ",np.sum(secondMoveDist))
-    print("\nTime " + str(time.clock() - start))
-#test3pass()
-
-def dbCreate():
-    TrainingDataSgfPass(folder="dgs", id_list = 'dan_data_10', dbNameMoves="dan_data_10")
-    con = sqlite3.connect(r"DB/Move/dan_data_10", detect_types=sqlite3.PARSE_DECLTYPES)
-    cur = con.cursor()
-    cur.execute("select * from movedata where id <= 100")
-    data = cur.fetchall()
-    con.close
-    print(data)
-#dbCreate()
-
-def distDbCreate():
-    TrainingDataSgfPass(folder="dgs", id_list='dan_data_10', dbNameDist="dan_data_10_new")
-    con = sqlite3.connect(r"DB/Dist/dan_data_10_new", detect_types=sqlite3.PARSE_DECLTYPES)
-    cur = con.cursor()
-    cur.execute("select count(*) from movedata where id <= 100")
-    data = cur.fetchall()
-    con.close()
-    print(data[0][0])
-#distDbCreate()
-

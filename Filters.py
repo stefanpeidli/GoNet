@@ -299,7 +299,7 @@ def filter_groups_eyes_unsec(board, k, color):
     n = board.shape[0]
     res = np.zeros((n, n))
     eyes = filter_eyes(board, color)
-    print(eyes)
+    #print(eyes)
     for row in range(n):
         for col in range(n):
             if eyes[row, col] == 1:
@@ -337,7 +337,7 @@ def filter_color_separation(board, color):
 def filter_legal_moves(board, color):
     bo = Board(9)
     bo.vertices = board * 1
-    bo.show()
+    #bo.show()
     leg = np.zeros((n, n))
     for row in range(n):
         for col in range(n):
@@ -349,7 +349,7 @@ def filter_legal_moves(board, color):
 
 # The Summary Fiter Function
 
-def apply_filters_by_id(board, color, filter_id=[0, 1, 2, 3, 4, 5, 6, 7]):
+def apply_filters_by_id(board, color, filter_id=[0, 1, 2, 3, 4, 5, 6, 7, 8]):
     filtered = []
     if 0 in filter_id:
         f0 = filter_eyes(board, color).flatten()
