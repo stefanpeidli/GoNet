@@ -80,7 +80,8 @@ class PolicyNet:
             self.weights = [0]*self.layercount  # alloc memory
             for i in range(0, self.layercount):
                 sigma = np.sqrt(2)/np.sqrt(self.layers[i+1])
-                self.weights[i] = np.random.normal(mu, sigma, (self.layers[i+1], self.layers[i]+1))  # the +1 in the input dimension is for the bias
+                self.weights[i] = np.random.normal(mu, sigma, (self.layers[i+1], self.layers[i]+1))
+                # the +1 in the input dimension is for the bias
 
     def apply_filters(self, board, color=-1):
         filtered = apply_filters_by_id(board, color, self.filter_ids)
@@ -91,7 +92,7 @@ class PolicyNet:
     # error functions
 
     # error fct Number 0
-    def compute_KL_divergence(self, suggested, target):  # Compute Kullback-Leibler divergence, stabilized version
+    def compute_kl_divergence(self, suggested, target):  # Compute Kullback-Leibler divergence, stabilized version
         t = target[target != 0]  # ->we'd divide by 0 else, does not have inpact on error anyway
         s = suggested[target != 0]
         difference = s / t  # this is stable
@@ -105,19 +106,20 @@ class PolicyNet:
         return error
     
     # error fct Number 2
-    def compute_Hellinger_dist(self, suggested, target):
+    def compute_hellinger_dist(self, suggested, target):
         return np.linalg.norm(np.sqrt(suggested) - np.sqrt(target), ord=2) / np.sqrt(2)
     
     # error fct Number 3
     def compute_cross_entropy(self, suggested, target):
-        return self.compute_entropy(target) + self.compute_KL_divergence(target, suggested)
+        return self.compute_entropy(target) + self.compute_kl_divergence(target, suggested)
         
     # error fct Number x, actually not a good one. Only for statistics.
     def compute_abs_error(self, suggested, target):  # compare the prediction with the answer/target, absolute error
         difference = np.absolute(suggested - target)
         error = np.inner(difference, np.ones(len(target)))
         return error
-    
+
+    # Auxilary function for cross-entropy
     def compute_entropy(self, distribution):
         return -np.inner(distribution, np.log(distribution))
     
@@ -125,11 +127,11 @@ class PolicyNet:
 
     def compute_error(self, suggested, target, error_function):
         if error_function == 0:
-            return self.compute_KL_divergence(suggested, target)
+            return self.compute_kl_divergence(suggested, target)
         elif error_function == 1:
             return self.compute_ms_error(suggested, target)
         elif error_function == 2:
-            return self.compute_Hellinger_dist(suggested, target)
+            return self.compute_hellinger_dist(suggested, target)
         elif error_function == 3:
             return self.compute_cross_entropy(suggested, target)
 
@@ -214,11 +216,11 @@ class PolicyNet:
                 batch_id_list[i] = id_set
         return [number_of_batches, batch_id_list]
 
-
     def extract_batches_from_id_list(self, number_of_batches, batch_id_list, db_name):
-    #TODO Beno: Funktionen trennen: 1.id_set generieren (nur einmal) 2. batches aus id_set bilden (jedes mal)
-    #TODO 2 Beno: momentan: Konstruktion des batches-dict mithilfe der Id_list mit einzelnen db-Abfragen. Optimierung: dict einmal generieren, danach nur shufflen.
-    #id_list benutzen und neues dict aus altem dict auslesen? Was ist schneller?
+        # TODO Beno: Funktionen trennen: 1.id_set generieren (nur einmal) 2. batches aus id_set bilden (jedes mal)
+        # TODO 2 Beno: momentan: Konstruktion des batches-dict mithilfe der Id_list mit einzelnen db-Abfragen.
+        # Optimierung: dict einmal generieren, danach nur shufflen.
+        # id_list benutzen und neues dict aus altem dict auslesen? Was ist schneller?
         con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
         batches = collections.defaultdict()
@@ -265,7 +267,7 @@ class PolicyNet:
         if adaptive_rule is "none":
             duplicate = True
         else:
-            duplicate = False #TODO Stefan:
+            duplicate = False  # TODO Stefan:
         if not db:  # Dictionary Case
             [number_of_batches, batches] = self.splitintobatches(trainingdata, batch_size)
         else:
@@ -516,34 +518,3 @@ class PolicyNet:
         else:
             error = error / checked  # average over the test set
             return error
-    
-# Tests
-
-
-def test():
-    PN = PolicyNet()
-    db_name = "dan_data_1"
-    con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
-    cur = con.cursor()
-    cur.execute("select count(*) from movedata")
-    data = cur.fetchall()
-    con.close()
-    datasize = data[0][0]
-
-    [_, set] = PN.extract_batches_from_db(db_name, 10, 1, duplicate=False)
-    whole_set = set[0]
-
-    #error_on_whole_set = PN.propagate_set(whole_set, True, "linear", 0)
-    #print(error_on_whole_set)
-
-    print(set.keys())
-    print(set.items())
-    for batch in set.keys():
-        print("Batchnummer/key", batch)
-        print("ID des Batchs/items", set[batch])
-        for entry in set[batch].keys():
-            print("Boardnummer/key", entry)
-            print("Boarddaten/item", set[batch][entry])
-
-
-#test()

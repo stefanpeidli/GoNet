@@ -5,7 +5,7 @@ Tags: Neural Network
 """
 
 import numpy as np
-
+from Board import Board
 
 n = 9
 
@@ -25,6 +25,7 @@ def gen_test_board(method=0):
     if method == 1:
         b = np.round(np.random.uniform(-1, 1, (n, n)), 0)
     return b
+
 
 gen_test_board(1)
 
@@ -59,13 +60,13 @@ def give_group_at_position(board, start_x, start_y):
         return [group, liberts]
 
 
-def give_liberties(board,color):
+def give_liberties(board, color):
     libs = np.zeros((n, n))
     for row in range(n):
         for col in range(n):
             if board[row, col] == color:
-                [g, li] = give_group_at_position(board, row, col)
-                libs[row,col] = li
+                [_, li] = give_group_at_position(board, row, col)
+                libs[row, col] = li
     return libs
 
 # Filters
@@ -121,8 +122,7 @@ def filter_eyes_create(board, color=1):
                 
 
 # captures ID = 2
-# Shows how many stones player "color" (1=b,-1=w) would capture by playing a 
-# move on a field
+# Shows how many stones player "color" (1=b,-1=w) would capture by playing a move on a field
 def filter_captures(board, color):
     board.reshape((9, 9))
     n = board.shape[0]
@@ -155,8 +155,7 @@ def filter_captures(board, color):
     return cap
 
 
-# rewards connecting groups and adding liberties to groups. But e.g. punishes
-# playing a move into an own eye. ID = 3.
+# rewards connecting groups and adding liberties to groups. But e.g. punishes playing a move into an own eye. ID = 3.
 def filter_add_liberties(board, color):
     board.reshape((9, 9))
     n = board.shape[0]
@@ -259,8 +258,7 @@ def filter_liberization(board, color):
     return libmat
 
 
-# Gives all groups with their sizes as field values at the member positions of
-# a color. ID = 5.
+# Gives all groups with their sizes as field values at the member positions of a color. ID = 5.
 def filter_groups(board, color):
     board.reshape((9, 9))
     n = board.shape[0]
@@ -275,8 +273,7 @@ def filter_groups(board, color):
     return gps
 
 
-# Gives all groups of size k of color. with_values=False unifies the output to 1
-# no ID yet
+# Gives all groups of size k of color. with_values=False unifies the output to 1 no ID yet
 def filter_groups_of_size_k(board, k, color, with_values=False):
     board.reshape((9, 9))
     n = board.shape[0]
@@ -296,8 +293,7 @@ def filter_groups_of_size_k(board, k, color, with_values=False):
 
 
 # Gives all groups of color with exactly k UNSECURED eyes (i.e. only stones that
-# form the eye are contained within the same group, not the diagonal stones)
-# no ID yet
+# form the eye are contained within the same group, not the diagonal stones) no ID yet
 def filter_groups_eyes_unsec(board, k, color):
     board.reshape((9, 9))
     n = board.shape[0]
@@ -328,8 +324,6 @@ def filter_groups_eyes_unsec(board, k, color):
     return res
 
 
-# Filters that are not self-mappings
-
 # gives the board with only the stones of one color. ID = 6. ID = 7 for opponent color.
 def filter_color_separation(board, color):
     temp = board * 1
@@ -339,8 +333,22 @@ def filter_color_separation(board, color):
     return temp 
 
 
+# Gives all legal possible moves of player color on a board. Sadly without KO and super-KO... :( . ID = 8
+def filter_legal_moves(board, color):
+    bo = Board(9)
+    bo.vertices = board * 1
+    bo.show()
+    leg = np.zeros((n, n))
+    for row in range(n):
+        for col in range(n):
+            if board[row, col] == 0:
+                if bo.play_is_legal(row, col, color):
+                    leg[row, col] = 1
+    return leg
+
+
 # The Summary Fiter Function
-    
+
 def apply_filters_by_id(board, color, filter_id=[0, 1, 2, 3, 4, 5, 6, 7]):
     filtered = []
     if 0 in filter_id:
@@ -367,6 +375,9 @@ def apply_filters_by_id(board, color, filter_id=[0, 1, 2, 3, 4, 5, 6, 7]):
     if 7 in filter_id:
         f7 = filter_color_separation(board, -color).flatten()
         filtered.extend(f7)
+    if 8 in filter_id:
+        f8 = filter_legal_moves(board, color).flatten()
+        filtered.extend(f8)
     return filtered
 
     
@@ -423,8 +434,18 @@ def test():
     liber_b = filter_liberization(b,-1)
     print("Liberization of black")
     print(liber_b)
+
+    leg_w = filter_legal_moves(b,1)
+    print("Legal moves of white")
+    print(leg_w)
+
+    leg_b = filter_legal_moves(b, 1)
+    print("Legal moves of black")
+    print(leg_b)
+
+    print(b)
     
-#test()
+test()
 
 
 def test1():
