@@ -184,14 +184,6 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
     print("duration_in_hours", duration_in_hours)
     print("custom_save_name", custom_save_name)
     print("adaptive_rule", adaptive_rule)
-    # if adaptive_rule is "none":
-    #     print("No adaptive eta rule will be applied. Instead, boards will be duplicated according to their frequency of"
-    #           " appearance in DB. This means we are using DistributionDBs.")
-    #     duplicate = True
-    # else:
-    #     print("Since a adaptive rule has been selected, we will work with MoveDBs instead of DistributionDBs. This "
-    #           "means we won't use board duplicates.")
-    #     duplicate = False
     print("")
 
     PN = PolicyNet(layers=layers, filter_ids=filter_ids)
@@ -199,20 +191,15 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
     con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select count(*) from movedata")
-    data = cur.fetchall()
+    datasize = int(np.ceil(cur.fetchone()[0] * sample_proportion))
     con.close()
-    datasize = data[0][0] * sample_proportion
-
-    #@Stef: this needs to be deleted/commented out..to big db, I'll come up with an alternative next days
-    #[_, whole_set_temp] = PN.extract_batches_from_db(db_name, datasize, 1, duplicate=duplicate)
-    #whole_set = whole_set_temp[0]
-
-
-    [number_of_batches, batch_id_list] = PN.gen_id_list_from_db(db_name, batch_size, sample_proportion)
-    print("Split up into", len(batch_id_list), "Batches with size", batch_size, ".")
 
     errors_by_epoch = []
-    #init_error = PN.propagate_set(whole_set, True, adaptive_rule, err_fct)  # Error needs to be measured on whole set
+    whole_id_set = PN.gen_id_list_from_db(db_name, datasize, sample_proportion)[1]
+    whole_set = PN.gen_whole_set_from_id_list(whole_id_set, db_name)
+    init_error = PN.propagate_set(whole_set, True, adaptive_rule, err_fct)  # Error needs to be measured on whole set
+    [number_of_batches, batch_id_list] = PN.gen_id_list_from_db(db_name, batch_size, sample_proportion)
+    print("Split up into", len(batch_id_list), "Batches with size", batch_size, ".")
     start = time.time()
     epoch = 0
     if (epochs == 0 and duration_in_hours == 0) or (epochs != 0 and duration_in_hours != 0):
@@ -251,15 +238,15 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
         save_name = custom_save_name
     PN.saveweights(save_name)
     total_time = time.time() - start
-    #final_error = PN.propagate_set(whole_set, True, adaptive_rule, err_fct)  # Error needs to be measured on whole set
+    final_error = PN.propagate_set(whole_set, True, adaptive_rule, err_fct)  # Error needs to be measured on whole set
     print("Total time taken for training:", total_time, "and epochs", epoch)
     print("Average time per epoch:", total_time / epoch)
-    #print("Initial error:", init_error)
-    #print("Final error:", final_error)
-    #improvement = init_error - final_error
-    #print("Total error improvement:", improvement)
+    print("Initial error:", init_error)
+    print("Final error:", final_error)
+    improvement = init_error - final_error
+    print("Total error improvement:", improvement)
     print("Error development: ", errors_by_epoch)
-    #print("Error reduction per second:", improvement / total_time)
+    print("Error reduction per second:", improvement / total_time)
     plt.plot(range(0, len(errors_by_epoch)), errors_by_epoch)
     plt.show()
 
@@ -340,7 +327,7 @@ if your_name is "Beno":
     batch_size = 10
     eta = 0.01
     error_function = 0
-    [epochs,duration_in_hours] = [5,0]
+    [epochs,duration_in_hours] = [2,0]
     sample_proportion = 0.5
     db_name = 'dan_data_10'
     #custom_save_name
