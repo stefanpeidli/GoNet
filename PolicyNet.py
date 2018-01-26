@@ -195,11 +195,8 @@ class PolicyNet:
         number_of_batchs = k
         return[number_of_batchs, Batch_sets]
 
-    def gen_id_list_from_db(self, db_name, batchsize, sample_proportion, duplicate=False):
-        if duplicate:
-            con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
-        else:
-            con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    def gen_id_list_from_db(self, db_name, batchsize, sample_proportion):
+        con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
         cur.execute("select count(*) from movedata")
         datasize = cur.fetchone()[0]
@@ -224,14 +221,14 @@ class PolicyNet:
     #id_list benutzen und neues dict aus altem dict auslesen? Was ist schneller?
         con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
-        batches = collections.defaultdict(dict)
+        batches = collections.defaultdict()
         for i in range(len(batch_id_list)):
-            batches[i] = collections.defaultdict(np.ndarray)
+            batches[i] = collections.defaultdict()
         for key in batches.keys():
             for j in batch_id_list[key]:
                 cur.execute("select * from movedata where id = ?", (int(j),))
                 data = cur.fetchone()
-                batches[key][int(j)] = [data[1:]]
+                batches[key][int(j)] = data[1:]
         con.close()
         return [number_of_batches, batches]
 

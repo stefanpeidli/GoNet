@@ -169,7 +169,7 @@ def train_dict(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 
 
 
 def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=200, eta=0.001,
-             err_fct=0, duration_in_hours=8, sample_proportion = 1, db_name="dan_data_10", custom_save_name="none", adaptive_rule="none", static=True):
+             err_fct=0, epochs = 0, duration_in_hours = 0.1, sample_proportion = 1, db_name="dan_data_10", custom_save_name="none", adaptive_rule="none"):
     print("This Script will generate a PolicyNet and train it for a certain time.")
     print("For this, DBs are used. Static: This means we will keep the batches once created, else we would rebuild it.")
     print("If and only if you don't choose an adaptive rule, Board duplicates will be used.")
@@ -184,14 +184,14 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
     print("duration_in_hours", duration_in_hours)
     print("custom_save_name", custom_save_name)
     print("adaptive_rule", adaptive_rule)
-    if adaptive_rule is "none":
-        print("No adaptive eta rule will be applied. Instead, boards will be duplicated according to their frequency of"
-              " appearance in DB. This means we are using DistributionDBs.")
-        duplicate = True
-    else:
-        print("Since a adaptive rule has been selected, we will work with MoveDBs instead of DistributionDBs. This "
-              "means we won't use board duplicates.")
-        duplicate = False
+    # if adaptive_rule is "none":
+    #     print("No adaptive eta rule will be applied. Instead, boards will be duplicated according to their frequency of"
+    #           " appearance in DB. This means we are using DistributionDBs.")
+    #     duplicate = True
+    # else:
+    #     print("Since a adaptive rule has been selected, we will work with MoveDBs instead of DistributionDBs. This "
+    #           "means we won't use board duplicates.")
+    #     duplicate = False
     print("")
 
     PN = PolicyNet(layers=layers, filter_ids=filter_ids)
@@ -208,29 +208,45 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
     #whole_set = whole_set_temp[0]
 
 
-    [number_of_batches, id_list] = PN.gen_id_list_from_db(db_name, batch_size, sample_proportion, duplicate=duplicate)
-    print("Split up into", len(id_list), "Batches with size", batch_size, ".")
+    [number_of_batches, batch_id_list] = PN.gen_id_list_from_db(db_name, batch_size, sample_proportion)
+    print("Split up into", len(batch_id_list), "Batches with size", batch_size, ".")
 
     errors_by_epoch = []
     #init_error = PN.propagate_set(whole_set, True, adaptive_rule, err_fct)  # Error needs to be measured on whole set
     start = time.time()
     epoch = 0
-    print("Training process starts now. It will take ", duration_in_hours, " hours.")
-    while time.time() - start < duration_in_hours * 60 * 60:
-        t = time.time()
-        errors_by_epoch.append(0)
-        batches = PN.extract_batches_from_id_list(number_of_batches, id_list, db_name)[1]
-        for i_batch in range(0, number_of_batches):
-            error_in_batch = PN.learn_batch(batches[i_batch], eta, err_fct, True, adaptive_rule, True)
-            errors_by_epoch[epoch] += error_in_batch
-        errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
-        print("Epoch", epoch, "with error", errors_by_epoch[epoch])
-        print("Time needed for epoch in seconds:", np.round(time.time() - t))
-        epoch = epoch + 1
+    if (epochs == 0 and duration_in_hours == 0) or (epochs != 0 and duration_in_hours != 0):
+        print("")
+        print("please choose a feasible combination of epochs and duration_in_hours: depending on which of the two"
+              "parameters is >0 you'll start a training for a certain time period or a count of epochs")
+        return
+    elif epochs == 0:
+        print("Training process starts now. It will take ", duration_in_hours, " hours.")
+        while time.time() - start < duration_in_hours * 60 * 60:
+            t = time.time()
+            errors_by_epoch.append(0)
+            batches = PN.extract_batches_from_id_list(number_of_batches, batch_id_list, db_name)[1]
+            for i_batch in range(number_of_batches):
+                error_in_batch = PN.learn_batch(batches[i_batch], eta, err_fct, True, adaptive_rule, True)
+                errors_by_epoch[epoch] += error_in_batch
+            errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batches
+            print("Epoch", epoch, "with error", errors_by_epoch[epoch])
+            print("Time needed for epoch in seconds:", np.round(time.time() - t))
+            epoch = epoch + 1
+    else:
+        print("Training process of " + str(epochs) + " epochs will start now")
+        for epoch in range(epochs):
+            errors_by_epoch.append(0)
+            batches = PN.extract_batches_from_id_list(number_of_batches, batch_id_list, db_name)[1]
+            for i_batch in range(number_of_batches):
+                error_in_batch = PN.learn_batch(batches[i_batch], eta, err_fct, True, adaptive_rule, True)
+                errors_by_epoch[epoch] += error_in_batch
+            errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batches
+            print("Epoch", epoch, "with error", errors_by_epoch[epoch])
     print("")
     if custom_save_name is "none":
         save_name = "weights" + str(duration_in_hours) + "hours" + "".join(
-            str(x) for x in filter_ids) + "filtids" + epoch + "epochs"
+            str(x) for x in filter_ids) + "filtids" + str(epoch) + "epochs"
     else:
         save_name = custom_save_name
     PN.saveweights(save_name)
@@ -247,7 +263,6 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
     plt.plot(range(0, len(errors_by_epoch)), errors_by_epoch)
     plt.show()
 
-train_db(db_name='dan_data_1', batch_size=10, eta=0.01, duration_in_hours=0.01, sample_proportion=1)
 """
 def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
     w=PolicyNetwork.weights
@@ -291,7 +306,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = ""
+your_name = "Beno"
 
 # example for training:
 if your_name is "Example":
@@ -320,18 +335,18 @@ if your_name is "Paddy":
 
 # Beno
 if your_name is "Beno":
-    MyNetwork = PolicyNet([9*9, 120, 200, 120, 9*9+1], filter_ids=[2, 6, 7])
-    epochs=10
-    sample_proportion=1
-    error_function=0
-    eta=0.01
-    batchsize = 100
-    training(MyNetwork, epochs, eta, batchsize, error_function, 'dan_data_1', sample_proportion = sample_proportion,
-             db=True, db_name='dan_data_1')
-    name = "weights" + datetime.datetime.now().strftime("%y%m%d%H%M") + "eta10000" + str(
-        int(eta * 10000)) + "epochs" + str(epochs) + "batchsize" + "1" + "errorfct" + str(error_function)
-    MyNetwork.saveweights(name)
-
+    layers = [9*9, 500, 150, 9*9 + 1]
+    filter_ids = [0]
+    batch_size = 10
+    eta = 0.01
+    error_function = 0
+    [epochs,duration_in_hours] = [5,0]
+    sample_proportion = 0.5
+    db_name = 'dan_data_10'
+    #custom_save_name
+    adaptive_rule = 'logarithmic'
+    train_db(layers, filter_ids, batch_size, eta, error_function, epochs, duration_in_hours, sample_proportion, db_name,
+             adaptive_rule=adaptive_rule)
 
 # Stefan:
 if your_name is "Stefan":

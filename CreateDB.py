@@ -63,7 +63,7 @@ distributions as often as the board was played
 
 Stefans Notiz: Expand = board duplicates. "dist" = Absolute Board Verteilungen, "moves" = Dirac-Verteilungen.
 '''
-createDB('dan_data_1', 'dan_data_1', expandDB=True)
+#createDB('dan_data_1', 'dan_data_1', expandDB=True)
 
 def test():
     db_name = "dan_data_10"
