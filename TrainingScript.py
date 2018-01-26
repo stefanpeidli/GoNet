@@ -169,7 +169,7 @@ def train_dict(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 
 
 
 def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=200, eta=0.001,
-             err_fct=0, duration_in_hours=8, custom_save_name="none", adaptive_rule="none", static=True):
+             err_fct=0, duration_in_hours=8, sample_proportion = 1, db_name="dan_data_10", custom_save_name="none", adaptive_rule="none", static=True):
     print("This Script will generate a PolicyNet and train it for a certain time.")
     print("For this, DBs are used. Static: This means we will keep the batches once created, else we would rebuild it.")
     print("If and only if you don't choose an adaptive rule, Board duplicates will be used.")
@@ -192,43 +192,35 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
         print("Since a adaptive rule has been selected, we will work with MoveDBs instead of DistributionDBs. This "
               "means we won't use board duplicates.")
         duplicate = False
-    if static:
-        print("We are working in static batch mode (=> no SGD, batches will not be rebuild every epoch, only once).")
-    else:
-        print("We are working in dynamic batch mode (=> SGD, we rebuild batches new each epoch).")
     print("")
 
     PN = PolicyNet(layers=layers, filter_ids=filter_ids)
-    db_name = "dan_data_10"
-    print("Games have been imported from dan_data_10.")
-    if not duplicate:
-        con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
-    else:
-        con = sqlite3.connect(r"DB/Dist/" + db_name + "_expanded", detect_types=sqlite3.PARSE_DECLTYPES)
+    print("Games have been imported from " + db_name)
+    con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select count(*) from movedata")
     data = cur.fetchall()
     con.close()
-    datasize = data[0][0]
+    datasize = data[0][0] * sample_proportion
 
-    [_, whole_set_temp] = PN.extract_batches_from_db(db_name, datasize, 1, duplicate=duplicate)
-    whole_set = whole_set_temp[0]
+    #@Stef: this needs to be deleted/commented out..to big db, I'll come up with an alternative next days
+    #[_, whole_set_temp] = PN.extract_batches_from_db(db_name, datasize, 1, duplicate=duplicate)
+    #whole_set = whole_set_temp[0]
 
-    if static:
-        [number_of_batchs, batches] = PN.extract_batches_from_db(db_name, batch_size, 1, duplicate=duplicate)
-        print("Split up into", number_of_batchs, "Batches with size", batch_size, ".")
+
+    [number_of_batches, id_list] = PN.gen_id_list_from_db(db_name, batch_size, sample_proportion, duplicate=duplicate)
+    print("Split up into", len(id_list), "Batches with size", batch_size, ".")
 
     errors_by_epoch = []
-    init_error = PN.propagate_set(whole_set, True, adaptive_rule, err_fct)  # Error needs to be measured on whole set
+    #init_error = PN.propagate_set(whole_set, True, adaptive_rule, err_fct)  # Error needs to be measured on whole set
     start = time.time()
     epoch = 0
     print("Training process starts now. It will take ", duration_in_hours, " hours.")
     while time.time() - start < duration_in_hours * 60 * 60:
         t = time.time()
         errors_by_epoch.append(0)
-        if not static:
-            [number_of_batchs, batches] = PN.extract_batches_from_db(db_name, batch_size, 1, duplicate=duplicate)
-        for i_batch in range(0, number_of_batchs):
+        batches = PN.extract_batches_from_id_list(number_of_batches, id_list, db_name)[1]
+        for i_batch in range(0, number_of_batches):
             error_in_batch = PN.learn_batch(batches[i_batch], eta, err_fct, True, adaptive_rule, True)
             errors_by_epoch[epoch] += error_in_batch
         errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
@@ -243,18 +235,19 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
         save_name = custom_save_name
     PN.saveweights(save_name)
     total_time = time.time() - start
-    final_error = PN.propagate_set(whole_set, True, adaptive_rule, err_fct)  # Error needs to be measured on whole set
+    #final_error = PN.propagate_set(whole_set, True, adaptive_rule, err_fct)  # Error needs to be measured on whole set
     print("Total time taken for training:", total_time, "and epochs", epoch)
     print("Average time per epoch:", total_time / epoch)
-    print("Initial error:", init_error)
-    print("Final error:", final_error)
-    improvement = init_error - final_error
-    print("Total error improvement:", improvement)
+    #print("Initial error:", init_error)
+    #print("Final error:", final_error)
+    #improvement = init_error - final_error
+    #print("Total error improvement:", improvement)
     print("Error development: ", errors_by_epoch)
-    print("Error reduction per second:", improvement / total_time)
+    #print("Error reduction per second:", improvement / total_time)
     plt.plot(range(0, len(errors_by_epoch)), errors_by_epoch)
     plt.show()
 
+train_db(db_name='dan_data_1', batch_size=10, eta=0.01, duration_in_hours=0.01, sample_proportion=1)
 """
 def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
     w=PolicyNetwork.weights
@@ -298,7 +291,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = "Stefan"
+your_name = ""
 
 # example for training:
 if your_name is "Example":

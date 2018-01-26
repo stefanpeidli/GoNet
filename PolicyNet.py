@@ -195,16 +195,16 @@ class PolicyNet:
         number_of_batchs = k
         return[number_of_batchs, Batch_sets]
 
-    def extract_batches_from_db(self, db_name, batchsize, sample_proportion, duplicate=False):
+    def gen_id_list_from_db(self, db_name, batchsize, sample_proportion, duplicate=False):
         if duplicate:
-            con = sqlite3.connect(r"DB/Dist/" + db_name + "_expanded", detect_types=sqlite3.PARSE_DECLTYPES)
+            con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         else:
             con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
         cur.execute("select count(*) from movedata")
-        data = cur.fetchone()
-        datasize = data[0]
-        dataprop = np.floor(float(data[0]) * sample_proportion)
+        datasize = cur.fetchone()[0]
+        con.close()
+        dataprop = np.floor(float(datasize) * sample_proportion)
         number_of_batches = int(np.ceil(dataprop / batchsize))
         id_set = set(range(int(datasize)) + np.ones(int(datasize), dtype='Int32'))
         batch_id_list = [0]*number_of_batches
@@ -214,7 +214,16 @@ class PolicyNet:
                 batch_id_list[i] = batch
                 id_set -= batch
             except ValueError:
-                batch_id_list[i] = id_set #TODO Beno: Funktionen trennen: 1.id_set generieren (nur einmal) 2. batches aus id_set bilden (jedes mal)
+                batch_id_list[i] = id_set
+        return [number_of_batches, batch_id_list]
+
+
+    def extract_batches_from_id_list(self, number_of_batches, batch_id_list, db_name):
+    #TODO Beno: Funktionen trennen: 1.id_set generieren (nur einmal) 2. batches aus id_set bilden (jedes mal)
+    #TODO 2 Beno: momentan: Konstruktion des batches-dict mithilfe der Id_list mit einzelnen db-Abfragen. Optimierung: dict einmal generieren, danach nur shufflen.
+    #id_list benutzen und neues dict aus altem dict auslesen? Was ist schneller?
+        con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+        cur = con.cursor()
         batches = collections.defaultdict(dict)
         for i in range(len(batch_id_list)):
             batches[i] = collections.defaultdict(np.ndarray)
@@ -261,18 +270,20 @@ class PolicyNet:
         else:
             duplicate = False #TODO Stefan:
         if not db:  # Dictionary Case
-            [number_of_batchs, batches] = self.splitintobatches(trainingdata, batch_size)
+            [number_of_batches, batches] = self.splitintobatches(trainingdata, batch_size)
+        else:
+            id_list = self.gen_id_list_from_db(db_name, batch_size, sample_proportion, duplicate)
         errors_by_epoch = []
         for epoch in range(0, epochs):
             print("current epoch: " + str(epoch))
             errors_by_epoch.append(0)
             if db:
-                [number_of_batchs, batches] = self.extract_batches_from_db(db_name, batch_size, sample_proportion, duplicate)
-            for i_batch in range(number_of_batchs):
+                [number_of_batches, batches] = self.extract_batches_from_id_list(number_of_batches, id_list, db_name)
+            for i_batch in range(number_of_batches):
                 batch = batches[i_batch]
                 error_in_batch = self.learn_batch(batch, eta, error_function, db, adaptive_rule=adaptive_rule)
                 errors_by_epoch[epoch] += error_in_batch
-            errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batchs
+            errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batches
         return errors_by_epoch
 
     """    
@@ -310,7 +321,10 @@ class PolicyNet:
                 targ = batch.dic[entry].reshape(9*9+1)  # target output, this is to be approximated
             else:  # DB case
                 t0 = batch[entry][0]
-                tf = self.apply_filters(t0.reshape((9, 9)))
+                tf = []
+                helpme = batch[entry]
+                for i in range(len(self.filter_ids)):
+                    tf.extend(batch[entry][i+2])
                 testdata = np.append(self.convert_input(t0),(tf))
                 targ = batch[entry][1].reshape(9 * 9 + 1)
 
