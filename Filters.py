@@ -427,15 +427,15 @@ def test():
     print("Liberties added to groups of black")
     print(add_lib_b)
     
-    liber_w = filter_liberization(b,1)
+    liber_w = filter_liberization(b, 1)
     print("Liberization of white")
     print(liber_w)
     
-    liber_b = filter_liberization(b,-1)
+    liber_b = filter_liberization(b, -1)
     print("Liberization of black")
     print(liber_b)
 
-    leg_w = filter_legal_moves(b,1)
+    leg_w = filter_legal_moves(b, 1)
     print("Legal moves of white")
     print(leg_w)
 
@@ -443,9 +443,8 @@ def test():
     print("Legal moves of black")
     print(leg_b)
 
-    print(b)
     
-test()
+#test()
 
 
 def test1():
