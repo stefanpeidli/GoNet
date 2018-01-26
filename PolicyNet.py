@@ -214,10 +214,8 @@ class PolicyNet:
                 batch_id_list[i] = id_set
         return [number_of_batches, batch_id_list]
 
-
     def extract_batches_from_id_list(self, number_of_batches, batch_id_list, db_name):
-    #TODO Beno: Funktionen trennen: 1.id_set generieren (nur einmal) 2. batches aus id_set bilden (jedes mal)
-    #TODO 2 Beno: momentan: Konstruktion des batches-dict mithilfe der Id_list mit einzelnen db-Abfragen. Optimierung: dict einmal generieren, danach nur shufflen.
+    #TODO  Beno: momentan: Konstruktion des batches-dict mithilfe der Id_list mit einzelnen db-Abfragen. Optimierung: dict einmal generieren, danach nur shufflen.
     #id_list benutzen und neues dict aus altem dict auslesen? Was ist schneller?
         con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
@@ -231,6 +229,22 @@ class PolicyNet:
                 batches[key][int(j)] = data[1:]
         con.close()
         return [number_of_batches, batches]
+
+    def gen_whole_set_from_id_list(self, batch_id_list, db_name):
+        whole_set_id_list = []
+        for item in batch_id_list[0]:
+                whole_set_id_list.append(item)
+        con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+        cur = con.cursor()
+        dict = collections.defaultdict()
+        j = 0
+        for i in whole_set_id_list:
+            cur.execute("select * from movedata where id = ?", (int(i),))
+            data = cur.fetchone()
+            dict[j] = data[1:]
+            j += 1
+        return dict
+
 
     def saveweights(self, filename, folder='Saved_Weights'):
         dir_path = os.path.dirname(os.path.realpath(__file__))

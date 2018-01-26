@@ -6,12 +6,12 @@
 #games from Bernhard
 dgs/
 
-#Training_Sets: top secret
-#not that secret anymore
+
 
 #Beno:
 log_3.txt
 DB/Dist/dan_data_295
+Test.py
 
 #paddy:
 Flush.py
