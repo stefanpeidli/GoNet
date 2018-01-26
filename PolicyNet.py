@@ -217,15 +217,9 @@ class PolicyNet:
         return [number_of_batches, batch_id_list]
 
     def extract_batches_from_id_list(self, number_of_batches, batch_id_list, db_name):
-<<<<<<< HEAD
-        # TODO Beno: Funktionen trennen: 1.id_set generieren (nur einmal) 2. batches aus id_set bilden (jedes mal)
         # TODO 2 Beno: momentan: Konstruktion des batches-dict mithilfe der Id_list mit einzelnen db-Abfragen.
         # Optimierung: dict einmal generieren, danach nur shufflen.
         # id_list benutzen und neues dict aus altem dict auslesen? Was ist schneller?
-=======
-    #TODO  Beno: momentan: Konstruktion des batches-dict mithilfe der Id_list mit einzelnen db-Abfragen. Optimierung: dict einmal generieren, danach nur shufflen.
-    #id_list benutzen und neues dict aus altem dict auslesen? Was ist schneller?
->>>>>>> Beno_branch
         con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
         batches = collections.defaultdict()
