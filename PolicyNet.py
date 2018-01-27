@@ -197,8 +197,11 @@ class PolicyNet:
         number_of_batchs = k
         return[number_of_batchs, Batch_sets]
 
-    def gen_id_list_from_db(self, db_name, batchsize, sample_proportion):
-        con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    def gen_id_list_from_db(self, db_name, batchsize, sample_proportion, db_move=True):
+        if not db_move:
+            con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+        else:
+            con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
         cur.execute("select count(*) from movedata")
         datasize = cur.fetchone()[0]
@@ -216,11 +219,14 @@ class PolicyNet:
                 batch_id_list[i] = id_set
         return [number_of_batches, batch_id_list]
 
-    def extract_batches_from_id_list(self, number_of_batches, batch_id_list, db_name):
+    def extract_batches_from_id_list(self, number_of_batches, batch_id_list, db_name, db_move=True):
         # TODO 2 Beno: momentan: Konstruktion des batches-dict mithilfe der Id_list mit einzelnen db-Abfragen.
         # Optimierung: dict einmal generieren, danach nur shufflen.
         # id_list benutzen und neues dict aus altem dict auslesen? Was ist schneller?
-        con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+        if not db_move:
+            con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+        else:
+            con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
         batches = collections.defaultdict()
         for i in range(len(batch_id_list)):
@@ -233,11 +239,14 @@ class PolicyNet:
         con.close()
         return [number_of_batches, batches]
 
-    def gen_whole_set_from_id_list(self, batch_id_list, db_name):
+    def gen_whole_set_from_id_list(self, batch_id_list, db_name, move_db=True):
         whole_set_id_list = []
         for item in batch_id_list[0]:
                 whole_set_id_list.append(item)
-        con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+        if not move_db:
+            con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+        else:
+            con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
         cur = con.cursor()
         dict = collections.defaultdict()
         j = 0

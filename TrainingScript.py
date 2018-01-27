@@ -169,7 +169,8 @@ def train_dict(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 
 
 
 def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5, 6, 7], batch_size=200, eta=0.001,
-             err_fct=0, epochs = 0, duration_in_hours = 0.1, sample_proportion = 1, db_name="dan_data_10", custom_save_name="none", adaptive_rule="none"):
+             err_fct=0, epochs = 0, duration_in_hours = 0.1, sample_proportion = 1, db_name="dan_data_10",
+             custom_save_name="none", adaptive_rule="none", db_move = True):
     print("This Script will generate a PolicyNet and train it for a certain time.")
     print("For this, DBs are used. Static: This means we will keep the batches once created, else we would rebuild it.")
     print("If and only if you don't choose an adaptive rule, Board duplicates will be used.")
@@ -188,7 +189,10 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
 
     PN = PolicyNet(layers=layers, filter_ids=filter_ids)
     print("Games have been imported from " + db_name)
-    con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    if not db_move:
+        con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    else:
+        con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select count(*) from movedata")
     datasize = int(np.ceil(cur.fetchone()[0] * sample_proportion))
@@ -293,7 +297,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = ""
+your_name = "Beno"
 
 # example for training:
 if your_name is "Example":
@@ -323,17 +327,17 @@ if your_name is "Paddy":
 # Beno
 if your_name is "Beno":
     layers = [9*9, 500, 150, 9*9 + 1]
-    filter_ids = [0]
-    batch_size = 10
+    filter_ids = [5,6,7,8]
+    batch_size = 50
     eta = 0.01
     error_function = 0
-    [epochs,duration_in_hours] = [2,0]
-    sample_proportion = 0.5
-    db_name = 'dan_data_10'
-    #custom_save_name
-    adaptive_rule = 'logarithmic'
+    [epochs,duration_in_hours] = [0,8]
+    sample_proportion = 0.003
+    db_name = 'data_3'
+    custom_save_name = 'akira_2_0_bs_50'
+    #adaptive_rule = 'none'
     train_db(layers, filter_ids, batch_size, eta, error_function, epochs, duration_in_hours, sample_proportion, db_name,
-             adaptive_rule=adaptive_rule)
+             custom_save_name = custom_save_name)
 
 # Stefan:
 if your_name is "Stefan":

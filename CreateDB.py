@@ -64,15 +64,12 @@ Stefans Notiz: Expand = board duplicates. "dist" = Absolute Board Verteilungen, 
 #createDB('data_4_5369', 'data_4', mode='move', expandDB=True)
 
 def test():
-    db_name = "dan_data_10"
-    con = sqlite3.connect(r"DB/Dist/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
+    db_name = "data_3"
+    con = sqlite3.connect(r"DB/Move/" + db_name, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
     cur.execute("select count(*) from movedata")
-    datasize = cur.fetchall()
-    cur.execute("select * from movedata")
-    data = cur.fetchall()
+    datasize = cur.fetchone()
     con.close()
     print("datasize", datasize[0])
-    print(data[0])
 
-#test()
+test()
