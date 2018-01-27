@@ -199,10 +199,10 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
     con.close()
 
     errors_by_epoch = []
-    whole_id_set = PN.gen_id_list_from_db(db_name, datasize, sample_proportion)[1]
-    whole_set = PN.gen_whole_set_from_id_list(whole_id_set, db_name)
+    whole_id_set = PN.gen_id_list_from_db(db_name, datasize, sample_proportion, db_move)[1]
+    whole_set = PN.gen_whole_set_from_id_list(whole_id_set, db_name, db_move)
     init_error = PN.propagate_set(whole_set, True, adaptive_rule, err_fct)  # Error needs to be measured on whole set
-    [number_of_batches, batch_id_list] = PN.gen_id_list_from_db(db_name, batch_size, sample_proportion)
+    [number_of_batches, batch_id_list] = PN.gen_id_list_from_db(db_name, batch_size, sample_proportion, db_move)
     print("Split up into", len(batch_id_list), "Batches with size", batch_size, ".")
     start = time.time()
     epoch = 0
@@ -216,7 +216,7 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
         while time.time() - start < duration_in_hours * 60 * 60:
             t = time.time()
             errors_by_epoch.append(0)
-            batches = PN.extract_batches_from_id_list(number_of_batches, batch_id_list, db_name)[1]
+            batches = PN.extract_batches_from_id_list(number_of_batches, batch_id_list, db_name, db_move)[1]
             for i_batch in range(number_of_batches):
                 error_in_batch = PN.learn_batch(batches[i_batch], eta, err_fct, True, adaptive_rule, True)
                 errors_by_epoch[epoch] += error_in_batch
@@ -228,7 +228,7 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
         print("Training process of " + str(epochs) + " epochs will start now")
         for epoch in range(epochs):
             errors_by_epoch.append(0)
-            batches = PN.extract_batches_from_id_list(number_of_batches, batch_id_list, db_name)[1]
+            batches = PN.extract_batches_from_id_list(number_of_batches, batch_id_list, db_name, db_move)[1]
             for i_batch in range(number_of_batches):
                 error_in_batch = PN.learn_batch(batches[i_batch], eta, err_fct, True, adaptive_rule, True)
                 errors_by_epoch[epoch] += error_in_batch
@@ -328,16 +328,16 @@ if your_name is "Paddy":
 if your_name is "Beno":
     layers = [9*9, 500, 150, 9*9 + 1]
     filter_ids = [5,6,7,8]
-    batch_size = 50
-    eta = 0.01
+    batch_size = 100
+    eta = 0.001
     error_function = 0
-    [epochs,duration_in_hours] = [0,8]
-    sample_proportion = 0.003
-    db_name = 'data_3'
-    custom_save_name = 'akira_2_0_bs_50'
-    #adaptive_rule = 'none'
+    [epochs,duration_in_hours] = [0,5]
+    sample_proportion = 0.008
+    db_name = 'data_3_2083'
+    custom_save_name = 'akira_2_0_1_bs_100'
+    adaptive_rule = 'logarithmic'
     train_db(layers, filter_ids, batch_size, eta, error_function, epochs, duration_in_hours, sample_proportion, db_name,
-             custom_save_name = custom_save_name)
+             custom_save_name = custom_save_name, adaptive_rule=adaptive_rule, db_move=False)
 
 # Stefan:
 if your_name is "Stefan":

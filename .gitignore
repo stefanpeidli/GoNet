@@ -12,6 +12,7 @@ dgs/
 log_3.txt
 DB/
 Test.py
+Plots/
 
 #paddy:
 Flush.py
