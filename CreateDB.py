@@ -3,11 +3,13 @@ import numpy as np
 import io
 import TrainingDataFromSgf as td
 
+
 def adapt_array(arr):
     out = io.BytesIO()
     np.save(out, arr)
     out.seek(0)
     return sqlite3.Binary(out.read())
+
 
 def convert_array(text):
     out = io.BytesIO(text)
@@ -19,6 +21,7 @@ sqlite3.register_adapter(np.ndarray, adapt_array)
 
 # Converts TEXT to np.array when selecting
 sqlite3.register_converter("array", convert_array)
+
 
 def expand_db(dbNameDist):
     con = sqlite3.connect(r"DB/Dist/" + dbNameDist, detect_types=sqlite3.PARSE_DECLTYPES)
@@ -37,6 +40,7 @@ def expand_db(dbNameDist):
                          current[8],current[9], current[10]))
         con.commit()
     con.close()
+
 
 def createDB(id_list, db_name, mode='move', expandDB=False):
     if mode == 'dist':
@@ -62,6 +66,7 @@ distributions as often as the board was played
 Stefans Notiz: Expand = board duplicates. "dist" = Absolute Board Verteilungen, "moves" = Dirac-Verteilungen.
 '''
 #createDB('data_4_5369', 'data_4', mode='move', expandDB=True)
+
 
 def test():
     db_name = "data_3"
