@@ -505,22 +505,24 @@ class PolicyNet:
     def propagate_set(self, testset, db=False, adaptive_rule='linear', error_function=0):
         error = 0
         checked = 0
-        if not db:
-            given_set = testset.dic
+        if not db:  # Dictionary case
+            selection = random.sample(list(testset.dic.keys()), len(testset.dic))  # This is indeed random order.
         else:
-            given_set = testset
-        for entry in given_set:
-            if not db:
+            selection = list(testset.keys())
+        for entry in selection:
+            if not db:   # Usual Dictionary case. Extract input and target.
                 t0 = Hashable.unwrap(entry)
                 tf = self.apply_filters(t0.reshape((9, 9)))
                 testdata = np.append(self.convert_input(t0),(tf))
-                targ = testset.dic[entry].reshape(9*9+1)
-            else:
+                targ = testset.dic[entry].reshape(9*9+1)  # target output, this is to be approximated
+            else:  # DB case
                 t0 = testset[entry][0]
-                tf = self.apply_filters(t0.reshape((9, 9)))
+                tf = []
+                helpme = testset[entry]
+                for i in range(len(self.filter_ids)):
+                    tf.extend(testset[entry][i+2])
                 testdata = np.append(self.convert_input(t0),(tf))
-                targ = testset[entry][1].reshape(9*9+1)
-
+                targ = testset[entry][1].reshape(9 * 9 + 1)
             if np.sum(targ) > 0:  # We can only learn if there are actual target vectors
                 targ_sum = np.sum(targ)
                 targ = targ/np.linalg.norm(targ, ord=1)  # normalize (L1-norm)

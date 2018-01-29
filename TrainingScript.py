@@ -264,7 +264,7 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
     print("Error development: ", errors_by_epoch)
     print("Error reduction per second:", improvement / total_time)
     plt.plot(range(0, len(errors_by_epoch)), errors_by_epoch)
-    plt.show()
+    plt.show(block=False)
 
     return [total_time, init_error, final_error, epoch]
 
@@ -311,7 +311,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = "Beno"
+your_name = "Stefan"
 
 # example for training:
 if your_name is "Example":
@@ -544,13 +544,13 @@ if your_name is "Stefan":
     if training_program == 11:
         layers = [9 * 9, 1000, 150, 9 * 9 + 1]
         filter_ids = [0, 1, 2, 3, 4, 5, 6, 7]
-        batch_size = 10
+        batch_size = 200
         eta = 0.005
         error_function = 0
-        [epochs, duration_in_hours] = [10, 0]
+        [epochs, duration_in_hours] = [5, 0]
         sample_proportion = 1
         db_name = 'dan_data_1'
-        custom_save_name = 'akira_2_0_1_bs_100'
+        custom_save_name = '29012018_1'
         adaptive_rule = 'logarithmic'
         momentum = 0.3
         regularization = 0.1
