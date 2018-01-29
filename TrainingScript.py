@@ -557,3 +557,22 @@ if your_name is "Stefan":
         train_db(layers, filter_ids, batch_size, eta, error_function, epochs, duration_in_hours, sample_proportion,
                  db_name, custom_save_name=custom_save_name, adaptive_rule=adaptive_rule, db_move=False,
                  regularization=regularization, momentum=momentum)
+
+    if training_program == 12:  # Dealing with sparse matrices
+        n = 1000
+
+        t1 = time.time()
+        a = np.arange(n)
+        A = np.diag(a)
+        F = np.diag(np.arange(n*2)).reshape(n*4, n)
+        E = np.matmul(F, A)
+        t2 = time.time()
+        print(t2-t1)
+
+        a = np.arange(n)
+        F = np.diag(np.arange(n * 2)).reshape(n*4, n)
+        G = np.zeros(F.shape)
+        for i in range(len(a)):
+            G[:][i] = a[i]*F[:][i]
+        t3 = time.time()
+        print(t3 - t2)

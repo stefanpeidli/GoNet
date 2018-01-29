@@ -391,14 +391,14 @@ class PolicyNet:
                         jacobian_softmax_temporary[:, j] *= yt[j]
                     jacobian_softmax[i] = jacobian_softmax_temporary
 
-                # Calculate Jacobian fot the not-last layers
+                # Calculate Jacobian fot the not-last layers, sparse version (slightly faster, without np.diag())
                 if self.activation_function is 0:  # Tanh
                     jacobian_tanh = [0] * self.layercount
                     for i in range(0, self.layercount):
                         yt = ys[i]  # load y from ys and lets call it yt
                         yt = yt[:-1]  # the last entry is from the offset, we don't need this
                         u = 1 - yt * yt
-                        jacobian_tanh[i] = np.diag(u)
+                        jacobian_tanh[i] = u
                     jacobian_hidden = jacobian_tanh
                 if self.activation_function is 1:  # ReLU
                     jacobian_relu = [0]*self.layercount
@@ -406,7 +406,7 @@ class PolicyNet:
                         yt = ys[i]  # load y from ys and lets call it yt
                         yt = yt[:-1]  # the last entry is from the offset, we don't need this
                         yt[yt > 0] = 1
-                        jacobian_relu[i] = np.diag(yt)
+                        jacobian_relu[i] = yt
                     jacobian_hidden = jacobian_relu
                 
                 # Use (L2) and (L3) to get the error signals of the layers
@@ -415,7 +415,10 @@ class PolicyNet:
                 for i in range(2, self.layercount+1):
                     w = self.weights[self.layercount-i+1]
                     dft = jacobian_hidden[self.layercount-i]
-                    errdet = np.matmul(w[:, :-1], dft)  # temporary
+                    w_load = w[:, :-1]
+                    errdet = np.zeros(w_load.shape)
+                    for k in range(len(dft)):  # Sparse version
+                        errdet[:, k] = dft[k] * w_load[:, k]
                     errorsignals[self.layercount-i] = np.dot(errorsignals[self.layercount-i+1], errdet)
                 
                 # Use (D3) to compute err_errorsignals as sum over the rows/columns? of the errorsignals weighted by
