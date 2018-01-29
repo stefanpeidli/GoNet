@@ -13,6 +13,7 @@ log_3.txt
 DB/
 Test.py
 Plots/
+logs/
 
 #paddy:
 Flush.py
