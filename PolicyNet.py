@@ -67,6 +67,10 @@ class PolicyNet:
         self.layercount = len(self.layers)-1
         self.init_weights()
 
+        # Momentum will be attached directly to the Neural Network
+        self.momentum = [0]*self.layercount
+        self.momentum_active = False
+
         if self.activation_function is 0:
             mu = 0
             self.weights = [0]*self.layercount  # alloc memory
@@ -257,7 +261,6 @@ class PolicyNet:
             j += 1
         return dict
 
-
     def saveweights(self, filename, folder='Saved_Weights'):
         dir_path = os.path.dirname(os.path.realpath(__file__))
         file = dir_path + "/" + folder + "/" + filename
@@ -329,7 +332,7 @@ class PolicyNet:
     # Takes a batch, propagates all boards in that batch while accumulating delta weights. Then sums the delta weights
     # up and then adjusts the weights of the Network.
     def learn_batch(self, batch, eta_start=0.01, error_function=0,
-                    db=False, adaptive_rule="linear", error_feedback=True, regularization=0):
+                    db=False, adaptive_rule="linear", error_feedback=True, regularization=0, momentum=0):
         deltaweights_batch = [0] * self.layercount
         if not db:  # Dictionary case
             selection = random.sample(list(batch.dic.keys()), len(batch.dic))  # This is indeed random order.
@@ -451,14 +454,19 @@ class PolicyNet:
 
         # Regularization Factor:
         regul = (1-(eta_start*regularization)/batch_counter)
-        # TODO which eta to choose for the regularization???
+        # TODO which eta to choose for the regularization??? Eta start or some weighted eta?
         # TODO Frage: Muss ich dann auch die Error measures anpassen?
 
         # Now adjust weights
         for i in range(0, self.layercount):
             if type(deltaweights_batch[i]) is not int:  # in this case we had no target for any board in this batch
-                self.weights[i][:, :-1] = regul * self.weights[i][:, :-1] + deltaweights_batch[i].T
+                if self.momentum_active:
+                    self.weights[i][:, :-1] = regul * self.weights[i][:, :-1] + deltaweights_batch[i].T + momentum * self.momentum[i]
+                else:
+                    self.weights[i][:, :-1] = regul * self.weights[i][:, :-1] + deltaweights_batch[i].T
                 # Problem: atm we only adjust non-bias weights. Change that! TODO
+                self.momentum[i] = deltaweights_batch[i].T + momentum * self.momentum[i]
+                self.momentum_active = True
         if error_feedback:
             error = self.propagate_set(batch, db, adaptive_rule, error_function=error_function)
             return error
