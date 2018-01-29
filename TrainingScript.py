@@ -231,17 +231,10 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
             errors_by_epoch.append(0)
             batches = PN.extract_batches_from_id_list(number_of_batches, batch_id_list, db_name, db_move)[1]
             for i_batch in range(number_of_batches):
-<<<<<<< HEAD
-                error_in_batch = PN.learn_batch(batches[i_batch], eta, err_fct, True, adaptive_rule, True)
+                error_in_batch = PN.learn_batch(batches[i_batch], eta, err_fct, True, adaptive_rule, True, regularization, momentum)
                 errors_by_epoch[epoch-1] += error_in_batch
             errors_by_epoch[epoch-1] = errors_by_epoch[epoch-1] / number_of_batches
             print("Epoch", epoch, "with error", errors_by_epoch[epoch-1])
-=======
-                error_in_batch = PN.learn_batch(batches[i_batch], eta, err_fct, True, adaptive_rule, True, regularization, momentum)
-                errors_by_epoch[epoch] += error_in_batch
-            errors_by_epoch[epoch] = errors_by_epoch[epoch] / number_of_batches
-            print("Epoch", epoch, "with error", errors_by_epoch[epoch])
->>>>>>> 23431a7334f9602c99df8a9e22c2d30bb4044f85
             print("Time needed for epoch in seconds:", np.round(time.time() - t))
             if epoch%20 == 0:
                 PN.saveweights(save_name)
@@ -318,7 +311,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = "Stefan"
+your_name = "Beno"
 
 # example for training:
 if your_name is "Example":
@@ -352,9 +345,8 @@ if your_name is "Beno":
     batch_size = 10
     eta = 0.001
     error_function = 0
-<<<<<<< HEAD
-    [epochs,duration_in_hours] = [240,0]
-    sample_proportion = 0.005
+    [epochs,duration_in_hours] = [2,0]
+    sample_proportion = 0.0001
     db_move = True
     db_name = 'data_3'
     custom_save_name = 'small_batches_test_2'
@@ -375,15 +367,6 @@ if your_name is "Beno":
                   + 'init error, final error: ' + str([init_error, final_error]) + '\n' + 'error reduction overall: '
                   + '\n' + str(final_error-init_error)  + '\n' + 'error reduction per second: ' + '\n'
                   + str((final_error - init_error)/total_time) + '\n' + 'seconds per epoch: ' + str(seconds_per_epoch))
-=======
-    [epochs,duration_in_hours] = [0, 5]
-    sample_proportion = 0.008
-    db_name = 'data_3_2083'
-    custom_save_name = 'akira_2_0_1_bs_100'
-    adaptive_rule = 'logarithmic'
-    train_db(layers, filter_ids, batch_size, eta, error_function, epochs, duration_in_hours, sample_proportion, db_name,
-             custom_save_name = custom_save_name, adaptive_rule=adaptive_rule, db_move=False)
->>>>>>> 23431a7334f9602c99df8a9e22c2d30bb4044f85
 
 # Stefan:
 if your_name is "Stefan":
