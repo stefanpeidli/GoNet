@@ -359,7 +359,8 @@ if your_name is "Beno":
     else:
         seconds_per_epoch = total_time/epochs
     fclient = open('logs/'+custom_save_name, 'w')
-    fclient.write('Training Session ' + custom_save_name + '\n' + '...\n' + 'filter_ids ' + str(filter_ids) + '\n'
+    fclient.write('Training Session ' + custom_save_name + '\n' + '...\n' + 'Network architecture: ' + str(layers) +
+                  '\n' + 'filter_ids ' + str(filter_ids) + '\n'
                   + 'batch_size ' + str(batch_size) + '\n' + 'eta ' + str(eta) + '\n' + 'errof_function '
                   + str(error_function) + '\n' + '[epochs, duration]: ' + str([epochs, duration_in_hours]) + '\n'
                   + 'sample_proportion ' + str(sample_proportion) + '\n' + 'moveDB ' + str(db_move) + '\n' + 'db_name: '
