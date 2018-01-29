@@ -249,7 +249,7 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
                 errors_by_epoch[epoch-1] += error_in_batch
             errors_by_epoch[epoch-1] = errors_by_epoch[epoch-1] / number_of_batches
             print("Epoch", epoch, "with error", errors_by_epoch[epoch-1])
-            if epoch%20 == 0:
+            if epoch % 20 == 0:
                 PN.saveweights(save_name)
     print("")
     PN.saveweights(save_name)
@@ -549,7 +549,7 @@ if your_name is "Stefan":
         error_function = 0
         [epochs, duration_in_hours] = [5, 0]
         sample_proportion = 1
-        db_name = 'dan_data_1'
+        db_name = 'dan_data_10'
         custom_save_name = '29012018_1'
         adaptive_rule = 'logarithmic'
         momentum = 0.3
@@ -576,3 +576,36 @@ if your_name is "Stefan":
             G[:][i] = a[i]*F[:][i]
         t3 = time.time()
         print(t3 - t2)
+
+    if training_program == 13:  # Comparison
+        layers = [9 * 9, 1000, 150, 9 * 9 + 1]
+        filter_ids = [0, 1, 2, 3, 4, 5, 6, 7]
+        batch_size = 20
+        eta = 0.005
+        error_function = 0
+        [epochs, duration_in_hours] = [5, 0]
+        sample_proportion = 1
+        db_name = 'dan_data_1'
+        custom_save_name = '29012018_13_1'
+        adaptive_rule = 'logarithmic'
+        momentum = 0.3
+        regularization = 0.1
+        train_db(layers, filter_ids, batch_size, eta, error_function, epochs, duration_in_hours, sample_proportion,
+                 db_name, custom_save_name=custom_save_name, adaptive_rule=adaptive_rule, db_move=False,
+                 regularization=regularization, momentum=momentum)
+
+        layers = [9 * 9, 1000, 150, 9 * 9 + 1]
+        filter_ids = [0, 1, 2, 3, 4, 5, 6, 7]
+        batch_size = 20
+        eta = 0.005
+        error_function = 0
+        [epochs, duration_in_hours] = [5, 0]
+        sample_proportion = 1
+        db_name = 'dan_data_1'
+        custom_save_name = '29012018_13_2'
+        adaptive_rule = 'logarithmic'
+        momentum = 0
+        regularization = 0
+        train_db(layers, filter_ids, batch_size, eta, error_function, epochs, duration_in_hours, sample_proportion,
+                 db_name, custom_save_name=custom_save_name, adaptive_rule=adaptive_rule, db_move=False,
+                 regularization=regularization, momentum=momentum)

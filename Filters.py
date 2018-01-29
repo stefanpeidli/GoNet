@@ -459,3 +459,15 @@ def test1():
     print(filtered)
 
 #test1()
+
+def test2():
+    b = gen_test_board(0)
+    print(b)
+    F = filter_color_separation(b, 1)
+    F2 = 0.5 * (F + F.T)
+    F3 = 0.5 * (F - F.T)
+    print(F)
+    print(F2)
+    print(F3)
+
+#test2()
