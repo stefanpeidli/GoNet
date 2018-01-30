@@ -161,7 +161,7 @@ class GTP:
 def run():
     #engine = PolicyEngine(9,"weights1801191025eta10000100epochs500batchsize1errorfct0.npz")
     # HINWEIS: You will have to specify the filters the weights were trained with. This can't be read from the file!
-    engine = PolicyEngine(9, "ambitestfilt1234567logrule", filter_ids=[0, 1, 2, 3, 4, 5, 6, 7])
+    engine = PolicyEngine(9, "small_batches_test_3", filter_ids=[5, 6, 7, 8])
     logfile = "log_3.txt"
     gtp = GTP(engine, logfile)
     # gtp.list_commands()
