@@ -5,7 +5,7 @@ Created on Wed Dec  6 18:58:03 2017
 """
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
+import os.path
 
 from Hashable import Hashable
 import Board
@@ -179,7 +179,7 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
     print("This Script will generate a PolicyNet and train it for a certain time.")
     print("For this, DBs are used. Static: This means we will keep the batches once created, else we would rebuild it.")
     print("If and only if you don't choose an adaptive rule, Board duplicates will be used.")
-    print("This Script ONLY works with Absolute board distributions, not dirac!. So we use the 'dist' DB folder.")
+    print("Training session: " + custom_save_name)
     print()
     print("Info:")
     print("Layers ", layers)
@@ -266,7 +266,7 @@ def train_db(layers=[9 * 9, 1000, 200, 9 * 9 + 1], filter_ids=[0, 1, 2, 3, 4, 5,
     plt.plot(range(0, len(errors_by_epoch)), errors_by_epoch)
     plt.show(block=False)
 
-    return [total_time, init_error, final_error, epoch]
+    return [total_time, init_error, final_error, epoch, errors_by_epoch]
 
 """
 def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
@@ -311,7 +311,7 @@ def ComparisonTraining1(PolicyNetwork,learningrate,epochs,batchsize):
 
 # Training Area = The Neural Network Gym : Do training here
     
-your_name = "Stefan"
+your_name = "Beno"
 
 # example for training:
 if your_name is "Example":
@@ -340,34 +340,37 @@ if your_name is "Paddy":
 
 # Beno
 if your_name is "Beno":
-    layers = [9*9, 784, 9*9 + 1]
+    layers = [9*9, 200, 200, 200, 9*9 + 1]
     filter_ids = [6, 7, 8]
     batch_size = 10
-    eta = 0.001
+    eta = 0.0005
     error_function = 0
-    [epochs,duration_in_hours] = [2,0]
-    sample_proportion = 0.0001
+    [epochs,duration_in_hours] = [1000,0]
+    sample_proportion = 0.01
     db_move = True
     db_name = 'data_3'
-    custom_save_name = 'small_batches_test_2'
     adaptive_rule = 'none'
-    [total_time, init_error, final_error, last_epoch] = train_db(layers, filter_ids, batch_size, eta, error_function, epochs,
-                                                     duration_in_hours, sample_proportion, db_name, custom_save_name=
-                                                     custom_save_name, adaptive_rule=adaptive_rule, db_move=db_move)
-    if epochs == 0:
-        seconds_per_epoch =  total_time / last_epoch
+    custom_save_name = 'small_batches_test_7_momentum'
+    momentum = False
+    if os.path.isfile("logs/" + custom_save_name) is False:
+        [total_time, init_error, final_error, last_epoch, errors_by_epoch] = \
+            train_db(layers, filter_ids, batch_size, eta, error_function, epochs, duration_in_hours, sample_proportion,
+                     db_name, custom_save_name=custom_save_name, adaptive_rule=adaptive_rule, db_move=db_move)
+        seconds_per_epoch =  total_time / len(errors_by_epoch)
+        fclient = open('logs/'+custom_save_name, 'w')
+        fclient.write('Training Session ' + custom_save_name + '\n' + '...\n' + 'Network architecture: ' + str(layers) +
+                      '\n' + 'filter_ids ' + str(filter_ids) + '\n'
+                      + 'batch_size ' + str(batch_size) + '\n' + 'eta ' + str(eta) + '\n' + 'error_function '
+                      + str(error_function) + '\n' + '[epochs, duration]: ' + str([epochs, duration_in_hours]) + '\n'
+                      + 'sample_proportion ' + str(sample_proportion) + '\n' + 'moveDB ' + str(db_move) + '\n' + 'db_name: '
+                      + db_name + '\n' + 'adaptive rule: ' + adaptive_rule + '\n' + 'total time: ' + str(total_time) + '\n'
+                      + 'init error, final error: ' + str([errors_by_epoch[0], errors_by_epoch[-1]]) + '\n' + 'error reduction overall: '
+                      + '\n' + str(errors_by_epoch[0] - errors_by_epoch[-1])  + '\n' + 'error reduction per second: ' + '\n'
+                      + str((errors_by_epoch[0] - errors_by_epoch[-1])/total_time) + '\n' + 'seconds per epoch: '
+                      + str(seconds_per_epoch))
     else:
-        seconds_per_epoch = total_time/epochs
-    fclient = open('logs/'+custom_save_name, 'w')
-    fclient.write('Training Session ' + custom_save_name + '\n' + '...\n' + 'Network architecture: ' + str(layers) +
-                  '\n' + 'filter_ids ' + str(filter_ids) + '\n'
-                  + 'batch_size ' + str(batch_size) + '\n' + 'eta ' + str(eta) + '\n' + 'errof_function '
-                  + str(error_function) + '\n' + '[epochs, duration]: ' + str([epochs, duration_in_hours]) + '\n'
-                  + 'sample_proportion ' + str(sample_proportion) + '\n' + 'moveDB ' + str(db_move) + '\n' + 'db_name: '
-                  + db_name + '\n' + 'adaptive rule: ' + adaptive_rule + '\n' + 'total time: ' + str(total_time) + '\n'
-                  + 'init error, final error: ' + str([init_error, final_error]) + '\n' + 'error reduction overall: '
-                  + '\n' + str(final_error-init_error)  + '\n' + 'error reduction per second: ' + '\n'
-                  + str((final_error - init_error)/total_time) + '\n' + 'seconds per epoch: ' + str(seconds_per_epoch))
+        print('........................')
+        print('Please choose another filename! This is already taken.')
 
 # Stefan:
 if your_name is "Stefan":
