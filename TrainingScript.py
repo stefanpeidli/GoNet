@@ -340,22 +340,26 @@ if your_name is "Paddy":
 
 # Beno
 if your_name is "Beno":
-    layers = [9*9, 200, 200, 200, 9*9 + 1]
+    layers = [9*9, 100, 100, 9*9 + 1]
     filter_ids = [6, 7, 8]
     batch_size = 10
     eta = 0.0005
     error_function = 0
-    [epochs,duration_in_hours] = [1000,0]
-    sample_proportion = 0.01
+    [epochs,duration_in_hours] = [1,0]
+    sample_proportion = 0.05
     db_move = True
     db_name = 'data_3'
     adaptive_rule = 'none'
-    custom_save_name = 'small_batches_test_7_momentum'
-    momentum = False
+    custom_save_name = 'small_layers_3'
+    momentum = 0
     if os.path.isfile("logs/" + custom_save_name) is False:
+        fclient = open('logs/' + custom_save_name, 'w')
+        fclient.write("Training in progress" + '\n' + '..............')
+        fclient.close()
         [total_time, init_error, final_error, last_epoch, errors_by_epoch] = \
             train_db(layers, filter_ids, batch_size, eta, error_function, epochs, duration_in_hours, sample_proportion,
-                     db_name, custom_save_name=custom_save_name, adaptive_rule=adaptive_rule, db_move=db_move)
+                     db_name, custom_save_name=custom_save_name, adaptive_rule=adaptive_rule, db_move=db_move,
+                     momentum=momentum)
         seconds_per_epoch =  total_time / len(errors_by_epoch)
         fclient = open('logs/'+custom_save_name, 'w')
         fclient.write('Training Session ' + custom_save_name + '\n' + '...\n' + 'Network architecture: ' + str(layers) +
@@ -368,6 +372,7 @@ if your_name is "Beno":
                       + '\n' + str(errors_by_epoch[0] - errors_by_epoch[-1])  + '\n' + 'error reduction per second: ' + '\n'
                       + str((errors_by_epoch[0] - errors_by_epoch[-1])/total_time) + '\n' + 'seconds per epoch: '
                       + str(seconds_per_epoch))
+        fclient.close()
     else:
         print('........................')
         print('Please choose another filename! This is already taken.')

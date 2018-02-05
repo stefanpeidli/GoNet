@@ -52,7 +52,7 @@ def relu(x):
 
 
 class PolicyNet:
-    def __init__(self, layers=[9*9, 1000, 100, 9*9+1], activation_function=0, filter_ids=[0, 2]):
+    def __init__(self, layers=[9*9, 1000, 100, 9*9+1], activation_function=0, filter_ids=[6,7,8]):
         # Specifications of the game
         self.n = 9  # 9x9 board
         self.filter_ids = filter_ids

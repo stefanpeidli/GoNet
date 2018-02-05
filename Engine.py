@@ -101,9 +101,9 @@ class IntelligentEngine(BaseEngine):
 
 
 class PolicyEngine(BaseEngine):
-    def __init__(self, n, weights_file='none', filter_ids=[0,1,2,3,4,5,6,7]):
+    def __init__(self, n, weights_file='none', layers = [9*9, 1000, 200, 9+9+1], filter_ids=[6,7,8]):
         super(PolicyEngine, self).__init__(n)
-        self.PolicyNet = PolicyNet([9*9,1000,200,9*9+1], filter_ids=filter_ids)  # untrained
+        self.PolicyNet = PolicyNet(layers, filter_ids=filter_ids)  # untrained
         if weights_file is not "none":
             self.PolicyNet.loadweightsfromfile(weights_file)
 
@@ -111,7 +111,7 @@ class PolicyEngine(BaseEngine):
         return "2.0"
 
     # need to get move from Neural Network here (forward propagate the current board)
-    def play_legal_move(self, board, stone, details=False):
+    def play_legal_move(self, board, stone, details=True):
         if stone == Stone.Black:
             out = self.PolicyNet.propagate_board(board)
         else:
@@ -128,7 +128,7 @@ class PolicyEngine(BaseEngine):
             board.vertices = tempVertices
 
         # We need to prohibit passing sometimes:
-        our_stones = np.sum(board.vertices[board.vertices == stone])
+        our_stones = np.abs(np.sum(board.vertices[board.vertices == stone]))
         their_stones = np.sum(board.vertices[board.vertices == -stone])
         if our_stones + their_stones > 81 * 0.75 and our_stones / their_stones > 1.1:
             allow_passing = True
